@@ -1,6 +1,5 @@
 // hooks/use-toast.tsx
-// This is probably already implemented but including for completeness
-
-import { useToast as useToastOriginal } from "@/components/ui/toast"
+import { useToast as useToastOriginal, toast } from "@/components/ui/use-toast"
 
 export const useToast = useToastOriginal
+export { toast }
