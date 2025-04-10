@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { hash } from 'bcrypt';
+import { hash } from 'bcryptjs';
 
 export interface IUser extends Document {
   email: string;

@@ -1,78 +1,35 @@
-import type { NextAuthOptions as AuthOptions } from "next-auth";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
+// lib/auth.ts
+import NextAuth from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcrypt";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "./mongodb";
+import { compare } from "bcryptjs";
 import User from "@/models/user";
 import connectToDatabase from "./db";
-import { User as UserType } from "@/types";
 
-// Define types for NextAuth
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      role: string;
-      permissions: string[];
-    }
-  }
-
-  interface User {
-    id?: string;
-    email?: string | null;
-    role?: string;
-    permissions?: string[];
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: string;
-    permissions: string[];
-  }
-}
-
-export const authOptions: AuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-  debug: process.env.NODE_ENV === "development",
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
+// Define your auth config
+export const authConfig: NextAuthConfig = {
+  // Configure different authentication providers
   providers: [
     CredentialsProvider({
+      // The name to display on the sign-in form (e.g., "Sign in with...")
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
+      // The authorize function is used to verify credentials
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          console.log("Missing credentials");
-          return null;
-        }
-
         try {
           await connectToDatabase();
           
+          if (!credentials?.email || !credentials?.password) {
+            console.log("Missing credentials");
+            return null;
+          }
+          
+          // Find the user
           const user = await User.findOne({ email: credentials.email.toLowerCase() });
           
           if (!user) {
@@ -80,6 +37,7 @@ export const authOptions: AuthOptions = {
             return null;
           }
           
+          // Verify password
           const isPasswordValid = await compare(
             credentials.password,
             user.passwordHash
@@ -90,18 +48,13 @@ export const authOptions: AuthOptions = {
             return null;
           }
           
-          // Update last login time
-          await User.findByIdAndUpdate(user._id, {
-            lastLogin: new Date()
-          });
-          
-          console.log("User authenticated successfully:", credentials.email);
-          
+          // Return user data
+          console.log("Authentication successful for:", credentials.email);
           return {
             id: user._id.toString(),
             email: user.email,
             role: user.role,
-            permissions: user.permissions || [],
+            permissions: user.permissions || []
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -110,8 +63,22 @@ export const authOptions: AuthOptions = {
       }
     })
   ],
+  // Adapter configuration
+  adapter: MongoDBAdapter(clientPromise),
+  // Session configuration
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  // Custom pages
+  pages: {
+    signIn: "/login",
+    error: "/login"
+  },
+  // Callbacks
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    // JWT callback to handle adding custom fields to the JWT
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -120,14 +87,47 @@ export const authOptions: AuthOptions = {
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: any }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.email = token.email;
-        session.user.role = token.role;
-        session.user.permissions = token.permissions;
+    // Session callback to add data to the session
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.role = token.role as string;
+        session.user.permissions = token.permissions as string[];
       }
       return session;
     },
   },
+  // Secret key for signing/encrypting tokens
+  secret: process.env.NEXTAUTH_SECRET
 };
+
+// Export types to ensure type safety
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      email: string;
+      role: string;
+      permissions: string[];
+    }
+  }
+  interface User {
+    id: string;
+    email: string;
+    role: string;
+    permissions: string[];
+  }
+}
+
+// Export types for JWT
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+    permissions: string[];
+  }
+}
+
+// Export the auth function for use in middleware
+export const { auth, signIn, signOut } = NextAuth(authConfig);
