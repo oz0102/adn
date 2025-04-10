@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import Notification from '@/models/notification';
+import ProgramFlyer from '@/models/programFlyer';
 import connectToDatabase from '@/lib/db';
 
 export async function GET(
@@ -26,47 +26,33 @@ export async function GET(
     // Connect to database
     await connectToDatabase();
     
-    // Get notification by ID
-    const notification = await Notification.findById(id)
-      .populate('senderId', 'firstName lastName email')
-      .populate('recipientId', 'firstName lastName email')
+    // Get flyer by ID
+    const flyer = await ProgramFlyer.findById(id)
+      .populate('createdBy', 'firstName lastName email')
+      .populate('eventId', 'name startDate location')
       .lean();
     
-    if (!notification) {
+    if (!flyer) {
       return NextResponse.json(
-        { success: false, message: 'Notification not found' },
+        { success: false, message: 'Flyer not found' },
         { status: 404 }
-      );
-    }
-    
-    // Check if user is authorized to view this notification
-    if (
-      token.role !== 'Admin' && 
-      token.role !== 'Pastor' && 
-      notification.recipientId && 
-      notification.recipientId.toString() !== token.id &&
-      notification.recipientType !== 'All'
-    ) {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to view this notification' },
-        { status: 403 }
       );
     }
     
     return NextResponse.json({
       success: true,
-      data: notification
+      data: flyer
     });
   } catch (error) {
-    console.error('Get notification error:', error);
+    console.error('Get flyer error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error fetching notification' },
+      { success: false, message: 'Error fetching flyer' },
       { status: 500 }
     );
   }
 }
 
-// PUT update notification (mark as read/unread)
+// PUT update flyer
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -91,53 +77,51 @@ export async function PUT(
     // Connect to database
     await connectToDatabase();
     
-    // Check if notification exists
-    const existingNotification = await Notification.findById(id);
+    // Check if flyer exists
+    const existingFlyer = await ProgramFlyer.findById(id);
     
-    if (!existingNotification) {
+    if (!existingFlyer) {
       return NextResponse.json(
-        { success: false, message: 'Notification not found' },
+        { success: false, message: 'Flyer not found' },
         { status: 404 }
       );
     }
     
-    // Check if user is authorized to update this notification
+    // Check if user is authorized to update this flyer
     if (
       token.role !== 'Admin' && 
       token.role !== 'Pastor' && 
-      existingNotification.recipientId && 
-      existingNotification.recipientId.toString() !== token.id &&
-      existingNotification.recipientType !== 'All'
+      existingFlyer.createdBy.toString() !== token.id
     ) {
       return NextResponse.json(
-        { success: false, message: 'Not authorized to update this notification' },
+        { success: false, message: 'Not authorized to update this flyer' },
         { status: 403 }
       );
     }
     
-    // Update notification
-    const updatedNotification = await Notification.findByIdAndUpdate(
+    // Update flyer
+    const updatedFlyer = await ProgramFlyer.findByIdAndUpdate(
       id,
       { $set: updateData },
       { new: true, runValidators: true }
     )
-      .populate('senderId', 'firstName lastName email')
-      .populate('recipientId', 'firstName lastName email');
+      .populate('createdBy', 'firstName lastName email')
+      .populate('eventId', 'name startDate location');
     
     return NextResponse.json({
       success: true,
-      data: updatedNotification
+      data: updatedFlyer
     });
   } catch (error) {
-    console.error('Update notification error:', error);
+    console.error('Update flyer error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error updating notification' },
+      { success: false, message: 'Error updating flyer' },
       { status: 500 }
     );
   }
 }
 
-// DELETE notification
+// DELETE flyer
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -161,40 +145,39 @@ export async function DELETE(
     // Connect to database
     await connectToDatabase();
     
-    // Check if notification exists
-    const existingNotification = await Notification.findById(id);
+    // Check if flyer exists
+    const existingFlyer = await ProgramFlyer.findById(id);
     
-    if (!existingNotification) {
+    if (!existingFlyer) {
       return NextResponse.json(
-        { success: false, message: 'Notification not found' },
+        { success: false, message: 'Flyer not found' },
         { status: 404 }
       );
     }
     
-    // Check if user is authorized to delete this notification
+    // Check if user is authorized to delete this flyer
     if (
       token.role !== 'Admin' && 
       token.role !== 'Pastor' && 
-      existingNotification.recipientId && 
-      existingNotification.recipientId.toString() !== token.id
+      existingFlyer.createdBy.toString() !== token.id
     ) {
       return NextResponse.json(
-        { success: false, message: 'Not authorized to delete this notification' },
+        { success: false, message: 'Not authorized to delete this flyer' },
         { status: 403 }
       );
     }
     
-    // Delete notification
-    await Notification.findByIdAndDelete(id);
+    // Delete flyer
+    await ProgramFlyer.findByIdAndDelete(id);
     
     return NextResponse.json({
       success: true,
-      message: 'Notification deleted successfully'
+      message: 'Flyer deleted successfully'
     });
   } catch (error) {
-    console.error('Delete notification error:', error);
+    console.error('Delete flyer error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error deleting notification' },
+      { success: false, message: 'Error deleting flyer' },
       { status: 500 }
     );
   }

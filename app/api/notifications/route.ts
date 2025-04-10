@@ -1,142 +1,175 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import Notification from '@/models/notification';
 import { getToken } from 'next-auth/jwt';
+import Notification from '@/models/notification';
+import connectToDatabase from '@/lib/db';
 
-const notificationSchema = z.object({
-  title: z.string(),
-  message: z.string(),
-  type: z.enum(['Info', 'Success', 'Warning', 'Error']),
-  targetUsers: z.array(z.string()).optional(),
-  targetRoles: z.array(z.string()).optional(),
-  targetAll: z.boolean().optional(),
-  link: z.string().optional(),
-  expiresAt: z.string().transform(val => new Date(val)).optional()
-});
-
+// GET all notifications with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
-    
+
+    // Parse query parameters
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const unreadOnly = searchParams.get('unreadOnly') === 'true';
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const type = searchParams.get('type') || '';
+    const status = searchParams.get('status') || '';
+    const startDate = searchParams.get('startDate') || '';
+    const endDate = searchParams.get('endDate') || '';
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+    // Build query
+    const query: any = {};
+    
+    // Only show notifications for this user or all users if admin
+    if (token.role !== 'Admin' && token.role !== 'Pastor') {
+      query.$or = [
+        { recipientId: token.id },
+        { recipientType: 'All' }
+      ];
+    }
+    
+    if (search) {
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { message: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
+    
+    if (type) {
+      query.type = type;
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (startDate && endDate) {
+      query.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    } else if (startDate) {
+      query.createdAt = { $gte: new Date(startDate) };
+    } else if (endDate) {
+      query.createdAt = { $lte: new Date(endDate) };
+    }
+
+    // Connect to database
+    await connectToDatabase();
+    
+    // Get total count
+    const total = await Notification.countDocuments(query);
+    
+    // Get paginated results
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
     
     const skip = (page - 1) * limit;
     
-    await connectToDatabase();
-    
-    // Build query to get notifications for this user
-    let query: any = {
-      $or: [
-        { targetUsers: token.id },
-        { targetRoles: token.role },
-        { targetAll: true }
-      ],
-      expiresAt: { $gt: new Date() }
-    };
-    
-    if (unreadOnly) {
-      query.readBy = { $ne: token.id };
-    }
-    
     const notifications = await Notification.find(query)
-      .populate('createdBy', 'email')
+      .sort(sort)
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
-    
-    const total = await Notification.countDocuments(query);
+      .populate('recipientId', 'firstName lastName email')
+      .populate('senderId', 'firstName lastName email')
+      .lean();
     
     return NextResponse.json({
       success: true,
-      data: notifications,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
+      data: {
+        notifications,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
       }
     });
   } catch (error) {
     console.error('Get notifications error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching notifications' },
       { status: 500 }
     );
   }
 }
 
+// POST create new notification
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor', 'ClusterLead'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Parse request body
+    const notificationData = await req.json();
     
-    const body = await req.json();
-    
-    // Validate request body
-    const validation = notificationSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid input data', 
-          errors: validation.error.errors 
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Ensure at least one target is specified
-    if (!body.targetUsers?.length && !body.targetRoles?.length && !body.targetAll) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'At least one target (users, roles, or all) must be specified' 
-        },
-        { status: 400 }
-      );
-    }
-    
+    // Connect to database
     await connectToDatabase();
     
+    // Validate notification data
+    if (!notificationData.title || !notificationData.message || !notificationData.type) {
+      return NextResponse.json(
+        { success: false, message: 'Title, message, and type are required' },
+        { status: 400 }
+      );
+    }
+    
+    // Set senderId to current user if not provided
+    if (!notificationData.senderId) {
+      notificationData.senderId = token.id;
+    }
+    
+    // Set default status if not provided
+    if (!notificationData.status) {
+      notificationData.status = 'Unread';
+    }
+    
     // Create new notification
-    const notification = new Notification({
-      ...body,
-      readBy: [],
-      createdBy: token.id,
-      expiresAt: body.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days
+    const newNotification = new Notification(notificationData);
+    await newNotification.save();
+    
+    // Populate sender and recipient details
+    if (newNotification.senderId) {
+      await newNotification.populate('senderId', 'firstName lastName email');
+    }
+    
+    if (newNotification.recipientId) {
+      await newNotification.populate('recipientId', 'firstName lastName email');
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: newNotification
     });
-    
-    await notification.save();
-    
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Notification created successfully',
-        data: notification
-      },
-      { status: 201 }
-    );
   } catch (error) {
     console.error('Create notification error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error creating notification' },
       { status: 500 }
     );
   }

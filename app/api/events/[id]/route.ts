@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import Event from '@/models/event';
-import Attendance from '@/models/attendance';
 import { getToken } from 'next-auth/jwt';
+import Event from '@/models/event';
+import connectToDatabase from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const event = await Event.findById(params.id)
-      .populate('organizer', 'name')
-      .populate('createdBy', 'email');
+    // Get event by ID
+    const event = await Event.findById(id)
+      .populate('organizer', 'firstName lastName email')
+      .populate('attendees', 'firstName lastName email')
+      .lean();
     
     if (!event) {
       return NextResponse.json(
@@ -39,98 +46,129 @@ export async function GET(
   } catch (error) {
     console.error('Get event error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching event' },
       { status: 500 }
     );
   }
 }
 
+// PUT update event
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
+    const updateData = await req.json();
     
-    const body = await req.json();
-    
+    // Connect to database
     await connectToDatabase();
     
-    const event = await Event.findById(params.id);
+    // Check if event exists
+    const existingEvent = await Event.findById(id);
     
-    if (!event) {
+    if (!existingEvent) {
       return NextResponse.json(
         { success: false, message: 'Event not found' },
         { status: 404 }
       );
     }
     
-    // Update event fields
-    Object.keys(body).forEach(key => {
-      if (key !== '_id' && key !== 'createdBy' && key !== 'createdAt') {
-        event[key] = body[key];
-      }
-    });
+    // Check if user is authorized to update this event
+    if (
+      token.role !== 'Admin' && 
+      token.role !== 'Pastor' && 
+      existingEvent.organizer.toString() !== token.id
+    ) {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to update this event' },
+        { status: 403 }
+      );
+    }
     
-    await event.save();
+    // Update event
+    const updatedEvent = await Event.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate('organizer', 'firstName lastName email')
+      .populate('attendees', 'firstName lastName email');
     
     return NextResponse.json({
       success: true,
-      message: 'Event updated successfully',
-      data: event
+      data: updatedEvent
     });
   } catch (error) {
     console.error('Update event error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error updating event' },
       { status: 500 }
     );
   }
 }
 
+// DELETE event
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const event = await Event.findById(params.id);
+    // Check if event exists
+    const existingEvent = await Event.findById(id);
     
-    if (!event) {
+    if (!existingEvent) {
       return NextResponse.json(
         { success: false, message: 'Event not found' },
         { status: 404 }
       );
     }
     
-    // Check if there are attendance records for this event
-    const attendanceCount = await Attendance.countDocuments({ eventId: params.id });
-    
-    if (attendanceCount > 0) {
+    // Check if user is authorized to delete this event
+    if (
+      token.role !== 'Admin' && 
+      token.role !== 'Pastor' && 
+      existingEvent.organizer.toString() !== token.id
+    ) {
       return NextResponse.json(
-        { success: false, message: 'Cannot delete event with attendance records. Delete attendance records first.' },
-        { status: 400 }
+        { success: false, message: 'Not authorized to delete this event' },
+        { status: 403 }
       );
     }
     
-    await Event.deleteOne({ _id: params.id });
+    // Delete event
+    await Event.findByIdAndDelete(id);
     
     return NextResponse.json({
       success: true,
@@ -139,7 +177,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete event error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error deleting event' },
       { status: 500 }
     );
   }

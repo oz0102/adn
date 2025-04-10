@@ -38,10 +38,14 @@ export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
+    error: "/login",
   },
+  debug: process.env.NODE_ENV === "development",
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -51,47 +55,64 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("Missing credentials");
           return null;
         }
 
-        await connectToDatabase();
-        
-        const user = await User.findOne({ email: credentials.email });
-        
-        if (!user) {
+        try {
+          await connectToDatabase();
+          
+          const user = await User.findOne({ email: credentials.email.toLowerCase() });
+          
+          if (!user) {
+            console.log("User not found:", credentials.email);
+            return null;
+          }
+          
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.passwordHash
+          );
+          
+          if (!isPasswordValid) {
+            console.log("Invalid password for user:", credentials.email);
+            return null;
+          }
+          
+          // Update last login time
+          await User.findByIdAndUpdate(user._id, {
+            lastLogin: new Date()
+          });
+          
+          console.log("User authenticated successfully:", credentials.email);
+          
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            permissions: user.permissions || [],
+          };
+        } catch (error) {
+          console.error("Authentication error:", error);
           return null;
         }
-        
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.passwordHash
-        );
-        
-        if (!isPasswordValid) {
-          return null;
-        }
-        
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          role: user.role,
-          permissions: user.permissions,
-        };
       }
     })
   ],
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
         token.role = user.role;
         token.permissions = user.permissions;
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
+        session.user.email = token.email;
         session.user.role = token.role;
         session.user.permissions = token.permissions;
       }

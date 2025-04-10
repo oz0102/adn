@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DataCardProps {
   title: string;
@@ -13,6 +14,7 @@ interface DataCardProps {
     onClick: () => void;
   };
   footer?: React.ReactNode;
+  isLoading?: boolean;
 }
 
 export function DataCard({
@@ -22,6 +24,7 @@ export function DataCard({
   className,
   action,
   footer,
+  isLoading = false,
 }: DataCardProps) {
   return (
     <Card className={cn("overflow-hidden", className)}>
@@ -31,13 +34,26 @@ export function DataCard({
           {title}
         </CardTitle>
         {action && (
-          <Button variant="ghost" size="sm" onClick={action.onClick}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={action.onClick}
+            disabled={isLoading}
+          >
             {action.label}
           </Button>
         )}
       </CardHeader>
       <CardContent>
-        {children}
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ) : (
+          children
+        )}
       </CardContent>
       {footer && (
         <CardFooter className="border-t bg-muted/50 px-6 py-3">

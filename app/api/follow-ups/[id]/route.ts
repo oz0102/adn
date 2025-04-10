@@ -1,46 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import FollowUp from '@/models/followUp';
 import { getToken } from 'next-auth/jwt';
+import FollowUp from '@/models/followUp';
+import connectToDatabase from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const followUp = await FollowUp.findById(params.id)
-      .populate('personId', 'firstName lastName email phoneNumber')
-      .populate('assignedTo', 'email')
-      .populate('attempts.conductedBy', 'email')
-      .populate('newAttendee.referredBy', 'firstName lastName');
+    // Get follow-up by ID
+    const followUp = await FollowUp.findById(id)
+      .populate('memberId', 'firstName lastName email phone profileImage')
+      .populate('assignedTo', 'firstName lastName email')
+      .lean();
     
     if (!followUp) {
       return NextResponse.json(
         { success: false, message: 'Follow-up not found' },
         { status: 404 }
-      );
-    }
-    
-    // If not admin or pastor, check if assigned to the user
-    if (
-      !['Admin', 'Pastor'].includes(token.role as string) && 
-      followUp.assignedTo.toString() !== token.id
-    ) {
-      return NextResponse.json(
-        { success: false, message: 'You can only view follow-ups assigned to you' },
-        { status: 403 }
       );
     }
     
@@ -51,97 +46,129 @@ export async function GET(
   } catch (error) {
     console.error('Get follow-up error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching follow-up' },
       { status: 500 }
     );
   }
 }
 
+// PUT update follow-up
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
+    const updateData = await req.json();
     
-    const body = await req.json();
-    
+    // Connect to database
     await connectToDatabase();
     
-    const followUp = await FollowUp.findById(params.id);
+    // Check if follow-up exists
+    const existingFollowUp = await FollowUp.findById(id);
     
-    if (!followUp) {
+    if (!existingFollowUp) {
       return NextResponse.json(
         { success: false, message: 'Follow-up not found' },
         { status: 404 }
       );
     }
     
-    // If not admin or pastor, check if assigned to the user
+    // Check if user is authorized to update this follow-up
     if (
-      !['Admin', 'Pastor'].includes(token.role as string) && 
-      followUp.assignedTo.toString() !== token.id
+      token.role !== 'Admin' && 
+      token.role !== 'Pastor' && 
+      existingFollowUp.assignedTo.toString() !== token.id
     ) {
       return NextResponse.json(
-        { success: false, message: 'You can only update follow-ups assigned to you' },
+        { success: false, message: 'Not authorized to update this follow-up' },
         { status: 403 }
       );
     }
     
-    // Update follow-up fields
-    if (body.status) followUp.status = body.status;
-    if (body.assignedTo) followUp.assignedTo = body.assignedTo;
-    if (body.nextFollowUpDate) followUp.nextFollowUpDate = new Date(body.nextFollowUpDate);
-    
-    await followUp.save();
+    // Update follow-up
+    const updatedFollowUp = await FollowUp.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate('memberId', 'firstName lastName email phone profileImage')
+      .populate('assignedTo', 'firstName lastName email');
     
     return NextResponse.json({
       success: true,
-      message: 'Follow-up updated successfully',
-      data: followUp
+      data: updatedFollowUp
     });
   } catch (error) {
     console.error('Update follow-up error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error updating follow-up' },
       { status: 500 }
     );
   }
 }
 
+// DELETE follow-up
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const followUp = await FollowUp.findById(params.id);
+    // Check if follow-up exists
+    const existingFollowUp = await FollowUp.findById(id);
     
-    if (!followUp) {
+    if (!existingFollowUp) {
       return NextResponse.json(
         { success: false, message: 'Follow-up not found' },
         { status: 404 }
       );
     }
     
-    await FollowUp.deleteOne({ _id: params.id });
+    // Check if user is authorized to delete this follow-up
+    if (
+      token.role !== 'Admin' && 
+      token.role !== 'Pastor' && 
+      existingFollowUp.assignedTo.toString() !== token.id
+    ) {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to delete this follow-up' },
+        { status: 403 }
+      );
+    }
+    
+    // Delete follow-up
+    await FollowUp.findByIdAndDelete(id);
     
     return NextResponse.json({
       success: true,
@@ -150,7 +177,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete follow-up error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error deleting follow-up' },
       { status: 500 }
     );
   }

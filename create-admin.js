@@ -13,10 +13,11 @@ if (!MONGODB_URI) {
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const email = args.find(arg => arg.startsWith('--email='))?.split('=')[1] || 'apostolicdominionglobal@gmail.com';
+const email = args.find(arg => arg.startsWith('--email='))?.split('=')[1] || 'hi@adnglobal.org';
 const password = args.find(arg => arg.startsWith('--password='))?.split('=')[1] || 'Adn2025@';
+const force = args.includes('--force');
 
-if (password === 'admin123') {
+if (password === 'Adn2025@') {
   console.warn('\nWARNING: Using default password. This is not secure for production.\n');
 }
 
@@ -66,12 +67,37 @@ async function main() {
     // Check if model exists or create it
     const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
-    // Check if an Admin user already exists
-    const existingAdmin = await User.findOne({ role: 'Admin' });
+    // Check if a user with this email already exists
+    const existingUser = await User.findOne({ email });
 
-    if (existingAdmin) {
-      console.log(`Admin user already exists with email: ${existingAdmin.email}`);
-      console.log('If you need to create a new admin user, please remove the existing one first.');
+    if (existingUser) {
+      console.log(`A user with email ${email} already exists with role: ${existingUser.role}`);
+      
+      if (force) {
+        console.log('Updating existing user to Admin role...');
+        existingUser.role = 'Admin';
+        existingUser.permissions = ['*'];
+        
+        if (args.find(arg => arg.startsWith('--password='))) {
+          existingUser.passwordHash = password;
+        }
+        
+        await existingUser.save();
+        
+        console.log('\n======================================================');
+        console.log('User updated to Admin successfully!');
+        console.log('======================================================');
+        console.log('Email:', email);
+        if (args.find(arg => arg.startsWith('--password='))) {
+          console.log('Password:', password);
+        } else {
+          console.log('Password: [unchanged]');
+        }
+        console.log('Role: Admin');
+        console.log('======================================================\n');
+      } else {
+        console.log('Use --force to update this user to Admin role');
+      }
     } else {
       // Create new admin user
       const admin = new User({

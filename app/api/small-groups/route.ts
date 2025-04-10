@@ -1,149 +1,153 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import SmallGroup from '@/models/smallGroup';
 import { getToken } from 'next-auth/jwt';
+import SmallGroup from '@/models/smallGroup';
+import Member from '@/models/member';
+import connectToDatabase from '@/lib/db';
 
-const smallGroupSchema = z.object({
-  groupId: z.string(),
-  name: z.string(),
-  location: z.string(),
-  address: z.object({
-    street: z.string(),
-    city: z.string(),
-    state: z.string(),
-    country: z.string(),
-    postalCode: z.string().optional()
-  }),
-  leaderId: z.string(),
-  contactPhone: z.string(),
-  contactEmail: z.string().email(),
-  photo: z.string().optional(),
-  description: z.string(),
-  meetingSchedule: z.object({
-    day: z.enum(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-    time: z.string(),
-    frequency: z.enum(['Weekly', 'Bi-weekly', 'Monthly'])
-  })
-});
-
+// GET all small groups with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
-    
+
+    // Parse query parameters
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const location = searchParams.get('location') || '';
     const clusterId = searchParams.get('clusterId') || '';
-    
-    const skip = (page - 1) * limit;
-    
-    await connectToDatabase();
-    
+    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortOrder = searchParams.get('sortOrder') || 'asc';
+
     // Build query
-    let query: any = {};
+    const query: any = {};
     
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } },
+        { meetingLocation: { $regex: search, $options: 'i' } }
       ];
     }
     
-    if (location) {
-      query.location = { $regex: location, $options: 'i' };
+    if (clusterId) {
+      query.clusterId = clusterId;
     }
+
+    // Connect to database
+    await connectToDatabase();
+    
+    // Get total count
+    const total = await SmallGroup.countDocuments(query);
+    
+    // Get paginated results
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    
+    const skip = (page - 1) * limit;
     
     const smallGroups = await SmallGroup.find(query)
-      .populate('leaderId', 'firstName lastName email phoneNumber')
+      .sort(sort)
       .skip(skip)
       .limit(limit)
-      .sort({ name: 1 });
-    
-    const total = await SmallGroup.countDocuments(query);
+      .populate('leader', 'firstName lastName email')
+      .populate('clusterId', 'name')
+      .lean();
     
     return NextResponse.json({
       success: true,
-      data: smallGroups,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
+      data: {
+        smallGroups,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
       }
     });
   } catch (error) {
     console.error('Get small groups error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching small groups' },
       { status: 500 }
     );
   }
 }
 
+// POST create new small group
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor', 'ClusterLead'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
-    
-    const body = await req.json();
-    
-    // Validate request body
-    const validation = smallGroupSchema.safeParse(body);
-    if (!validation.success) {
+
+    // Check if user has appropriate role
+    if (token.role !== 'Admin' && token.role !== 'Pastor' && token.role !== 'ClusterLead') {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid input data', 
-          errors: validation.error.errors 
-        },
+        { success: false, message: 'Not authorized to create small groups' },
+        { status: 403 }
+      );
+    }
+
+    // Parse request body
+    const smallGroupData = await req.json();
+    
+    // Connect to database
+    await connectToDatabase();
+    
+    // Validate small group data
+    if (!smallGroupData.name || !smallGroupData.clusterId) {
+      return NextResponse.json(
+        { success: false, message: 'Small group name and cluster ID are required' },
         { status: 400 }
       );
     }
     
-    await connectToDatabase();
-    
-    // Check if small group already exists
-    const existingSmallGroup = await SmallGroup.findOne({ groupId: body.groupId });
+    // Check if small group with same name already exists
+    const existingSmallGroup = await SmallGroup.findOne({ name: smallGroupData.name });
     if (existingSmallGroup) {
       return NextResponse.json(
-        { success: false, message: 'Small group with this ID already exists' },
-        { status: 409 }
+        { success: false, message: 'Small group with this name already exists' },
+        { status: 400 }
       );
     }
     
     // Create new small group
-    const smallGroup = new SmallGroup(body);
+    const newSmallGroup = new SmallGroup(smallGroupData);
+    await newSmallGroup.save();
     
-    await smallGroup.save();
+    // Populate leader and cluster details
+    await newSmallGroup.populate('leader', 'firstName lastName email');
+    await newSmallGroup.populate('clusterId', 'name');
     
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Small group created successfully',
-        data: smallGroup
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      success: true,
+      data: newSmallGroup
+    });
   } catch (error) {
     console.error('Create small group error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error creating small group' },
       { status: 500 }
     );
   }

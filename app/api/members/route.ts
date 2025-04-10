@@ -1,81 +1,49 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import Member from '@/models/member';
 import { getToken } from 'next-auth/jwt';
+import Member from '@/models/member';
+import connectToDatabase from '@/lib/db';
 
-const memberSchema = z.object({
-  memberId: z.string(),
-  firstName: z.string(),
-  middleName: z.string().optional(),
-  lastName: z.string(),
-  gender: z.enum(['Male', 'Female']),
-  dateOfBirth: z.string().transform(val => new Date(val)),
-  email: z.string().email().optional(),
-  phoneNumber: z.string(),
-  whatsappNumber: z.string().optional(),
-  address: z.object({
-    street: z.string(),
-    city: z.string(),
-    state: z.string(),
-    country: z.string(),
-    postalCode: z.string().optional()
-  }),
-  maritalStatus: z.enum(['Single', 'Married', 'Divorced', 'Widowed']),
-  relationshipStatus: z.string().optional(),
-  occupation: z.string().optional(),
-  employer: z.string().optional(),
-  profilePhoto: z.string().optional(),
-  education: z.object({
-    level: z.string(),
-    institution: z.string().optional(),
-    course: z.string().optional(),
-    graduationYear: z.number().optional()
-  }).optional(),
-  skills: z.array(z.object({
-    name: z.string(),
-    proficiencyLevel: z.string(),
-    certified: z.boolean()
-  })).optional(),
-  clusterId: z.string().optional(),
-  smallGroupId: z.string().optional()
-});
-
+// GET all members with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
-    
+
+    // Parse query parameters
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || '';
     const clusterId = searchParams.get('clusterId') || '';
     const smallGroupId = searchParams.get('smallGroupId') || '';
-    const teamId = searchParams.get('teamId') || '';
-    const spiritualGrowthStage = searchParams.get('spiritualGrowthStage') || '';
-    
-    const skip = (page - 1) * limit;
-    
-    await connectToDatabase();
-    
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
     // Build query
-    let query: any = {};
+    const query: any = {};
     
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { phoneNumber: { $regex: search, $options: 'i' } }
+        { phone: { $regex: search, $options: 'i' } }
       ];
+    }
+    
+    if (status) {
+      query.status = status;
     }
     
     if (clusterId) {
@@ -85,99 +53,103 @@ export async function GET(req: NextRequest) {
     if (smallGroupId) {
       query.smallGroupId = smallGroupId;
     }
+
+    // Connect to database
+    await connectToDatabase();
     
-    if (teamId) {
-      query['teams.teamId'] = teamId;
-    }
+    // Get total count
+    const total = await Member.countDocuments(query);
     
-    if (spiritualGrowthStage) {
-      query[`spiritualGrowth.${spiritualGrowthStage}.date`] = { $exists: true };
-    }
+    // Get paginated results
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    
+    const skip = (page - 1) * limit;
     
     const members = await Member.find(query)
+      .sort(sort)
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
-    
-    const total = await Member.countDocuments(query);
+      .populate('clusterId', 'name')
+      .populate('smallGroupId', 'name')
+      .lean();
     
     return NextResponse.json({
       success: true,
-      data: members,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
+      data: {
+        members,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
       }
     });
   } catch (error) {
     console.error('Get members error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching members' },
       { status: 500 }
     );
   }
 }
 
+// POST create new member
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Parse request body
+    const memberData = await req.json();
     
-    const body = await req.json();
-    
-    // Validate request body
-    const validation = memberSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid input data', 
-          errors: validation.error.errors 
-        },
-        { status: 400 }
-      );
-    }
-    
+    // Connect to database
     await connectToDatabase();
     
-    // Check if member already exists
-    const existingMember = await Member.findOne({ memberId: body.memberId });
-    if (existingMember) {
-      return NextResponse.json(
-        { success: false, message: 'Member with this ID already exists' },
-        { status: 409 }
-      );
+    // Check if member with same email or phone already exists
+    if (memberData.email) {
+      const existingMember = await Member.findOne({ email: memberData.email });
+      if (existingMember) {
+        return NextResponse.json(
+          { success: false, message: 'Member with this email already exists' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    if (memberData.phone) {
+      const existingMember = await Member.findOne({ phone: memberData.phone });
+      if (existingMember) {
+        return NextResponse.json(
+          { success: false, message: 'Member with this phone number already exists' },
+          { status: 400 }
+        );
+      }
     }
     
     // Create new member
-    const member = new Member({
-      ...body,
-      createdBy: token.id,
-      lastUpdatedBy: token.id
+    const newMember = new Member(memberData);
+    await newMember.save();
+    
+    return NextResponse.json({
+      success: true,
+      data: newMember
     });
-    
-    await member.save();
-    
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Member created successfully',
-        data: member
-      },
-      { status: 201 }
-    );
   } catch (error) {
     console.error('Create member error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error creating member' },
       { status: 500 }
     );
   }

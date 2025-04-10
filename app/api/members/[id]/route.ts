@@ -1,29 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import Member from '@/models/member';
 import { getToken } from 'next-auth/jwt';
+import Member from '@/models/member';
+import connectToDatabase from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const member = await Member.findById(params.id)
+    // Get member by ID
+    const member = await Member.findById(id)
       .populate('clusterId', 'name')
       .populate('smallGroupId', 'name')
-      .populate('teams.teamId', 'name');
+      .populate('teams', 'name')
+      .lean();
     
     if (!member) {
       return NextResponse.json(
@@ -39,90 +47,141 @@ export async function GET(
   } catch (error) {
     console.error('Get member error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching member' },
       { status: 500 }
     );
   }
 }
 
+// PUT update member
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
+    const updateData = await req.json();
     
-    const body = await req.json();
-    
+    // Connect to database
     await connectToDatabase();
     
-    const member = await Member.findById(params.id);
+    // Check if member exists
+    const existingMember = await Member.findById(id);
     
-    if (!member) {
+    if (!existingMember) {
       return NextResponse.json(
         { success: false, message: 'Member not found' },
         { status: 404 }
       );
     }
     
-    // Update member fields
-    Object.keys(body).forEach(key => {
-      if (key !== '_id' && key !== 'createdBy' && key !== 'createdAt') {
-        member[key] = body[key];
+    // Check if email is being updated and is already in use
+    if (updateData.email && updateData.email !== existingMember.email) {
+      const emailExists = await Member.findOne({ 
+        email: updateData.email,
+        _id: { $ne: id }
+      });
+      
+      if (emailExists) {
+        return NextResponse.json(
+          { success: false, message: 'Email is already in use by another member' },
+          { status: 400 }
+        );
       }
-    });
+    }
     
-    member.lastUpdatedBy = token.id;
+    // Check if phone is being updated and is already in use
+    if (updateData.phone && updateData.phone !== existingMember.phone) {
+      const phoneExists = await Member.findOne({ 
+        phone: updateData.phone,
+        _id: { $ne: id }
+      });
+      
+      if (phoneExists) {
+        return NextResponse.json(
+          { success: false, message: 'Phone number is already in use by another member' },
+          { status: 400 }
+        );
+      }
+    }
     
-    await member.save();
+    // Update member
+    const updatedMember = await Member.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate('clusterId', 'name')
+      .populate('smallGroupId', 'name')
+      .populate('teams', 'name');
     
     return NextResponse.json({
       success: true,
-      message: 'Member updated successfully',
-      data: member
+      data: updatedMember
     });
   } catch (error) {
     console.error('Update member error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error updating member' },
       { status: 500 }
     );
   }
 }
 
+// DELETE member
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Check if user has admin role
+    if (token.role !== 'Admin' && token.role !== 'Pastor') {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to delete members' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const member = await Member.findById(params.id);
+    // Delete member
+    const deletedMember = await Member.findByIdAndDelete(id);
     
-    if (!member) {
+    if (!deletedMember) {
       return NextResponse.json(
         { success: false, message: 'Member not found' },
         { status: 404 }
       );
     }
-    
-    await Member.deleteOne({ _id: params.id });
     
     return NextResponse.json({
       success: true,
@@ -131,7 +190,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete member error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error deleting member' },
       { status: 500 }
     );
   }

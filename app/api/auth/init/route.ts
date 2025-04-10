@@ -1,56 +1,61 @@
-// app/api/auth/init/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
+import { hash } from 'bcrypt';
 import User from '@/models/user';
+import connectToDatabase from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const { secretKey, email, password } = await req.json();
     
-    // Simple protection to prevent unauthorized initialization
-    if (!body.secretKey || body.secretKey !== process.env.ADMIN_INIT_SECRET) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Unauthorized initialization attempt' 
-      }, { status: 401 });
+    // Validate the secret key
+    if (secretKey !== process.env.ADMIN_INIT_SECRET) {
+      console.log('Admin initialization: Invalid secret key');
+      return NextResponse.json(
+        { success: false, message: 'Invalid secret key' },
+        { status: 403 }
+      );
     }
     
     await connectToDatabase();
     
-    // Check if a super admin user already exists
+    // Check if admin already exists
     const existingAdmin = await User.findOne({ role: 'Admin' });
     
     if (existingAdmin) {
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Admin user already exists', 
-        adminExists: true,
+      console.log('Admin initialization: Admin already exists');
+      return NextResponse.json({
+        success: true,
+        adminCreated: false,
+        message: 'Admin user already exists',
         email: existingAdmin.email
       });
     }
     
-    // Create a super admin user
-    const adminUser = new User({
-      email: body.email || 'apostolicdominionglobal@gmail.com',
-      passwordHash: body.password || 'Adn2026@@!', // This will be hashed by the pre-save hook
+    // Create admin user
+    const passwordHash = await hash(password, 10);
+    
+    const newAdmin = new User({
+      email: email.toLowerCase(),
+      passwordHash,
       role: 'Admin',
-      permissions: ['*'] // All permissions
+      permissions: ['all'],
     });
     
-    await adminUser.save();
+    await newAdmin.save();
     
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Admin user created successfully', 
+    console.log('Admin initialization: Admin user created successfully');
+    
+    return NextResponse.json({
+      success: true,
       adminCreated: true,
-      email: adminUser.email
+      message: 'Admin user created successfully',
+      email: email
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Admin initialization error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Failed to initialize admin user', 
-      error: error.message 
-    }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'Server error during admin initialization' },
+      { status: 500 }
+    );
   }
 }

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import Event from '@/models/event';
+import ProgramFlyer from '@/models/programFlyer';
 import connectToDatabase from '@/lib/db';
 
-// GET all events with pagination and filtering
+// GET all flyers with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
     // Verify authentication
@@ -24,11 +24,9 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const type = searchParams.get('type') || '';
+    const eventId = searchParams.get('eventId') || '';
     const status = searchParams.get('status') || '';
-    const startDate = searchParams.get('startDate') || '';
-    const endDate = searchParams.get('endDate') || '';
-    const sortBy = searchParams.get('sortBy') || 'startDate';
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     // Build query
@@ -36,33 +34,24 @@ export async function GET(req: NextRequest) {
     
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
-    if (type) {
-      query.type = type;
+    if (eventId) {
+      query.eventId = eventId;
     }
     
     if (status) {
       query.status = status;
-    }
-    
-    if (startDate && endDate) {
-      query.startDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    } else if (startDate) {
-      query.startDate = { $gte: new Date(startDate) };
-    } else if (endDate) {
-      query.startDate = { $lte: new Date(endDate) };
     }
 
     // Connect to database
     await connectToDatabase();
     
     // Get total count
-    const total = await Event.countDocuments(query);
+    const total = await ProgramFlyer.countDocuments(query);
     
     // Get paginated results
     const sort: any = {};
@@ -70,17 +59,18 @@ export async function GET(req: NextRequest) {
     
     const skip = (page - 1) * limit;
     
-    const events = await Event.find(query)
+    const flyers = await ProgramFlyer.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .populate('organizer', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email')
+      .populate('eventId', 'name startDate')
       .lean();
     
     return NextResponse.json({
       success: true,
       data: {
-        events,
+        flyers,
         pagination: {
           total,
           page,
@@ -90,15 +80,15 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Get events error:', error);
+    console.error('Get flyers error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error fetching events' },
+      { success: false, message: 'Error fetching flyers' },
       { status: 500 }
     );
   }
 }
 
-// POST create new event
+// POST create new flyer
 export async function POST(req: NextRequest) {
   try {
     // Verify authentication
@@ -115,39 +105,42 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse request body
-    const eventData = await req.json();
+    const flyerData = await req.json();
     
     // Connect to database
     await connectToDatabase();
     
-    // Validate event data
-    if (!eventData.name || !eventData.startDate) {
+    // Validate flyer data
+    if (!flyerData.title || !flyerData.imageUrl) {
       return NextResponse.json(
-        { success: false, message: 'Event name and start date are required' },
+        { success: false, message: 'Title and image URL are required' },
         { status: 400 }
       );
     }
     
-    // Set organizer to current user if not provided
-    if (!eventData.organizer) {
-      eventData.organizer = token.id;
+    // Set createdBy to current user if not provided
+    if (!flyerData.createdBy) {
+      flyerData.createdBy = token.id;
     }
     
-    // Create new event
-    const newEvent = new Event(eventData);
-    await newEvent.save();
+    // Create new flyer
+    const newFlyer = new ProgramFlyer(flyerData);
+    await newFlyer.save();
     
-    // Populate organizer details
-    await newEvent.populate('organizer', 'firstName lastName email');
+    // Populate creator and event details
+    await newFlyer.populate('createdBy', 'firstName lastName email');
+    if (newFlyer.eventId) {
+      await newFlyer.populate('eventId', 'name startDate');
+    }
     
     return NextResponse.json({
       success: true,
-      data: newEvent
+      data: newFlyer
     });
   } catch (error) {
-    console.error('Create event error:', error);
+    console.error('Create flyer error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error creating event' },
+      { success: false, message: 'Error creating flyer' },
       { status: 500 }
     );
   }

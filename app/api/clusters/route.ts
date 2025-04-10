@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import Event from '@/models/event';
+import Cluster from '@/models/cluster';
 import connectToDatabase from '@/lib/db';
 
-// GET all events with pagination and filtering
+// GET all clusters with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
     // Verify authentication
@@ -24,12 +24,8 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const type = searchParams.get('type') || '';
-    const status = searchParams.get('status') || '';
-    const startDate = searchParams.get('startDate') || '';
-    const endDate = searchParams.get('endDate') || '';
-    const sortBy = searchParams.get('sortBy') || 'startDate';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortOrder = searchParams.get('sortOrder') || 'asc';
 
     // Build query
     const query: any = {};
@@ -41,28 +37,12 @@ export async function GET(req: NextRequest) {
         { location: { $regex: search, $options: 'i' } }
       ];
     }
-    
-    if (type) {
-      query.type = type;
-    }
-    
-    if (status) {
-      query.status = status;
-    }
-    
-    if (startDate && endDate) {
-      query.startDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    } else if (startDate) {
-      query.startDate = { $gte: new Date(startDate) };
-    } else if (endDate) {
-      query.startDate = { $lte: new Date(endDate) };
-    }
 
     // Connect to database
     await connectToDatabase();
     
     // Get total count
-    const total = await Event.countDocuments(query);
+    const total = await Cluster.countDocuments(query);
     
     // Get paginated results
     const sort: any = {};
@@ -70,17 +50,17 @@ export async function GET(req: NextRequest) {
     
     const skip = (page - 1) * limit;
     
-    const events = await Event.find(query)
+    const clusters = await Cluster.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .populate('organizer', 'firstName lastName email')
+      .populate('leader', 'firstName lastName email')
       .lean();
     
     return NextResponse.json({
       success: true,
       data: {
-        events,
+        clusters,
         pagination: {
           total,
           page,
@@ -90,15 +70,15 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Get events error:', error);
+    console.error('Get clusters error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error fetching events' },
+      { success: false, message: 'Error fetching clusters' },
       { status: 500 }
     );
   }
 }
 
-// POST create new event
+// POST create new cluster
 export async function POST(req: NextRequest) {
   try {
     // Verify authentication
@@ -114,40 +94,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if user has admin or pastor role
+    if (token.role !== 'Admin' && token.role !== 'Pastor') {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to create clusters' },
+        { status: 403 }
+      );
+    }
+
     // Parse request body
-    const eventData = await req.json();
+    const clusterData = await req.json();
     
     // Connect to database
     await connectToDatabase();
     
-    // Validate event data
-    if (!eventData.name || !eventData.startDate) {
+    // Validate cluster data
+    if (!clusterData.name) {
       return NextResponse.json(
-        { success: false, message: 'Event name and start date are required' },
+        { success: false, message: 'Cluster name is required' },
         { status: 400 }
       );
     }
     
-    // Set organizer to current user if not provided
-    if (!eventData.organizer) {
-      eventData.organizer = token.id;
+    // Check if cluster with same name already exists
+    const existingCluster = await Cluster.findOne({ name: clusterData.name });
+    if (existingCluster) {
+      return NextResponse.json(
+        { success: false, message: 'Cluster with this name already exists' },
+        { status: 400 }
+      );
     }
     
-    // Create new event
-    const newEvent = new Event(eventData);
-    await newEvent.save();
+    // Create new cluster
+    const newCluster = new Cluster(clusterData);
+    await newCluster.save();
     
-    // Populate organizer details
-    await newEvent.populate('organizer', 'firstName lastName email');
+    // Populate leader details
+    if (newCluster.leader) {
+      await newCluster.populate('leader', 'firstName lastName email');
+    }
     
     return NextResponse.json({
       success: true,
-      data: newEvent
+      data: newCluster
     });
   } catch (error) {
-    console.error('Create event error:', error);
+    console.error('Create cluster error:', error);
     return NextResponse.json(
-      { success: false, message: 'Error creating event' },
+      { success: false, message: 'Error creating cluster' },
       { status: 500 }
     );
   }

@@ -1,28 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
+import { getToken } from 'next-auth/jwt';
 import Cluster from '@/models/cluster';
 import Member from '@/models/member';
-import { getToken } from 'next-auth/jwt';
+import SmallGroup from '@/models/smallGroup';
+import connectToDatabase from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const cluster = await Cluster.findById(params.id)
-      .populate('leaderId', 'firstName lastName email phoneNumber');
+    // Get cluster by ID
+    const cluster = await Cluster.findById(id)
+      .populate('leader', 'firstName lastName email phone profileImage')
+      .lean();
     
     if (!cluster) {
       return NextResponse.json(
@@ -31,113 +40,179 @@ export async function GET(
       );
     }
     
+    // Get small groups in this cluster
+    const smallGroups = await SmallGroup.find({ clusterId: id })
+      .populate('leader', 'firstName lastName email')
+      .lean();
+    
+    // Get members in this cluster
+    const members = await Member.find({ clusterId: id })
+      .select('firstName lastName email phone status profileImage')
+      .lean();
+    
     return NextResponse.json({
       success: true,
-      data: cluster
+      data: {
+        ...cluster,
+        smallGroups,
+        members,
+        stats: {
+          smallGroupsCount: smallGroups.length,
+          membersCount: members.length
+        }
+      }
     });
   } catch (error) {
     console.error('Get cluster error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching cluster' },
       { status: 500 }
     );
   }
 }
 
+// PUT update cluster
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor', 'ClusterLead'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Check if user has admin or pastor role
+    if (token.role !== 'Admin' && token.role !== 'Pastor' && token.role !== 'ClusterLead') {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to update clusters' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = params;
+    const updateData = await req.json();
     
-    const body = await req.json();
-    
+    // Connect to database
     await connectToDatabase();
     
-    const cluster = await Cluster.findById(params.id);
+    // Check if cluster exists
+    const existingCluster = await Cluster.findById(id);
     
-    if (!cluster) {
+    if (!existingCluster) {
       return NextResponse.json(
         { success: false, message: 'Cluster not found' },
         { status: 404 }
       );
     }
     
-    // If user is ClusterLead, verify they are the leader of this cluster
-    if (token.role === 'ClusterLead' && cluster.leaderId.toString() !== token.id) {
+    // If user is ClusterLead, check if they are the leader of this cluster
+    if (token.role === 'ClusterLead' && existingCluster.leader.toString() !== token.id) {
       return NextResponse.json(
-        { success: false, message: 'You can only update clusters you lead' },
+        { success: false, message: 'Not authorized to update this cluster' },
         { status: 403 }
       );
     }
     
-    // Update cluster fields
-    Object.keys(body).forEach(key => {
-      if (key !== '_id' && key !== 'clusterId') {
-        cluster[key] = body[key];
+    // Check if name is being updated and is already in use
+    if (updateData.name && updateData.name !== existingCluster.name) {
+      const nameExists = await Cluster.findOne({ 
+        name: updateData.name,
+        _id: { $ne: id }
+      });
+      
+      if (nameExists) {
+        return NextResponse.json(
+          { success: false, message: 'Cluster name is already in use' },
+          { status: 400 }
+        );
       }
-    });
+    }
     
-    await cluster.save();
+    // Update cluster
+    const updatedCluster = await Cluster.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).populate('leader', 'firstName lastName email phone profileImage');
     
     return NextResponse.json({
       success: true,
-      message: 'Cluster updated successfully',
-      data: cluster
+      data: updatedCluster
     });
   } catch (error) {
     console.error('Update cluster error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error updating cluster' },
       { status: 500 }
     );
   }
 }
 
+// DELETE cluster
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Check if user has admin or pastor role
+    if (token.role !== 'Admin' && token.role !== 'Pastor') {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to delete clusters' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const cluster = await Cluster.findById(params.id);
+    // Check if cluster has members or small groups
+    const membersCount = await Member.countDocuments({ clusterId: id });
+    const smallGroupsCount = await SmallGroup.countDocuments({ clusterId: id });
     
-    if (!cluster) {
+    if (membersCount > 0 || smallGroupsCount > 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Cannot delete cluster with associated members or small groups',
+          data: { membersCount, smallGroupsCount }
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Delete cluster
+    const deletedCluster = await Cluster.findByIdAndDelete(id);
+    
+    if (!deletedCluster) {
       return NextResponse.json(
         { success: false, message: 'Cluster not found' },
         { status: 404 }
       );
     }
-    
-    // Check if there are members in this cluster
-    const membersCount = await Member.countDocuments({ clusterId: params.id });
-    
-    if (membersCount > 0) {
-      return NextResponse.json(
-        { success: false, message: 'Cannot delete cluster with members. Reassign members first.' },
-        { status: 400 }
-      );
-    }
-    
-    await Cluster.deleteOne({ _id: params.id });
     
     return NextResponse.json({
       success: true,
@@ -146,7 +221,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete cluster error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error deleting cluster' },
       { status: 500 }
     );
   }

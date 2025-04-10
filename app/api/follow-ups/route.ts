@@ -1,174 +1,174 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
+import { getToken } from 'next-auth/jwt';
 import FollowUp from '@/models/followUp';
 import Member from '@/models/member';
-import Event from '@/models/event';
-import { getToken } from 'next-auth/jwt';
+import connectToDatabase from '@/lib/db';
 
-const followUpSchema = z.object({
-  personType: z.enum(['New Attendee', 'Member']),
-  personId: z.string().optional(),
-  newAttendee: z.object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.string().email().optional(),
-    phoneNumber: z.string(),
-    whatsappNumber: z.string().optional(),
-    address: z.string().optional(),
-    visitDate: z.string().transform(val => new Date(val)),
-    referredBy: z.string().optional()
-  }).optional(),
-  missedEvent: z.object({
-    eventId: z.string(),
-    eventDate: z.string().transform(val => new Date(val)),
-    eventType: z.string()
-  }).optional(),
-  status: z.enum(['Pending', 'In Progress', 'Completed', 'Failed']).optional(),
-  assignedTo: z.string(),
-  nextFollowUpDate: z.string().transform(val => new Date(val)).optional()
-});
-
+// GET all follow-ups with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
-    
+
+    // Parse query parameters
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
-    const personType = searchParams.get('personType') || '';
     const assignedTo = searchParams.get('assignedTo') || '';
-    
-    const skip = (page - 1) * limit;
-    
-    await connectToDatabase();
-    
+    const type = searchParams.get('type') || '';
+    const startDate = searchParams.get('startDate') || '';
+    const endDate = searchParams.get('endDate') || '';
+    const sortBy = searchParams.get('sortBy') || 'dueDate';
+    const sortOrder = searchParams.get('sortOrder') || 'asc';
+
     // Build query
-    let query: any = {};
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { notes: { $regex: search, $options: 'i' } },
+        { outcome: { $regex: search, $options: 'i' } }
+      ];
+    }
     
     if (status) {
       query.status = status;
     }
     
-    if (personType) {
-      query.personType = personType;
-    }
-    
     if (assignedTo) {
       query.assignedTo = assignedTo;
-    } else if (token.role !== 'Admin' && token.role !== 'Pastor') {
-      // If not admin or pastor, only show follow-ups assigned to the user
-      query.assignedTo = token.id;
     }
     
+    if (type) {
+      query.type = type;
+    }
+    
+    if (startDate && endDate) {
+      query.dueDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    } else if (startDate) {
+      query.dueDate = { $gte: new Date(startDate) };
+    } else if (endDate) {
+      query.dueDate = { $lte: new Date(endDate) };
+    }
+
+    // Connect to database
+    await connectToDatabase();
+    
+    // Get total count
+    const total = await FollowUp.countDocuments(query);
+    
+    // Get paginated results
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    
+    const skip = (page - 1) * limit;
+    
     const followUps = await FollowUp.find(query)
-      .populate('personId', 'firstName lastName email phoneNumber')
-      .populate('assignedTo', 'email')
-      .populate('attempts.conductedBy', 'email')
-      .populate('newAttendee.referredBy', 'firstName lastName')
+      .sort(sort)
       .skip(skip)
       .limit(limit)
-      .sort({ nextFollowUpDate: 1, createdAt: -1 });
-    
-    const total = await FollowUp.countDocuments(query);
+      .populate('memberId', 'firstName lastName email phone profileImage')
+      .populate('assignedTo', 'firstName lastName email')
+      .lean();
     
     return NextResponse.json({
       success: true,
-      data: followUps,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
+      data: {
+        followUps,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
       }
     });
   } catch (error) {
     console.error('Get follow-ups error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching follow-ups' },
       { status: 500 }
     );
   }
 }
 
+// POST create new follow-up
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Parse request body
+    const followUpData = await req.json();
     
-    const body = await req.json();
+    // Connect to database
+    await connectToDatabase();
     
-    // Validate request body
-    const validation = followUpSchema.safeParse(body);
-    if (!validation.success) {
+    // Validate follow-up data
+    if (!followUpData.memberId || !followUpData.type || !followUpData.dueDate) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid input data', 
-          errors: validation.error.errors 
-        },
+        { success: false, message: 'Member ID, type, and due date are required' },
         { status: 400 }
       );
     }
     
-    await connectToDatabase();
-    
-    // Validate references
-    if (body.personType === 'Member' && body.personId) {
-      const member = await Member.findById(body.personId);
-      if (!member) {
-        return NextResponse.json(
-          { success: false, message: 'Member not found' },
-          { status: 404 }
-        );
-      }
+    // Check if member exists
+    const memberExists = await Member.findById(followUpData.memberId);
+    if (!memberExists) {
+      return NextResponse.json(
+        { success: false, message: 'Member not found' },
+        { status: 400 }
+      );
     }
     
-    if (body.missedEvent && body.missedEvent.eventId) {
-      const event = await Event.findById(body.missedEvent.eventId);
-      if (!event) {
-        return NextResponse.json(
-          { success: false, message: 'Event not found' },
-          { status: 404 }
-        );
-      }
+    // Set default status if not provided
+    if (!followUpData.status) {
+      followUpData.status = 'Pending';
+    }
+    
+    // Set assignedTo to current user if not provided
+    if (!followUpData.assignedTo) {
+      followUpData.assignedTo = token.id;
     }
     
     // Create new follow-up
-    const followUp = new FollowUp({
-      ...body,
-      status: body.status || 'Pending',
-      attempts: []
+    const newFollowUp = new FollowUp(followUpData);
+    await newFollowUp.save();
+    
+    // Populate member and assignedTo details
+    await newFollowUp.populate('memberId', 'firstName lastName email phone profileImage');
+    await newFollowUp.populate('assignedTo', 'firstName lastName email');
+    
+    return NextResponse.json({
+      success: true,
+      data: newFollowUp
     });
-    
-    await followUp.save();
-    
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Follow-up created successfully',
-        data: followUp
-      },
-      { status: 201 }
-    );
   } catch (error) {
     console.error('Create follow-up error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error creating follow-up' },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatsCardProps {
   title: string;
@@ -10,6 +11,7 @@ interface StatsCardProps {
   change?: number;
   changeType?: 'increase' | 'decrease' | 'neutral';
   className?: string;
+  isLoading?: boolean;
 }
 
 export function StatsCard({
@@ -20,6 +22,7 @@ export function StatsCard({
   change,
   changeType = 'neutral',
   className,
+  isLoading = false,
 }: StatsCardProps) {
   return (
     <Card className={cn("overflow-hidden", className)}>
@@ -28,22 +31,31 @@ export function StatsCard({
         {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {(description || change !== undefined) && (
-          <p className="text-xs text-muted-foreground mt-1 flex items-center">
-            {change !== undefined && (
-              <span className={cn(
-                "mr-1 flex items-center",
-                changeType === 'increase' && "text-green-500",
-                changeType === 'decrease' && "text-red-500"
-              )}>
-                {changeType === 'increase' && '↑'}
-                {changeType === 'decrease' && '↓'}
-                {change}%
-              </span>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-8 w-24 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{value}</div>
+            {(description || change !== undefined) && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center">
+                {change !== undefined && (
+                  <span className={cn(
+                    "mr-1 flex items-center",
+                    changeType === 'increase' && "text-green-500",
+                    changeType === 'decrease' && "text-red-500"
+                  )}>
+                    {changeType === 'increase' && '↑'}
+                    {changeType === 'decrease' && '↓'}
+                    {change}%
+                  </span>
+                )}
+                {description}
+              </p>
             )}
-            {description}
-          </p>
+          </>
         )}
       </CardContent>
     </Card>

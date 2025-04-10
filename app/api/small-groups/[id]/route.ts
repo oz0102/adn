@@ -1,28 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
+import { getToken } from 'next-auth/jwt';
 import SmallGroup from '@/models/smallGroup';
 import Member from '@/models/member';
-import { getToken } from 'next-auth/jwt';
+import connectToDatabase from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const smallGroup = await SmallGroup.findById(params.id)
-      .populate('leaderId', 'firstName lastName email phoneNumber');
+    // Get small group by ID
+    const smallGroup = await SmallGroup.findById(id)
+      .populate('leader', 'firstName lastName email phone profileImage')
+      .populate('clusterId', 'name leader')
+      .lean();
     
     if (!smallGroup) {
       return NextResponse.json(
@@ -31,113 +40,170 @@ export async function GET(
       );
     }
     
+    // Get members in this small group
+    const members = await Member.find({ smallGroupId: id })
+      .select('firstName lastName email phone status profileImage')
+      .lean();
+    
     return NextResponse.json({
       success: true,
-      data: smallGroup
+      data: {
+        ...smallGroup,
+        members,
+        stats: {
+          membersCount: members.length
+        }
+      }
     });
   } catch (error) {
     console.error('Get small group error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error fetching small group' },
       { status: 500 }
     );
   }
 }
 
+// PUT update small group
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor', 'ClusterLead', 'SmallGroupLead'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    const { id } = params;
+    const updateData = await req.json();
     
-    const body = await req.json();
-    
+    // Connect to database
     await connectToDatabase();
     
-    const smallGroup = await SmallGroup.findById(params.id);
+    // Check if small group exists
+    const existingSmallGroup = await SmallGroup.findById(id);
     
-    if (!smallGroup) {
+    if (!existingSmallGroup) {
       return NextResponse.json(
         { success: false, message: 'Small group not found' },
         { status: 404 }
       );
     }
     
-    // If user is SmallGroupLead, verify they are the leader of this small group
-    if (token.role === 'SmallGroupLead' && smallGroup.leaderId.toString() !== token.id) {
+    // Check if user has appropriate role
+    if (
+      token.role !== 'Admin' && 
+      token.role !== 'Pastor' && 
+      token.role !== 'ClusterLead' &&
+      existingSmallGroup.leader.toString() !== token.id
+    ) {
       return NextResponse.json(
-        { success: false, message: 'You can only update small groups you lead' },
+        { success: false, message: 'Not authorized to update this small group' },
         { status: 403 }
       );
     }
     
-    // Update small group fields
-    Object.keys(body).forEach(key => {
-      if (key !== '_id' && key !== 'groupId') {
-        smallGroup[key] = body[key];
+    // Check if name is being updated and is already in use
+    if (updateData.name && updateData.name !== existingSmallGroup.name) {
+      const nameExists = await SmallGroup.findOne({ 
+        name: updateData.name,
+        _id: { $ne: id }
+      });
+      
+      if (nameExists) {
+        return NextResponse.json(
+          { success: false, message: 'Small group name is already in use' },
+          { status: 400 }
+        );
       }
-    });
+    }
     
-    await smallGroup.save();
+    // Update small group
+    const updatedSmallGroup = await SmallGroup.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate('leader', 'firstName lastName email phone profileImage')
+      .populate('clusterId', 'name');
     
     return NextResponse.json({
       success: true,
-      message: 'Small group updated successfully',
-      data: smallGroup
+      data: updatedSmallGroup
     });
   } catch (error) {
     console.error('Update small group error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error updating small group' },
       { status: 500 }
     );
   }
 }
 
+// DELETE small group
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // Verify authentication
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
     
-    if (!token || !['Admin', 'Pastor', 'ClusterLead'].includes(token.role as string)) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Not authenticated' },
         { status: 401 }
       );
     }
+
+    // Check if user has appropriate role
+    if (token.role !== 'Admin' && token.role !== 'Pastor' && token.role !== 'ClusterLead') {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized to delete small groups' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = params;
     
+    // Connect to database
     await connectToDatabase();
     
-    const smallGroup = await SmallGroup.findById(params.id);
+    // Check if small group has members
+    const membersCount = await Member.countDocuments({ smallGroupId: id });
     
-    if (!smallGroup) {
+    if (membersCount > 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Cannot delete small group with associated members',
+          data: { membersCount }
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Delete small group
+    const deletedSmallGroup = await SmallGroup.findByIdAndDelete(id);
+    
+    if (!deletedSmallGroup) {
       return NextResponse.json(
         { success: false, message: 'Small group not found' },
         { status: 404 }
       );
     }
-    
-    // Check if there are members in this small group
-    const membersCount = await Member.countDocuments({ smallGroupId: params.id });
-    
-    if (membersCount > 0) {
-      return NextResponse.json(
-        { success: false, message: 'Cannot delete small group with members. Reassign members first.' },
-        { status: 400 }
-      );
-    }
-    
-    await SmallGroup.deleteOne({ _id: params.id });
     
     return NextResponse.json({
       success: true,
@@ -146,7 +212,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete small group error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Error deleting small group' },
       { status: 500 }
     );
   }
