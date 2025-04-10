@@ -47,6 +47,7 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
+        callbackUrl
       })
       
       console.log("Sign in result:", result)
@@ -63,7 +64,10 @@ export default function LoginPage() {
       })
       
       // Redirect to dashboard or callback URL
-      router.push(callbackUrl)
+      console.log("Redirecting to:", callbackUrl)
+      
+      // Force a hard navigation to ensure proper session handling
+      window.location.href = callbackUrl
       
     } catch (error) {
       console.error("Login error:", error)

@@ -96,7 +96,7 @@ export async function middleware(request: NextRequest) {
   }
   
   // Get the token
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   
   // If the user is not authenticated and trying to access a protected route
   if (!token && !isAuthPath) {
