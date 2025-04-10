@@ -1,305 +1,232 @@
+// app/(dashboard)/page.tsx
 "use client"
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Users, 
-  UserPlus, 
-  Calendar, 
-  Star, 
-  UserCheck, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  Layers, 
-  BarChart3
-} from "lucide-react"
-import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
-
-// Dashboard components
-import { DashboardChart } from "@/components/dashboard/dashboard-chart"
-import { RecentActivity } from "@/components/dashboard/recent-activity"
-import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
+import React from 'react';
+import { DashboardStats } from '@/components/dashboard/dashboard-stats';
+import { ActivityFeed } from '@/components/dashboard/activity-feed';
+import { UpcomingEventsCard } from '@/components/dashboard/upcoming-events-card';
+import { ChartCard } from '@/components/ui/chart-card';
+import { DataCard } from '@/components/ui/data-card';
+import { Users, UserCheck, Calendar, Clock } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState({
-    totalMembers: 0,
-    newMembers: 0,
-    attendanceRate: 0,
-    clusters: 0,
-    smallGroups: 0,
-    followUps: 0
-  })
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // Simulating API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Mock stats data
-        setStats({
-          totalMembers: 235,
-          newMembers: 12,
-          attendanceRate: 78,
-          clusters: 4,
-          smallGroups: 16,
-          followUps: 8
-        })
-        
-        setIsLoading(false)
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data. Please try again.",
-          variant: "destructive"
-        })
-        setIsLoading(false)
+  // Sample chart data for attendance trends
+  const attendanceData = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        label: 'Sunday Service',
+        data: [65, 72, 68, 75, 82, 78],
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+      },
+      {
+        label: 'Midweek Service',
+        data: [42, 45, 40, 48, 53, 50],
+        borderColor: 'rgb(16, 185, 129)',
+        backgroundColor: 'rgba(16, 185, 129, 0.5)',
       }
-    }
+    ],
+  };
 
-    fetchDashboardData()
-  }, [toast])
+  // Sample chart data for member growth
+  const memberGrowthData = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        label: 'New Members',
+        data: [8, 12, 10, 14, 16, 12],
+        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+        borderColor: 'rgb(99, 102, 241)',
+        borderWidth: 1,
+      }
+    ],
+  };
+
+  // Sample chart data for member demographics
+  const demographicsData = {
+    labels: ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'],
+    datasets: [
+      {
+        label: 'Age Distribution',
+        data: [15, 25, 30, 20, 7, 3],
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.5)',
+          'rgba(54, 162, 235, 0.5)',
+          'rgba(255, 206, 86, 0.5)',
+          'rgba(75, 192, 192, 0.5)',
+          'rgba(153, 102, 255, 0.5)',
+          'rgba(255, 159, 64, 0.5)',
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)',
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+          'rgba(255, 159, 64, 1)',
+        ],
+        borderWidth: 1,
+      }
+    ],
+  };
+
+  // Sample data for spiritual growth
+  const spiritualGrowthData = {
+    labels: ['New Convert', 'Water Baptism', 'Holy Ghost Baptism', 'Worker', 'Minister'],
+    datasets: [
+      {
+        label: 'Members',
+        data: [120, 95, 80, 45, 20],
+        backgroundColor: 'rgba(147, 51, 234, 0.5)',
+        borderColor: 'rgb(147, 51, 234)',
+        borderWidth: 1,
+      }
+    ],
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <div className="flex items-center space-x-2">
-          <Clock className="h-5 w-5 text-gray-500" />
-          <span className="text-sm text-gray-500">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </span>
+    <div className="space-y-6 p-6">
+      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      
+      {/* Stats Cards */}
+      <DashboardStats className="mt-6" />
+      
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Feed - Takes 1/3 of the width on large screens */}
+        <div className="lg:col-span-1">
+          <ActivityFeed className="h-full" />
+        </div>
+        
+        {/* Upcoming Events - Takes 2/3 of the width on large screens */}
+        <div className="lg:col-span-2">
+          <UpcomingEventsCard className="h-full" />
         </div>
       </div>
-
-      {/* Key metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-            <Users className="h-5 w-5 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? "..." : stats.totalMembers}</div>
-            <p className="text-xs text-gray-500">Active church members</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Members</CardTitle>
-            <UserPlus className="h-5 w-5 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? "..." : stats.newMembers}</div>
-            <p className="text-xs text-gray-500">Added this month</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
-            <CheckCircle2 className="h-5 w-5 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? "..." : `${stats.attendanceRate}%`}</div>
-            <p className="text-xs text-gray-500">Average for last month</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clusters</CardTitle>
-            <Layers className="h-5 w-5 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? "..." : stats.clusters}</div>
-            <p className="text-xs text-gray-500">Active clusters</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Small Groups</CardTitle>
-            <Users className="h-5 w-5 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? "..." : stats.smallGroups}</div>
-            <p className="text-xs text-gray-500">Active small groups</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Follow-ups</CardTitle>
-            <UserCheck className="h-5 w-5 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? "..." : stats.followUps}</div>
-            <p className="text-xs text-gray-500">Requiring attention</p>
-          </CardContent>
-        </Card>
+      
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ChartCard 
+          title="Attendance Trends" 
+          type="line" 
+          data={attendanceData} 
+        />
+        <ChartCard 
+          title="Member Growth" 
+          type="bar" 
+          data={memberGrowthData} 
+        />
+        <ChartCard 
+          title="Age Demographics" 
+          type="doughnut" 
+          data={demographicsData} 
+        />
+        <ChartCard 
+          title="Spiritual Growth Stages" 
+          type="bar" 
+          data={spiritualGrowthData} 
+        />
       </div>
-
-      {/* Quick actions */}
-      <div className="flex flex-wrap gap-3">
-        <Button asChild>
-          <Link href="/dashboard/members/new">
-            <UserPlus className="mr-2 h-4 w-4" /> Add Member
-          </Link>
-        </Button>
-        <Button asChild>
-          <Link href="/dashboard/events/new">
-            <Calendar className="mr-2 h-4 w-4" /> Create Event
-          </Link>
-        </Button>
-        <Button asChild>
-          <Link href="/dashboard/follow-ups/new">
-            <UserCheck className="mr-2 h-4 w-4" /> New Follow-up
-          </Link>
-        </Button>
-        <Button asChild>
-          <Link href="/dashboard/attendance/new">
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Record Attendance
-          </Link>
-        </Button>
-      </div>
-
-      {/* Main content */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="events">Upcoming Events</TabsTrigger>
-          <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-6">
-          <DashboardChart />
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upcoming Birthdays</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p>Loading birthdays...</p>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                        <Star className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Sarah Johnson</p>
-                        <p className="text-sm text-gray-500">April 15 (2 days from now)</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Star className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Michael Thompson</p>
-                        <p className="text-sm text-gray-500">April 18 (5 days from now)</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <Star className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Rebecca Martinez</p>
-                        <p className="text-sm text-gray-500">April 22 (9 days from now)</p>
-                      </div>
-                    </div>
-                    <div className="pt-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/dashboard/members?view=birthdays">View all birthdays</Link>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Follow-up Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p>Loading follow-ups...</p>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Pending</p>
-                        <p className="text-sm text-gray-500">3</p>
-                      </div>
-                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-yellow-400 rounded-full" style={{ width: '38%' }}></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">In Progress</p>
-                        <p className="text-sm text-gray-500">4</p>
-                      </div>
-                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-400 rounded-full" style={{ width: '50%' }}></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Completed</p>
-                        <p className="text-sm text-gray-500">12</p>
-                      </div>
-                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-green-400 rounded-full" style={{ width: '75%' }}></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Failed</p>
-                        <p className="text-sm text-gray-500">1</p>
-                      </div>
-                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-red-400 rounded-full" style={{ width: '13%' }}></div>
-                      </div>
-                    </div>
-                    <div className="pt-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/dashboard/follow-ups">Manage follow-ups</Link>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      
+      {/* Additional Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DataCard 
+          title="Birthdays This Month" 
+          icon={<Calendar className="h-4 w-4" />}
+          action={{
+            label: "View All",
+            onClick: () => console.log("View all birthdays")
+          }}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">John Doe</p>
+                  <p className="text-sm text-muted-foreground">April 15</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Send Wishes</button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Jane Smith</p>
+                  <p className="text-sm text-muted-foreground">April 22</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Send Wishes</button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Michael Johnson</p>
+                  <p className="text-sm text-muted-foreground">April 28</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Send Wishes</button>
+            </div>
           </div>
-        </TabsContent>
+        </DataCard>
         
-        <TabsContent value="events">
-          <UpcomingEvents />
-        </TabsContent>
-        
-        <TabsContent value="activity">
-          <RecentActivity />
-        </TabsContent>
-      </Tabs>
+        <DataCard 
+          title="Pending Follow-ups" 
+          icon={<UserCheck className="h-4 w-4" />}
+          action={{
+            label: "View All",
+            onClick: () => console.log("View all follow-ups")
+          }}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <UserCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Sarah Williams</p>
+                  <p className="text-sm text-muted-foreground">New Attendee - First Visit</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Follow Up</button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <UserCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Robert Brown</p>
+                  <p className="text-sm text-muted-foreground">Member - Missed 3 Services</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Follow Up</button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <UserCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Emily Davis</p>
+                  <p className="text-sm text-muted-foreground">New Convert - Baptism Interest</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Follow Up</button>
+            </div>
+          </div>
+        </DataCard>
+      </div>
     </div>
-  )
+  );
 }

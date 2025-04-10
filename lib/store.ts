@@ -1,66 +1,36 @@
+"use client"
+
 import { create } from 'zustand';
+import { User } from '@/types';
 
 interface AuthState {
+  user: User | null;
   isAuthenticated: boolean;
-  user: {
-    id: string;
-    email: string;
-    role: string;
-    permissions: string[];
-  } | null;
-  setAuth: (isAuthenticated: boolean, user: any) => void;
-  clearAuth: () => void;
+  setUser: (user: User | null) => void;
+  setAuthenticated: (isAuthenticated: boolean) => void;
+}
+
+interface NotificationState {
+  unreadCount: number;
+  setUnreadCount: (count: number) => void;
+  incrementUnreadCount: () => void;
+  decrementUnreadCount: () => void;
+  resetUnreadCount: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
   user: null,
-  setAuth: (isAuthenticated, user) => set({ isAuthenticated, user }),
-  clearAuth: () => set({ isAuthenticated: false, user: null }),
+  isAuthenticated: false,
+  setUser: (user) => set({ user }),
+  setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
 }));
-
-interface SidebarState {
-  isOpen: boolean;
-  toggle: () => void;
-  close: () => void;
-  open: () => void;
-}
-
-export const useSidebarStore = create<SidebarState>((set) => ({
-  isOpen: true,
-  toggle: () => set((state) => ({ isOpen: !state.isOpen })),
-  close: () => set({ isOpen: false }),
-  open: () => set({ isOpen: true }),
-}));
-
-interface NotificationState {
-  notifications: any[];
-  unreadCount: number;
-  setNotifications: (notifications: any[]) => void;
-  addNotification: (notification: any) => void;
-  markAsRead: (id: string) => void;
-  clearNotifications: () => void;
-}
 
 export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: [],
   unreadCount: 0,
-  setNotifications: (notifications) => 
-    set({ 
-      notifications, 
-      unreadCount: notifications.filter(n => !n.readBy?.includes(localStorage.getItem('userId'))).length 
-    }),
-  addNotification: (notification) => 
-    set((state) => ({ 
-      notifications: [notification, ...state.notifications],
-      unreadCount: state.unreadCount + 1
-    })),
-  markAsRead: (id) => 
-    set((state) => ({
-      notifications: state.notifications.map(n => 
-        n._id === id ? { ...n, readBy: [...(n.readBy || []), localStorage.getItem('userId')] } : n
-      ),
-      unreadCount: state.unreadCount - 1
-    })),
-  clearNotifications: () => set({ notifications: [], unreadCount: 0 }),
+  setUnreadCount: (count) => set({ unreadCount: count }),
+  incrementUnreadCount: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
+  decrementUnreadCount: () => set((state) => ({ 
+    unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0 
+  })),
+  resetUnreadCount: () => set({ unreadCount: 0 }),
 }));

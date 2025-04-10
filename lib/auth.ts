@@ -5,6 +5,34 @@ import { compare } from "bcrypt";
 import clientPromise from "./mongodb";
 import User from "@/models/user";
 import connectToDatabase from "./db";
+import { User as UserType } from "@/types";
+
+// Define types for NextAuth
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      email: string;
+      role: string;
+      permissions: string[];
+    }
+  }
+
+  interface User {
+    id: string;
+    email: string;
+    role: string;
+    permissions: string[];
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+    permissions: string[];
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
@@ -53,7 +81,7 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any; user: any }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -61,7 +89,7 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
