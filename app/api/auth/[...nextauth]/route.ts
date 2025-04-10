@@ -1,9 +1,20 @@
 // app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth";
+import { getServerAuthConfig } from "@/auth";
 
-// Use the handler pattern from Auth.js v5
-const handler = NextAuth(authConfig);
+// Use the handler pattern from Auth.js v5 with server-side config
+const getHandler = async () => {
+  const serverAuthConfig = await getServerAuthConfig();
+  return NextAuth(serverAuthConfig);
+};
 
 // Export as route handlers
-export { handler as GET, handler as POST };
+export async function GET(req: Request) {
+  const handler = await getHandler();
+  return handler.GET(req);
+}
+
+export async function POST(req: Request) {
+  const handler = await getHandler();
+  return handler.POST(req);
+}

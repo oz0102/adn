@@ -1,3 +1,9 @@
+// This file is only used on the server side
+// Add a check to prevent importing in browser environments
+if (typeof window !== 'undefined') {
+  throw new Error('This module is server-side only and cannot be imported in browser code');
+}
+
 import { MongoClient } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
