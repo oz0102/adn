@@ -32,9 +32,9 @@ export async function GET(req: NextRequest) {
     }
     
     const { searchParams } = new URL(req.url);
-    const year = searchParams.get('year') ? parseInt(searchParams.get('year')) : null;
-    const month = searchParams.get('month') ? parseInt(searchParams.get('month')) : null;
-    const quarter = searchParams.get('quarter') ? parseInt(searchParams.get('quarter')) : null;
+    const year = searchParams.get('year') ? parseInt(searchParams.get('year') || '') : null;
+    const month = searchParams.get('month') ? parseInt(searchParams.get('month') || '') : null;
+    const quarter = searchParams.get('quarter') ? parseInt(searchParams.get('quarter') || '') : null;
     const goalType = searchParams.get('goalType') || null;
     
     await connectToDatabase();

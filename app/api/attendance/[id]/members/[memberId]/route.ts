@@ -51,7 +51,7 @@ export async function PUT(
     
     // Find member in attendance record
     const memberIndex = attendance.members.findIndex(
-      m => m.memberId.toString() === params.memberId
+      (m: { memberId: { toString: () => string } }) => m.memberId.toString() === params.memberId
     );
     
     if (memberIndex === -1) {

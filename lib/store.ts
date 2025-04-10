@@ -8,6 +8,7 @@ interface AuthState {
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
   setAuthenticated: (isAuthenticated: boolean) => void;
+  setAuth: (isAuthenticated: boolean, user: User | null) => void;
 }
 
 interface NotificationState {
@@ -23,6 +24,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   setUser: (user) => set({ user }),
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
+  setAuth: (isAuthenticated, user) => set({ isAuthenticated, user }),
 }));
 
 export const useNotificationStore = create<NotificationState>((set) => ({

@@ -44,6 +44,8 @@ export async function GET(
       token.role !== 'Admin' && 
       token.role !== 'Pastor' && 
       notification.recipientId && 
+      typeof notification.recipientId === 'object' &&
+      'toString' in notification.recipientId &&
       notification.recipientId.toString() !== token.id &&
       notification.recipientType !== 'All'
     ) {
@@ -106,6 +108,8 @@ export async function PUT(
       token.role !== 'Admin' && 
       token.role !== 'Pastor' && 
       existingNotification.recipientId && 
+      typeof existingNotification.recipientId === 'object' &&
+      'toString' in existingNotification.recipientId &&
       existingNotification.recipientId.toString() !== token.id &&
       existingNotification.recipientType !== 'All'
     ) {
@@ -176,6 +180,8 @@ export async function DELETE(
       token.role !== 'Admin' && 
       token.role !== 'Pastor' && 
       existingNotification.recipientId && 
+      typeof existingNotification.recipientId === 'object' &&
+      'toString' in existingNotification.recipientId &&
       existingNotification.recipientId.toString() !== token.id
     ) {
       return NextResponse.json(

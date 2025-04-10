@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
     let totalExcused = 0;
     
     if (body.members && body.members.length > 0) {
-      body.members.forEach(member => {
+      body.members.forEach((member: { status: string }) => {
         if (member.status === 'Present') totalPresent++;
         else if (member.status === 'Absent') totalAbsent++;
         else if (member.status === 'Excused') totalExcused++;

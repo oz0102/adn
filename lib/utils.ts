@@ -34,15 +34,21 @@ export function truncateText(text: string, maxLength: number): string {
   return text.substring(0, maxLength) + '...';
 }
 
-export function getInitials(name: string): string {
-  if (!name) return '';
+export function getInitials(firstName: string, lastName?: string): string {
+  if (!firstName) return '';
   
-  return name
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
+  if (lastName) {
+    // If both first and last name are provided
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+  } else {
+    // If only one name parameter is provided (could be full name with space)
+    return firstName
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  }
 }
 
 export function generateMemberId(firstName: string, lastName: string, count: number): string {

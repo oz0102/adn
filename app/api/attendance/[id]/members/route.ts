@@ -62,7 +62,7 @@ export async function POST(
     
     // Check if member is already in the attendance record
     const existingMemberIndex = attendance.members.findIndex(
-      m => m.memberId.toString() === body.memberId
+      (m: { memberId: { toString: () => string } }) => m.memberId.toString() === body.memberId
     );
     
     if (existingMemberIndex !== -1) {
