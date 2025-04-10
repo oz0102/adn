@@ -1,153 +1,219 @@
+/**
+ * API route handler for user by ID operations
+ * This file implements RESTful endpoints for individual user management
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import connectToDatabase from '@/lib/db';
-import User from '@/models/user';
-import { getToken } from 'next-auth/jwt';
+import { userRepository } from '@/lib/server/db/repositories/user-repository';
+import { ApiResponse, UserData, UpdateUserRequest, ChangePasswordRequest } from '@/lib/shared/types/user';
 
-const userUpdateSchema = z.object({
-  role: z.string().optional(),
-  permissions: z.array(z.string()).optional()
-});
+/**
+ * Convert database user to API user data
+ */
+function mapUserToUserData(user: any): UserData {
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    permissions: user.permissions || [],
+    lastLogin: user.lastLogin ? user.lastLogin.toISOString() : undefined,
+    createdAt: user.createdAt ? user.createdAt.toISOString() : undefined,
+    updatedAt: user.updatedAt ? user.updatedAt.toISOString() : undefined
+  };
+}
 
+/**
+ * GET /api/users/[id] - Get user by ID
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const userId = params.id;
     
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    
-    await connectToDatabase();
-    
-    const user = await User.findById(params.id).select('-passwordHash');
+    const user = await userRepository.findById(userId);
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'User not found' },
-        { status: 404 }
-      );
+      const response: ApiResponse<null> = {
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      };
+      
+      return NextResponse.json(response, { status: 404 });
     }
     
-    return NextResponse.json({
+    const response: ApiResponse<UserData> = {
       success: true,
-      data: user
-    });
+      data: mapUserToUserData(user)
+    };
+    
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Get user error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error fetching user:', error);
+    
+    const response: ApiResponse<null> = {
+      success: false,
+      error: {
+        code: 'SERVER_ERROR',
+        message: 'An error occurred while fetching the user'
+      }
+    };
+    
+    return NextResponse.json(response, { status: 500 });
   }
 }
 
+/**
+ * PUT /api/users/[id] - Update user
+ */
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const userId = params.id;
+    const body: UpdateUserRequest = await req.json();
     
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Check if user exists
+    const existingUser = await userRepository.findById(userId);
+    if (!existingUser) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      };
+      
+      return NextResponse.json(response, { status: 404 });
     }
     
-    const body = await req.json();
+    // Update user
+    const updatedUser = await userRepository.updateUser(userId, body);
     
-    // Validate request body
-    const validation = userUpdateSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid input data', 
-          errors: validation.error.errors 
-        },
-        { status: 400 }
-      );
-    }
-    
-    await connectToDatabase();
-    
-    const user = await User.findById(params.id);
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Update user fields
-    if (body.role) user.role = body.role;
-    if (body.permissions) user.permissions = body.permissions;
-    
-    await user.save();
-    
-    return NextResponse.json({
+    const response: ApiResponse<UserData> = {
       success: true,
-      message: 'User updated successfully',
-      data: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        permissions: user.permissions
-      }
-    });
+      data: mapUserToUserData(updatedUser!)
+    };
+    
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Update user error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error updating user:', error);
+    
+    const response: ApiResponse<null> = {
+      success: false,
+      error: {
+        code: 'SERVER_ERROR',
+        message: 'An error occurred while updating the user'
+      }
+    };
+    
+    return NextResponse.json(response, { status: 500 });
   }
 }
 
+/**
+ * DELETE /api/users/[id] - Delete user
+ */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const userId = params.id;
     
-    if (!token || token.role !== 'Admin') {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    const deleted = await userRepository.deleteUser(userId);
+    
+    if (!deleted) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      };
+      
+      return NextResponse.json(response, { status: 404 });
     }
     
-    await connectToDatabase();
+    const response: ApiResponse<null> = {
+      success: true
+    };
     
-    const user = await User.findById(params.id);
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    
+    const response: ApiResponse<null> = {
+      success: false,
+      error: {
+        code: 'SERVER_ERROR',
+        message: 'An error occurred while deleting the user'
+      }
+    };
+    
+    return NextResponse.json(response, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/users/[id] - Change user password
+ */
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+): Promise<NextResponse> {
+  try {
+    const userId = params.id;
+    const body: ChangePasswordRequest = await req.json();
+    
+    if (!body.password) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Password is required'
+        }
+      };
+      
+      return NextResponse.json(response, { status: 400 });
+    }
+    
+    const user = await userRepository.updatePassword(userId, body.password);
     
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'User not found' },
-        { status: 404 }
-      );
+      const response: ApiResponse<null> = {
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        }
+      };
+      
+      return NextResponse.json(response, { status: 404 });
     }
     
-    await User.deleteOne({ _id: params.id });
-    
-    return NextResponse.json({
+    const response: ApiResponse<UserData> = {
       success: true,
-      message: 'User deleted successfully'
-    });
+      data: mapUserToUserData(user)
+    };
+    
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Delete user error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error changing password:', error);
+    
+    const response: ApiResponse<null> = {
+      success: false,
+      error: {
+        code: 'SERVER_ERROR',
+        message: 'An error occurred while changing the password'
+      }
+    };
+    
+    return NextResponse.json(response, { status: 500 });
   }
 }

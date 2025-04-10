@@ -1,63 +1,87 @@
+// app/api/users/route.ts - Updated with route wrapper
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db';
-import User from '@/models/user';
-import { getToken } from 'next-auth/jwt';
+import { withMongoDBHandler } from '@/app/api/route-wrapper';
+import { userRepository } from '@/lib/server/db/repositories/user-repository';
+import { ApiResponse, UserData, CreateUserRequest } from '@/lib/shared/types/user';
 
-export async function GET(req: NextRequest) {
-  try {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-    
-    if (!token || !['Admin', 'Pastor'].includes(token.role as string)) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const search = searchParams.get('search') || '';
-    const role = searchParams.get('role') || '';
-    
-    const skip = (page - 1) * limit;
-    
-    await connectToDatabase();
-    
-    // Build query
-    let query: any = {};
-    
-    if (search) {
-      query.email = { $regex: search, $options: 'i' };
-    }
-    
-    if (role) {
-      query.role = role;
-    }
-    
-    const users = await User.find(query)
-      .select('-passwordHash')
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-    
-    const total = await User.countDocuments(query);
-    
-    return NextResponse.json({
-      success: true,
-      data: users,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error('Get users error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+/**
+ * Convert database user to API user data
+ */
+function mapUserToUserData(user: any): UserData {
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    permissions: user.permissions || [],
+    lastLogin: user.lastLogin ? user.lastLogin.toISOString() : undefined,
+    createdAt: user.createdAt ? user.createdAt.toISOString() : undefined,
+    updatedAt: user.updatedAt ? user.updatedAt.toISOString() : undefined
+  };
 }
+
+/**
+ * GET /api/users - Get all users
+ */
+export const GET = withMongoDBHandler(async (req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
+  const limit = parseInt(searchParams.get('limit') || '100');
+  const skip = parseInt(searchParams.get('skip') || '0');
+  
+  const users = await userRepository.listUsers(limit, skip);
+  
+  const response: ApiResponse<UserData[]> = {
+    success: true,
+    data: users.map(mapUserToUserData)
+  };
+  
+  return NextResponse.json(response);
+});
+
+/**
+ * POST /api/users - Create a new user
+ */
+export const POST = withMongoDBHandler(async (req: NextRequest) => {
+  const body: CreateUserRequest = await req.json();
+  
+  // Validate request
+  if (!body.email || !body.password || !body.role) {
+    const response: ApiResponse<null> = {
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Email, password, and role are required'
+      }
+    };
+    
+    return NextResponse.json(response, { status: 400 });
+  }
+  
+  // Check if user already exists
+  const existingUser = await userRepository.findByEmail(body.email);
+  if (existingUser) {
+    const response: ApiResponse<null> = {
+      success: false,
+      error: {
+        code: 'USER_EXISTS',
+        message: 'A user with this email already exists'
+      }
+    };
+    
+    return NextResponse.json(response, { status: 409 });
+  }
+  
+  // Create user
+  const user = await userRepository.createUser({
+    email: body.email,
+    password: body.password,
+    role: body.role,
+    permissions: body.permissions
+  });
+  
+  const response: ApiResponse<UserData> = {
+    success: true,
+    data: mapUserToUserData(user)
+  };
+  
+  return NextResponse.json(response, { status: 201 });
+});

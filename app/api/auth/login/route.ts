@@ -1,11 +1,11 @@
 /**
- * API route handler for user registration
- * This file implements the registration endpoint
+ * API route handler for authentication
+ * This file implements login and registration endpoints
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { userRepository } from '@/lib/server/db/repositories/user-repository';
-import { ApiResponse, UserData, CreateUserRequest } from '@/lib/shared/types/user';
+import { ApiResponse, UserData, LoginRequest, CreateUserRequest, LoginResponse } from '@/lib/shared/types/user';
 
 /**
  * Convert database user to API user data
@@ -23,61 +23,57 @@ function mapUserToUserData(user: any): UserData {
 }
 
 /**
- * POST /api/auth/register - Register new user
+ * POST /api/auth/login - Login user
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body: CreateUserRequest = await req.json();
+    const body: LoginRequest = await req.json();
     
     // Validate request
-    if (!body.email || !body.password || !body.role) {
+    if (!body.email || !body.password) {
       const response: ApiResponse<null> = {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Email, password, and role are required'
+          message: 'Email and password are required'
         }
       };
       
       return NextResponse.json(response, { status: 400 });
     }
     
-    // Check if user already exists
-    const existingUser = await userRepository.findByEmail(body.email);
-    if (existingUser) {
+    // Verify credentials
+    const user = await userRepository.verifyCredentials(body.email, body.password);
+    
+    if (!user) {
       const response: ApiResponse<null> = {
         success: false,
         error: {
-          code: 'USER_EXISTS',
-          message: 'A user with this email already exists'
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid email or password'
         }
       };
       
-      return NextResponse.json(response, { status: 409 });
+      return NextResponse.json(response, { status: 401 });
     }
     
-    // Create user
-    const user = await userRepository.createUser({
-      email: body.email,
-      password: body.password,
-      role: body.role,
-      permissions: body.permissions
-    });
-    
-    const response: ApiResponse<UserData> = {
+    // Return user data
+    const response: ApiResponse<LoginResponse> = {
       success: true,
-      data: mapUserToUserData(user)
+      data: {
+        user: mapUserToUserData(user)
+      }
     };
     
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error registering user:', error);
+    console.error('Error logging in:', error);
     
     const response: ApiResponse<null> = {
       success: false,
       error: {
         code: 'SERVER_ERROR',
-        message: 'An error occurred while registering the user'
+        message: 'An error occurred while logging in'
       }
     };
     
