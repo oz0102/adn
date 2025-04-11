@@ -12,7 +12,15 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
-const options = {};
+// Add options to disable problematic features
+const options = {
+  // Disable compression which requires binary modules
+  compressors: 'none',
+  // Disable optional dependencies
+  autoEncryption: {
+    bypassAutoEncryption: true
+  }
+};
 
 let client;
 let clientPromise: Promise<MongoClient>;
