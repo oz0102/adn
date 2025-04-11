@@ -1,8 +1,7 @@
-// app/login/page.tsx - Client-side login page
 "use client";
 
 import { useState } from "react";
-import { signIn } from "@/auth";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
