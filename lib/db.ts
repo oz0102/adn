@@ -45,6 +45,9 @@ async function connectToDatabase(): Promise<mongoose.Connection> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Disable compression to avoid binary module dependencies
+      compressors: null,
+      autoIndex: true,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

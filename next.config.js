@@ -1,31 +1,30 @@
+// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
   webpack: (config, { isServer }) => {
-    // Add a rule to handle binary files like zstd.node
+    // Handle binary modules for MongoDB
     config.module.rules.push({
       test: /\.node$/,
       use: 'node-loader',
-      type: 'javascript/auto',
     });
 
-    // Prevent certain MongoDB dependencies from being bundled on the client side
+    // Exclude problematic MongoDB dependencies on the client side
     if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        mongodb: false,
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Exclude binary modules that cause issues on the client
         '@mongodb-js/zstd': false,
-        kerberos: false,
+        'kerberos': false,
         'mongodb-client-encryption': false,
-        'aws4': false,
         'snappy': false,
-        'socks': false,
+        'aws4': false,
         'gcp-metadata': false,
+        'socks': false,
       };
     }
 
     return config;
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
