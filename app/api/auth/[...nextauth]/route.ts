@@ -4,15 +4,13 @@ import { authConfig } from "@/auth/config";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "@/lib/mongodb";
 import connectToDatabase from "@/lib/db";
 import User from "@/models/user";
 
-// Create a server-side only auth handler with MongoDB adapter and credentials provider
+// Create a server-side only auth handler with credentials provider
+// Remove MongoDB adapter to avoid binary dependency issues
 const handler = NextAuth({
   ...authConfig,
-  adapter: MongoDBAdapter(clientPromise),
   providers: [
     CredentialsProvider({
       name: "Credentials",
