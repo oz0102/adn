@@ -1,41 +1,69 @@
-/**
- * Server-side authentication route handler
- * This file implements the NextAuth API routes with proper server-side MongoDB integration
- */
-
+// app/api/auth/[...nextauth]/route.ts - Server-side auth handler
+import { NextRequest } from "next/server";
+import { authConfig } from "@/auth/config";
 import NextAuth from "next-auth";
-import { authConfig } from "@/lib/server/auth/config";
-import { getMongoDBAdapter } from "@/lib/server/auth/adapter";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import clientPromise from "@/lib/mongodb";
+import connectToDatabase from "@/lib/db";
+import User from "@/models/user";
 
-/**
- * Get the NextAuth handler with server-side MongoDB adapter
- */
-async function getAuthHandler() {
-  // Dynamically add the MongoDB adapter on the server side
-  const adapter = await getMongoDBAdapter();
-  
-  // Merge the adapter with the auth config
-  const config = {
-    ...authConfig,
-    adapter
-  };
-  
-  // Return the NextAuth handler
-  return NextAuth(config);
-}
+// Create a server-side only auth handler with MongoDB adapter and credentials provider
+const handler = NextAuth({
+  ...authConfig,
+  adapter: MongoDBAdapter(clientPromise),
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        try {
+          await connectToDatabase();
+          
+          if (!credentials?.email || !credentials?.password) {
+            console.log("Missing credentials");
+            return null;
+          }
+          
+          // Find the user
+          const user = await User.findOne({ email: credentials.email.toLowerCase() });
+          
+          if (!user) {
+            console.log("User not found:", credentials.email);
+            return null;
+          }
+          
+          // Verify password
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.passwordHash
+          );
+          
+          if (!isPasswordValid) {
+            console.log("Invalid password for user:", credentials.email);
+            return null;
+          }
+          
+          // Return user data
+          console.log("Authentication successful for:", credentials.email);
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            permissions: user.permissions || []
+          };
+        } catch (error) {
+          console.error("Authentication error:", error);
+          return null;
+        }
+      }
+    })
+  ]
+});
 
-/**
- * GET handler for NextAuth
- */
-export async function GET(req: Request) {
-  const handler = await getAuthHandler();
-  return handler.GET(req);
-}
-
-/**
- * POST handler for NextAuth
- */
-export async function POST(req: Request) {
-  const handler = await getAuthHandler();
-  return handler.POST(req);
-}
+// Export the handler as GET and POST functions
+export { handler as GET, handler as POST };

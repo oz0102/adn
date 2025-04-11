@@ -1,3 +1,4 @@
+// lib/db.ts - Server-side only Mongoose connection
 // This file is only used on the server side
 // Add a check to prevent importing in browser environments
 if (typeof window !== 'undefined') {
