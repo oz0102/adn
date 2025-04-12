@@ -1,3 +1,6 @@
+// //lib\store.ts
+
+
 "use client"
 
 import { create } from 'zustand';
@@ -19,6 +22,11 @@ interface NotificationState {
   resetUnreadCount: () => void;
 }
 
+interface SidebarState {
+  isOpen: boolean;
+  toggle: () => void;
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
@@ -35,4 +43,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0 
   })),
   resetUnreadCount: () => set({ unreadCount: 0 }),
+}));
+
+export const useSidebarStore = create<SidebarState>((set) => ({
+  isOpen: true, // Default to open
+  toggle: () => set((state) => ({ isOpen: !state.isOpen })),
 }));
