@@ -69,7 +69,7 @@ export function Sidebar() {
     )}>
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
         {isOpen ? (
-          <h1 className="text-lg font-semibold">Church Manager</h1>
+          <h1 className="text-lg font-semibold">ADN ADMIN</h1>
         ) : (
           <span className="mx-auto font-bold text-xl">CM</span>
         )}
@@ -91,88 +91,88 @@ export function Sidebar() {
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/members"
+            href="/members"
             icon={<Users className="h-5 w-5" />}
             title="Members"
-            isActive={pathname.startsWith("/dashboard/members")}
+            isActive={pathname.startsWith("/members")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/clusters"
+            href="/clusters"
             icon={<Layers className="h-5 w-5" />}
             title="Clusters"
-            isActive={pathname.startsWith("/dashboard/clusters")}
+            isActive={pathname.startsWith("/clusters")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/small-groups"
+            href="/small-groups"
             icon={<UserCheck className="h-5 w-5" />}
             title="Small Groups"
-            isActive={pathname.startsWith("/dashboard/small-groups")}
+            isActive={pathname.startsWith("/small-groups")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/events"
+            href="/events"
             icon={<Calendar className="h-5 w-5" />}
             title="Events"
-            isActive={pathname.startsWith("/dashboard/events")}
+            isActive={pathname.startsWith("/events")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/attendance"
+            href="/attendance"
             icon={<UserCheck className="h-5 w-5" />}
             title="Attendance"
-            isActive={pathname.startsWith("/dashboard/attendance")}
+            isActive={pathname.startsWith("/attendance")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/follow-ups"
+            href="/follow-ups"
             icon={<UserPlus className="h-5 w-5" />}
             title="Follow-ups"
-            isActive={pathname.startsWith("/dashboard/follow-ups")}
+            isActive={pathname.startsWith("/follow-ups")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/teams"
+            href="/teams"
             icon={<Users className="h-5 w-5" />}
             title="Teams"
-            isActive={pathname.startsWith("/dashboard/teams")}
+            isActive={pathname.startsWith("/teams")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/flyers"
+            href="/flyers"
             icon={<FileText className="h-5 w-5" />}
             title="Flyers"
-            isActive={pathname.startsWith("/dashboard/flyers")}
+            isActive={pathname.startsWith("/flyers")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/discipleship-goals"
+            href="/discipleship-goals"
             icon={<Target className="h-5 w-5" />}
             title="Goals"
-            isActive={pathname.startsWith("/dashboard/discipleship-goals")}
+            isActive={pathname.startsWith("/discipleship-goals")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/notifications"
+            href="/notifications"
             icon={<Bell className="h-5 w-5" />}
             title="Notifications"
-            isActive={pathname.startsWith("/dashboard/notifications")}
+            isActive={pathname.startsWith("/notifications")}
             isCollapsed={!isOpen}
           />
           <NavItem
-            href="/dashboard/reports"
+            href="/reports"
             icon={<BarChart3 className="h-5 w-5" />}
             title="Reports"
-            isActive={pathname.startsWith("/dashboard/reports")}
+            isActive={pathname.startsWith("/reports")}
             isCollapsed={!isOpen}
           />
           {isAdmin && (
             <NavItem
-              href="/dashboard/settings"
+              href="/settings"
               icon={<Settings className="h-5 w-5" />}
               title="Settings"
-              isActive={pathname.startsWith("/dashboard/settings")}
+              isActive={pathname.startsWith("/settings")}
               isCollapsed={!isOpen}
             />
           )}

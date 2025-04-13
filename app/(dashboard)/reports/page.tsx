@@ -22,7 +22,8 @@ import {
   LineChart,
   FileDown,
   Calendar,
-  Download
+  Download,
+  Plus
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {

@@ -59,6 +59,8 @@
 // export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
 
+//user.ts
+
 // This file is only used on the server side
 // Add a check to prevent importing in browser environments
 if (typeof window !== 'undefined') {
