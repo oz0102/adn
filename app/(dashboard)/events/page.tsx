@@ -161,8 +161,20 @@ export default function EventsPage() {
   }
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    updateUrlParams({ [key]: value, page: 1 })
+    // If "all" is selected, treat it as an empty string in the state and URL
+    const actualValue = value === "all" ? "" : value
+    
+    setFilters(prev => ({ ...prev, [key]: actualValue }))
+    
+    // Update URL parameters - remove the parameter if value is "all"
+    if (value === "all") {
+      const newParams = new URLSearchParams(searchParams.toString())
+      newParams.delete(key)
+      newParams.set("page", "1")
+      router.push(`/dashboard/events?${newParams.toString()}`)
+    } else {
+      updateUrlParams({ [key]: value, page: 1 })
+    }
   }
 
   const clearFilters = () => {
@@ -191,6 +203,11 @@ export default function EventsPage() {
 
   const handlePageChange = (page: number) => {
     updateUrlParams({ page })
+  }
+
+  // Helper to get the select value (handles the "all" case)
+  const getSelectValue = (value: string) => {
+    return value || "all"
   }
 
   return (
@@ -222,14 +239,14 @@ export default function EventsPage() {
           
           <div className="flex items-center gap-2">
             <Select
-              value={filters.eventType}
+              value={getSelectValue(filters.eventType)}
               onValueChange={(value) => handleFilterChange("eventType", value)}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Event Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="Sunday Service">Sunday Service</SelectItem>
                 <SelectItem value="Midweek Service">Midweek Service</SelectItem>
                 <SelectItem value="Cluster Meeting">Cluster Meeting</SelectItem>
@@ -292,7 +309,7 @@ export default function EventsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-4 w-4 p-0 ml-1"
-                  onClick={() => handleFilterChange("eventType", "")}
+                  onClick={() => handleFilterChange("eventType", "all")}
                 >
                   <X className="h-3 w-3" />
                 </Button>
