@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface FollowUpCardProps {
-  id: string;
   personName: string;
   personType: 'New Attendee' | 'Member';
   status: 'Pending' | 'In Progress' | 'Completed' | 'Failed';
@@ -20,7 +19,6 @@ interface FollowUpCardProps {
 }
 
 export function FollowUpCard({
-  id,
   personName,
   personType,
   status,

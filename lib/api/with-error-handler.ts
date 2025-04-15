@@ -4,7 +4,12 @@ import { getToken } from 'next-auth/jwt';
 import { ApiErrorResponse, handleApiError } from '@/lib/error-handler';
 import connectToDatabase from '@/lib/db';
 
-type ApiHandler = (req: NextRequest, params?: any) => Promise<NextResponse>;
+interface RouteParams {
+  params: Record<string, string>;
+  searchParams?: URLSearchParams;
+}
+
+type ApiHandler = (req: NextRequest, params?: RouteParams) => Promise<NextResponse>;
 
 /**
  * Higher-order function that wraps an API route handler with standard error handling and authentication
@@ -22,7 +27,7 @@ export function withApiHandler(
 ) {
   const { requireAuth = true, requireAdmin = false, connectDb = true } = options;
 
-  return async (req: NextRequest, params?: any): Promise<NextResponse> => {
+  return async (req: NextRequest, params?: RouteParams): Promise<NextResponse> => {
     try {
       // Connect to database if needed
       if (connectDb) {

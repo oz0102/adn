@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface SmallGroupCardProps {
   name: string;
@@ -41,10 +42,11 @@ export function SmallGroupCard({
     >
       {imageUrl && (
         <div className="relative h-40 w-full">
-          <img 
+          <Image 
             src={imageUrl} 
             alt={name} 
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
           />
         </div>
       )}

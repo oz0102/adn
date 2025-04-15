@@ -14,7 +14,7 @@ interface ApiResponse<T> {
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
   };
 }
 
@@ -50,7 +50,7 @@ export class ApiClient {
    * @param data The data to send
    * @returns Promise with the response data
    */
-  async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(url: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     return this.request<T>('POST', url, data);
   }
 
@@ -60,7 +60,7 @@ export class ApiClient {
    * @param data The data to send
    * @returns Promise with the response data
    */
-  async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T>(url: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     return this.request<T>('PUT', url, data);
   }
 
@@ -70,7 +70,7 @@ export class ApiClient {
    * @param data The data to send
    * @returns Promise with the response data
    */
-  async patch<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async patch<T>(url: string, data?: Record<string, unknown>): Promise<ApiResponse<T>> {
     return this.request<T>('PATCH', url, data);
   }
 
@@ -93,7 +93,7 @@ export class ApiClient {
   private async request<T>(
     method: string,
     url: string,
-    data?: any
+    data?: Record<string, unknown>
   ): Promise<ApiResponse<T>> {
     const fullUrl = this.baseUrl ? `${this.baseUrl}${url}` : url;
     

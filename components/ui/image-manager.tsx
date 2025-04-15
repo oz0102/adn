@@ -165,7 +165,7 @@ export function ImageManager({
                 
                 {searchTerm && filteredImages.length === 0 && (
                   <p className="text-center text-gray-500 my-8">
-                    No images found matching "{searchTerm}"
+                    No images found matching &quot;{searchTerm}&quot;
                   </p>
                 )}
               </>

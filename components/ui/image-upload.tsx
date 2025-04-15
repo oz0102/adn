@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import Image from 'next/image';
 
 interface UploadedImageData {
   url: string;
@@ -146,7 +147,10 @@ export function ImageUpload({
             </CardContent>
           </Card>
         ) : (
-          <div className="relative">
+          <div className="relative w-full h-auto rounded-md">
+            {/* For preview images from FileReader, we need to keep using img tag 
+                since Next/Image requires actual URLs, not data URLs */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={preview}
               alt="Preview"

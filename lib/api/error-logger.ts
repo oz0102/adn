@@ -6,7 +6,7 @@ interface ErrorLogEntry {
   code: string;
   message: string;
   stack?: string;
-  details?: any;
+  details?: Record<string, unknown>;
   url?: string;
   method?: string;
   userId?: string;
@@ -27,7 +27,7 @@ export class ErrorLogger {
       url?: string;
       method?: string;
       userId?: string;
-      additionalInfo?: Record<string, any>;
+      additionalInfo?: Record<string, unknown>;
     } = {}
   ): void {
     const { url, method, userId, additionalInfo } = context;

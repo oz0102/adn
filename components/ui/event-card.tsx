@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
+import Image from "next/image";
 
 interface EventCardProps {
-  id: string;
   title: string;
   description?: string;
   startDate: Date | string;
@@ -21,7 +21,6 @@ interface EventCardProps {
 }
 
 export function EventCard({
-  id,
   title,
   description,
   startDate,
@@ -57,13 +56,14 @@ export function EventCard({
     >
       {imageUrl && (
         <div className="relative h-48 w-full">
-          <img 
+          <Image 
             src={imageUrl} 
             alt={title} 
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
           />
           {eventType && (
-            <Badge className="absolute top-2 right-2">
+            <Badge className="absolute top-2 right-2 z-10">
               {eventType}
             </Badge>
           )}
