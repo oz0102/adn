@@ -40,7 +40,6 @@ import {
   Phone, 
   User, 
   Clock, 
-  MessageCircle,
   CheckCircle,
   XCircle,
   AlertCircle,

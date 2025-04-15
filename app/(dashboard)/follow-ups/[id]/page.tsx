@@ -14,7 +14,6 @@ import {
   Mail, 
   Calendar, 
   User, 
-  Edit, 
   Trash2,
   AlertCircle,
   Plus

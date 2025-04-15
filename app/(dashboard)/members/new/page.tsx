@@ -78,6 +78,9 @@ export default function AddMemberPage() {
     { _id: "4", name: "Youth" },
   ]
   
+  // Special value to represent "None" or unassigned
+  const NONE_VALUE = "none"
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -88,8 +91,8 @@ export default function AddMemberPage() {
       gender: "",
       dateOfBirth: "",
       address: "",
-      clusterId: "",
-      smallGroupId: "",
+      clusterId: NONE_VALUE,
+      smallGroupId: NONE_VALUE,
       notes: "",
     },
   })
@@ -98,8 +101,15 @@ export default function AddMemberPage() {
     try {
       setIsSubmitting(true)
       
+      // Convert special "none" values back to empty strings for the API
+      const formattedValues = {
+        ...values,
+        clusterId: values.clusterId === NONE_VALUE ? "" : values.clusterId,
+        smallGroupId: values.smallGroupId === NONE_VALUE ? "" : values.smallGroupId,
+      }
+      
       // In a real implementation, you would send this data to your API
-      console.log("Form values:", values)
+      console.log("Form values:", formattedValues)
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -110,7 +120,7 @@ export default function AddMemberPage() {
       })
       
       // Redirect to members list
-      router.push("/dashboard/members")
+      router.push("/members")
     } catch (error) {
       console.error("Error adding member:", error)
       toast({
@@ -128,7 +138,7 @@ export default function AddMemberPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Add Member</h1>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/members">
+          <Link href="/members">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Members
           </Link>
         </Button>
@@ -219,7 +229,7 @@ export default function AddMemberPage() {
                         <SelectContent>
                           <SelectItem value="Male">Male</SelectItem>
                           <SelectItem value="Female">Female</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -277,7 +287,7 @@ export default function AddMemberPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value={NONE_VALUE}>None</SelectItem>
                           {clusters.map((cluster) => (
                             <SelectItem key={cluster._id} value={cluster._id}>
                               {cluster.name}
@@ -309,7 +319,7 @@ export default function AddMemberPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value={NONE_VALUE}>None</SelectItem>
                           {smallGroups.map((group) => (
                             <SelectItem key={group._id} value={group._id}>
                               {group.name}
