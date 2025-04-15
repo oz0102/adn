@@ -5,7 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { userRepository } from '@/lib/server/db/repositories/user-repository';
-import { ApiResponse, UserData, LoginRequest, CreateUserRequest, LoginResponse } from '@/lib/shared/types/user';
+import { ApiResponse, UserData, LoginRequest, LoginResponse } from '@/lib/shared/types/user';
+// Removed unused import
+// import { CreateUserRequest } from '@/lib/shared/types/user';
 
 /**
  * Convert database user to API user data

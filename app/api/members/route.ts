@@ -31,7 +31,14 @@ export async function GET(req: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     // Build query
-    const query: any = {};
+    interface MemberQueryType {
+      $or?: Array<{[key: string]: {$regex: string, $options: string}}>;
+      status?: string;
+      clusterId?: string;
+      smallGroupId?: string;
+    }
+    
+    const query: MemberQueryType = {};
     
     if (search) {
       query.$or = [
@@ -61,7 +68,10 @@ export async function GET(req: NextRequest) {
     const total = await Member.countDocuments(query);
     
     // Get paginated results
-    const sort: any = {};
+    interface SortType {
+      [key: string]: number;
+    }
+    const sort: SortType = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
     
     const skip = (page - 1) * limit;

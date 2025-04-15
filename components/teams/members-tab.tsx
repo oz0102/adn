@@ -40,7 +40,6 @@ interface TeamMember {
 }
 
 interface TeamMembersTabProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   teamId: string;
   members: TeamMember[];
 }

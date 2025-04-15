@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface TeamEventsTabProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   teamId: string
 }
 

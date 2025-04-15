@@ -80,11 +80,14 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// Removed unused imports
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { CalendarDays, Users, UserCheck, Calendar, Award, ChevronRight, Download, Plus } from "lucide-react"
+import { CalendarDays, Users, UserCheck, Calendar, Award, Download } from "lucide-react"
+// Removed unused imports
+// import { ChevronRight, Plus } from "lucide-react"
 
 // Membership Report Component
 export function MembershipReport() {
@@ -759,8 +762,10 @@ export interface ReportProps {
 }
 
 export function ReportsList() {
-  const [reports, setReports] = useState<ReportProps[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  // Using array destructuring to only get the first element (the state value)
+  const [reports] = useState<ReportProps[]>([])
+  // Removed unused state variables
+  // const [isLoading, setIsLoading] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -769,7 +774,7 @@ export function ReportsList() {
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">No reports found</p>
             <Button className="mt-4" size="sm">
-              <ChevronRight className="mr-2 h-4 w-4" /> Create Report
+              Create Report
             </Button>
           </CardContent>
         </Card>
@@ -797,7 +802,8 @@ export function ReportCard({ report }: { report: ReportProps }) {
 }
 
 export function ScheduledReportsList() {
-  const [scheduledReports, setScheduledReports] = useState([])
+  // Using array destructuring to only get the first element (the state value)
+  const [scheduledReports] = useState([])
   
   return (
     <div className="space-y-4">
@@ -806,7 +812,7 @@ export function ScheduledReportsList() {
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">No scheduled reports found</p>
             <Button className="mt-4" size="sm">
-              <ChevronRight className="mr-2 h-4 w-4" /> Schedule Report
+              Schedule Report
             </Button>
           </CardContent>
         </Card>

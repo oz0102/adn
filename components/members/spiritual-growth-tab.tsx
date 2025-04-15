@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface MemberSpiritualGrowthTabProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // This prop is defined for future implementation but not currently used
   memberId: string
 }
 

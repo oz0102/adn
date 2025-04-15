@@ -4,12 +4,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { 
-  Card, 
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
+import {} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
 import { Badge } from "@/components/ui/badge"
@@ -19,8 +14,6 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
-  Calendar,
-  Filter,
   Plus,
   User,
   Users,
@@ -42,7 +35,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -104,91 +96,88 @@ export default function NotificationsPage() {
     
     setTypeFilter(type);
     
-    fetchNotifications(page, type);
-  }, [searchParams]);
-
-  const fetchNotifications = async (
-    page: number, 
-    type: string
-  ) => {
-    try {
-      setIsLoading(true);
-      
-      // Build query string
-      let queryParams = new URLSearchParams();
-      queryParams.append("page", page.toString());
-      queryParams.append("limit", pagination.limit.toString());
-      
-      if (type) queryParams.append("type", type);
-      
-      // In a real implementation, you would fetch actual data from your API
-      // This is just simulating the API response
-      await new Promise(resolve => setTimeout(resolve, 500)); // Fake loading delay
-      
-      // Mock data for unread notifications
-      const mockNotifications: Notification[] = Array.from({ length: 5 }).map((_, i) => {
-        const type: 'Info' | 'Success' | 'Warning' | 'Error' = 
-          i % 4 === 0 ? 'Info' : 
-          i % 4 === 1 ? 'Success' : 
-          i % 4 === 2 ? 'Warning' : 'Error';
+    const fetchNotificationsData = async () => {
+      try {
+        setIsLoading(true);
         
-        return {
-          _id: `notification${i + 1}`,
-          title: `${type} Notification ${i + 1}`,
-          message: `This is a ${type.toLowerCase()} notification message. It contains important information that you need to know.`,
-          type,
-          read: false,
-          createdAt: new Date(Date.now() - 86400000 * i).toISOString(),
-          expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
-          link: i % 2 === 0 ? `/dashboard/example/${i}` : undefined
-        };
-      });
-
-      // Mock data for read notifications
-      const mockReadNotifications: Notification[] = Array.from({ length: 10 }).map((_, i) => {
-        const type: 'Info' | 'Success' | 'Warning' | 'Error' = 
-          i % 4 === 0 ? 'Info' : 
-          i % 4 === 1 ? 'Success' : 
-          i % 4 === 2 ? 'Warning' : 'Error';
+        // Build query string
+        const queryParams = new URLSearchParams();
+        queryParams.append("page", page.toString());
+        queryParams.append("limit", pagination.limit.toString());
         
-        return {
-          _id: `read-notification${i + 1}`,
-          title: `Read ${type} Notification ${i + 1}`,
-          message: `This is a read ${type.toLowerCase()} notification message that you have already viewed.`,
-          type,
-          read: true,
-          createdAt: new Date(Date.now() - 86400000 * (i + 5)).toISOString(),
-          expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
-          link: i % 3 === 0 ? `/dashboard/example/${i}` : undefined
-        };
-      });
-      
-      setNotifications(mockNotifications);
-      setReadNotifications(mockReadNotifications);
-      setPagination({
-        page,
-        limit: 10,
-        total: 15, // Mock total
-        pages: 2,  // Mock pages
-      });
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load notifications. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        if (type) queryParams.append("type", type);
+        
+        // In a real implementation, you would fetch actual data from your API
+        // This is just simulating the API response
+        await new Promise(resolve => setTimeout(resolve, 500)); // Fake loading delay
+        
+        // Mock data for unread notifications
+        const mockNotifications: Notification[] = Array.from({ length: 5 }).map((_, i) => {
+          const type: 'Info' | 'Success' | 'Warning' | 'Error' = 
+            i % 4 === 0 ? 'Info' : 
+            i % 4 === 1 ? 'Success' : 
+            i % 4 === 2 ? 'Warning' : 'Error';
+          
+          return {
+            _id: `notification${i + 1}`,
+            title: `${type} Notification ${i + 1}`,
+            message: `This is a ${type.toLowerCase()} notification message. It contains important information that you need to know.`,
+            type,
+            read: false,
+            createdAt: new Date(Date.now() - 86400000 * i).toISOString(),
+            expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
+            link: i % 2 === 0 ? `/dashboard/example/${i}` : undefined
+          };
+        });
+
+        // Mock data for read notifications
+        const mockReadNotifications: Notification[] = Array.from({ length: 10 }).map((_, i) => {
+          const type: 'Info' | 'Success' | 'Warning' | 'Error' = 
+            i % 4 === 0 ? 'Info' : 
+            i % 4 === 1 ? 'Success' : 
+            i % 4 === 2 ? 'Warning' : 'Error';
+          
+          return {
+            _id: `read-notification${i + 1}`,
+            title: `Read ${type} Notification ${i + 1}`,
+            message: `This is a read ${type.toLowerCase()} notification message that you have already viewed.`,
+            type,
+            read: true,
+            createdAt: new Date(Date.now() - 86400000 * (i + 5)).toISOString(),
+            expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
+            link: i % 3 === 0 ? `/dashboard/example/${i}` : undefined
+          };
+        });
+        
+        setNotifications(mockNotifications);
+        setReadNotifications(mockReadNotifications);
+        setPagination({
+          page,
+          limit: 10,
+          total: 15, // Mock total
+          pages: 2,  // Mock pages
+        });
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load notifications. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchNotificationsData();
+  }, [searchParams, pagination.limit, toast]);
 
   const handleTypeChange = (type: string) => {
     setTypeFilter(type);
     updateUrlParams({ type, page: 1 });
   };
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | boolean | undefined>) => {
     const newParams = new URLSearchParams(searchParams.toString());
     
     Object.entries(params).forEach(([key, value]) => {

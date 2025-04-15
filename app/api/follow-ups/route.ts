@@ -34,7 +34,15 @@ export async function GET(req: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'asc';
 
     // Build query
-    const query: any = {};
+    interface FollowUpQueryType {
+      $or?: Array<{[key: string]: {$regex: string, $options: string}}>;
+      status?: string;
+      assignedTo?: string;
+      type?: string;
+      dueDate?: {$gte?: Date, $lte?: Date};
+    }
+    
+    const query: FollowUpQueryType = {};
     
     if (search) {
       query.$or = [
@@ -70,7 +78,10 @@ export async function GET(req: NextRequest) {
     const total = await FollowUp.countDocuments(query);
     
     // Get paginated results
-    const sort: any = {};
+    interface SortType {
+      [key: string]: number;
+    }
+    const sort: SortType = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
     
     const skip = (page - 1) * limit;

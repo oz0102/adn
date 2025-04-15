@@ -82,79 +82,75 @@ export default function SmallGroupsPage() {
     setSearchTerm(search)
     setLocationFilter(location)
     
-    fetchSmallGroups(page, search, location)
-  }, [searchParams])
-
-  const fetchSmallGroups = async (
-    page: number, 
-    search: string, 
-    location: string
-  ) => {
-    try {
-      setIsLoading(true)
-      
-      // Build query string
-      let queryParams = new URLSearchParams()
-      queryParams.append("page", page.toString())
-      queryParams.append("limit", pagination.limit.toString())
-      
-      if (search) queryParams.append("search", search)
-      if (location) queryParams.append("location", location)
-      
-      // In a real implementation, you would fetch actual data from your API
-      // This is just simulating the API response
-      await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
-      
-      // Mock data
-      const locations = ["North", "South", "East", "West", "Central"]
-      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-      
-      const mockSmallGroups: SmallGroup[] = Array.from({ length: 9 }).map((_, i) => {
-        const locationIndex = i % locations.length
-        const dayIndex = i % days.length
-        const memberCount = 5 + (i * 2)
+    const fetchSmallGroupsData = async () => {
+      try {
+        setIsLoading(true)
         
-        return {
-          _id: `smallgroup${i + 1}`,
-          groupId: `SG${1000 + i}`,
-          name: `${locations[locationIndex]} ${i % 2 === 0 ? 'Young Adults' : 'Family'} Group`,
-          location: `${locations[locationIndex]} District`,
-          leaderId: {
-            _id: `member${i+10}`,
-            firstName: `Leader${i+1}`,
-            lastName: "Smith",
-            email: `leader${i+1}@example.com`
-          },
-          contactPhone: `+123456789${i}`,
-          contactEmail: `${locations[locationIndex].toLowerCase()}group@example.com`,
-          description: `A small group for ${i % 2 === 0 ? 'young adults' : 'families'} in the ${locations[locationIndex]} area.`,
-          meetingSchedule: {
-            day: days[dayIndex],
-            time: `${18 + (i % 3)}:00`,
-            frequency: i % 3 === 0 ? 'Weekly' : i % 3 === 1 ? 'Bi-weekly' : 'Monthly'
-          },
-          memberCount
-        }
-      })
-      
-      setSmallGroups(mockSmallGroups)
-      setPagination({
-        page,
-        limit: 10,
-        total: 25, // Mock total
-        pages: 3,  // Mock pages
-      })
-    } catch (error) {
-      console.error("Error fetching small groups:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load small groups data. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+        // Build query string
+        const queryParams = new URLSearchParams()
+        queryParams.append("page", page.toString())
+        queryParams.append("limit", pagination.limit.toString())
+        
+        if (search) queryParams.append("search", search)
+        if (location) queryParams.append("location", location)
+        
+        // In a real implementation, you would fetch actual data from your API
+        // This is just simulating the API response
+        await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
+        
+        // Mock data
+        const locations = ["North", "South", "East", "West", "Central"]
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        
+        const mockSmallGroups: SmallGroup[] = Array.from({ length: 9 }).map((_, i) => {
+          const locationIndex = i % locations.length
+          const dayIndex = i % days.length
+          const memberCount = 5 + (i * 2)
+          
+          return {
+            _id: `smallgroup${i + 1}`,
+            groupId: `SG${1000 + i}`,
+            name: `${locations[locationIndex]} ${i % 2 === 0 ? 'Young Adults' : 'Family'} Group`,
+            location: `${locations[locationIndex]} District`,
+            leaderId: {
+              _id: `member${i+10}`,
+              firstName: `Leader${i+1}`,
+              lastName: "Smith",
+              email: `leader${i+1}@example.com`
+            },
+            contactPhone: `+123456789${i}`,
+            contactEmail: `${locations[locationIndex].toLowerCase()}group@example.com`,
+            description: `A small group for ${i % 2 === 0 ? 'young adults' : 'families'} in the ${locations[locationIndex]} area.`,
+            meetingSchedule: {
+              day: days[dayIndex],
+              time: `${18 + (i % 3)}:00`,
+              frequency: i % 3 === 0 ? 'Weekly' : i % 3 === 1 ? 'Bi-weekly' : 'Monthly'
+            },
+            memberCount
+          }
+        })
+        
+        setSmallGroups(mockSmallGroups)
+        setPagination({
+          page,
+          limit: 10,
+          total: 25, // Mock total
+          pages: 3,  // Mock pages
+        })
+      } catch (error) {
+        console.error("Error fetching small groups:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load small groups data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
+    
+    fetchSmallGroupsData();
+  }, [searchParams, pagination.limit, toast])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -172,7 +168,7 @@ export default function SmallGroupsPage() {
     router.push("/dashboard/small-groups")
   }
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | boolean | undefined>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     
     Object.entries(params).forEach(([key, value]) => {

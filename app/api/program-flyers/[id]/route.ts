@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+// z is not used in this file
+// import { z } from 'zod';
 import connectToDatabase from '@/lib/db';
 import ProgramFlyer from '@/models/programFlyer';
 import Event from '@/models/event';

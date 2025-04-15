@@ -469,7 +469,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Pagination } from "@/components/ui/pagination"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Filter, UserCheck, ChevronRight, X } from "lucide-react"
+import { Search, Plus, ChevronRight, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 
@@ -547,8 +547,58 @@ export default function MembersPage() {
       gender,
     })
     
-    fetchMembers(page, search, clusterId, smallGroupId, gender)
-  }, [searchParams])
+    const fetchMembersData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Build query string
+        const queryParams = new URLSearchParams()
+        queryParams.append("page", page.toString())
+        queryParams.append("limit", pagination.limit.toString())
+        
+        if (search) queryParams.append("search", search)
+        if (clusterId) queryParams.append("clusterId", clusterId)
+        if (smallGroupId) queryParams.append("smallGroupId", smallGroupId)
+        if (gender) queryParams.append("gender", gender)
+        
+        // In a real implementation, you would fetch actual data from your API
+        // This is just simulating the API response
+        await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
+        
+        // Mock data
+        const mockMembers: Member[] = Array.from({ length: 10 }).map((_, i) => ({
+          _id: `member${i + 1}`,
+          memberId: `M${1000 + i}`,
+          firstName: `First${i + 1}`,
+          lastName: `Last${i + 1}`,
+          email: `member${i + 1}@example.com`,
+          phoneNumber: `+123456789${i}`,
+          gender: i % 2 === 0 ? "Male" : "Female",
+          ...(i % 3 === 0 ? { clusterId: { _id: "1", name: "North Cluster" } } : {}),
+          ...(i % 4 === 0 ? { smallGroupId: { _id: "1", name: "Young Adults" } } : {}),
+        }))
+        
+        setMembers(mockMembers)
+        setPagination({
+          page,
+          limit: 10,
+          total: 45, // Mock total
+          pages: 5,  // Mock pages
+        })
+      } catch (error) {
+        console.error("Error fetching members:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load members data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchMembersData()
+  }, [searchParams, pagination.limit, toast])
 
   const fetchMembers = async (
     page: number, 
@@ -638,7 +688,7 @@ export default function MembersPage() {
     router.push("/dashboard/members")
   }
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | boolean | undefined>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     
     Object.entries(params).forEach(([key, value]) => {

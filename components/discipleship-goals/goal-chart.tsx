@@ -77,7 +77,7 @@ export function DiscipleshipGoalChart({ data, type }: DiscipleshipGoalChartProps
     churchAttendance: 'Church Attendance'
   }
 
-  const formatYAxis = (value: number, index: number): string => {
+  const formatYAxis = (value: number): string => {
     if (type === 'progress') {
       return `${value}%`
     }

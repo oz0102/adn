@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Image as ImageIcon, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import Image from 'next/image';
+// Removed unused import
+// import Image from 'next/image';
 
 interface CloudinaryImageProps {
   src: string;

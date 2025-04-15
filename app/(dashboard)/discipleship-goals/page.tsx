@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { 
   Card, 
   CardContent, 
@@ -11,11 +10,10 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   Target,
   Plus,
-  TrendingUp,
   User,
   Users,
   Droplet,
@@ -76,7 +74,7 @@ interface DiscipleshipGoal {
 }
 
 export default function DiscipleshipGoalsPage() {
-  const router = useRouter()
+  // const router = useRouter() - removed unused variable
   const { toast } = useToast()
   
   const [goals, setGoals] = useState<DiscipleshipGoal[]>([])

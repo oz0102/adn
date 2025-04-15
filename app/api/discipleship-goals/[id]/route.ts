@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+// Removed unused import
+// import { z } from 'zod';
 import connectToDatabase from '@/lib/db';
 import DiscipleshipGoal from '@/models/discipleshipGoal';
 import { getToken } from 'next-auth/jwt';

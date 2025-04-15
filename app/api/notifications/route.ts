@@ -32,7 +32,15 @@ export async function GET(req: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     // Build query
-    const query: any = {};
+    interface NotificationQueryType {
+      $or?: Array<{recipientId?: string, recipientType?: string}>;
+      $and?: Array<{$or: Array<{[key: string]: {$regex: string, $options: string}}>}>;
+      type?: string;
+      status?: string;
+      createdAt?: {$gte?: Date, $lte?: Date};
+    }
+    
+    const query: NotificationQueryType = {};
     
     // Only show notifications for this user or all users if admin
     if (token.role !== 'Admin' && token.role !== 'Pastor') {
@@ -75,7 +83,10 @@ export async function GET(req: NextRequest) {
     const total = await Notification.countDocuments(query);
     
     // Get paginated results
-    const sort: any = {};
+    interface SortType {
+      [key: string]: number;
+    }
+    const sort: SortType = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
     
     const skip = (page - 1) * limit;

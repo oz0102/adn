@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import SmallGroup from '@/models/smallGroup';
-import Member from '@/models/member';
+// Member model not used in this file
+// import Member from '@/models/member';
 import connectToDatabase from '@/lib/db';
 
 // GET all small groups with pagination and filtering
@@ -30,7 +31,12 @@ export async function GET(req: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'asc';
 
     // Build query
-    const query: any = {};
+    interface SmallGroupQueryType {
+      $or?: Array<{[key: string]: {$regex: string, $options: string}}>;
+      clusterId?: string;
+    }
+    
+    const query: SmallGroupQueryType = {};
     
     if (search) {
       query.$or = [
@@ -51,7 +57,10 @@ export async function GET(req: NextRequest) {
     const total = await SmallGroup.countDocuments(query);
     
     // Get paginated results
-    const sort: any = {};
+    interface SortType {
+      [key: string]: number;
+    }
+    const sort: SortType = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
     
     const skip = (page - 1) * limit;

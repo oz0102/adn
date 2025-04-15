@@ -15,7 +15,7 @@ export default function LoginPage() {
   const { login } = useAuthActions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
       // Redirect to dashboard on successful login
       router.push('/dashboard');
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred');
       setIsLoading(false);
     }
@@ -54,11 +54,11 @@ export default function LoginPage() {
           </h2>
         </div>
         
-        {error && (
+        {errorMessage && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
             <div className="flex">
               <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-sm text-red-700">{errorMessage}</p>
               </div>
             </div>
           </div>

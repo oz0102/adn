@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+// Removed unused imports
+// import { z } from 'zod';
 import connectToDatabase from '@/lib/db';
 import Attendance from '@/models/attendance';
-import Member from '@/models/member';
+// import Member from '@/models/member';
 import { getToken } from 'next-auth/jwt';
 
 export async function GET(

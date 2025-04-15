@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
     
     // Build query
-    let query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {};
     
     if (year) {
       query.year = year;
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     
     // Check for existing goal with same period
-    let existingQuery: Record<string, unknown> = {
+    const existingQuery: Record<string, unknown> = {
       year: body.year,
       goalType: body.goalType
     };

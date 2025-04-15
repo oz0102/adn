@@ -4,14 +4,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '@/lib/shared/types/user';
 
-type RouteHandler<T> = (req: NextRequest, params?: any) => Promise<NextResponse<ApiResponse<T>>>;
+type RouteParams = {
+  params?: {
+    id?: string;
+    [key: string]: string | undefined;
+  };
+};
+
+type RouteHandler<T> = (req: NextRequest, params?: RouteParams) => Promise<NextResponse<ApiResponse<T>>>;
 
 /**
  * Wraps API route handlers to ensure MongoDB operations are properly isolated
  * and errors are handled consistently
  */
 export function withMongoDBHandler<T>(handler: RouteHandler<T>): RouteHandler<T> {
-  return async (req: NextRequest, params?: any) => {
+  return async (req: NextRequest, params?: RouteParams) => {
     try {
       // Call the original handler
       return await handler(req, params);

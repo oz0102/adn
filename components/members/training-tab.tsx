@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface MemberTrainingTabProps {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // This prop is defined for future implementation but not currently used
   memberId: string
 }
 

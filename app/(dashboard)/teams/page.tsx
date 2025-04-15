@@ -78,19 +78,12 @@ export default function TeamsPage() {
     setSearchTerm(search)
     setCategoryFilter(category)
     
-    fetchTeams(page, search, category)
-  }, [searchParams])
-
-  const fetchTeams = async (
-    page: number, 
-    search: string, 
-    category: string
-  ) => {
+    const fetchTeamsData = async () => {
     try {
       setIsLoading(true)
       
       // Build query string
-      let queryParams = new URLSearchParams()
+      const queryParams = new URLSearchParams()
       queryParams.append("page", page.toString())
       queryParams.append("limit", pagination.limit.toString())
       
@@ -147,6 +140,9 @@ export default function TeamsPage() {
       setIsLoading(false)
     }
   }
+  
+  fetchTeamsData();
+}, [searchParams, pagination.limit, toast])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,7 +160,7 @@ export default function TeamsPage() {
     router.push("/dashboard/teams")
   }
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | boolean | undefined>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     
     Object.entries(params).forEach(([key, value]) => {

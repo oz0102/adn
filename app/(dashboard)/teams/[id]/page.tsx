@@ -78,72 +78,72 @@ export default function TeamDetailPage({ params }: { params: { id: string } }) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    fetchTeam()
-  }, [params.id])
-
-  const fetchTeam = async () => {
-    try {
-      setIsLoading(true)
+    const fetchTeamData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // In a real implementation, fetch actual data from your API
+        // This is just simulating the API response
+        await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
       
-      // In a real implementation, fetch actual data from your API
-      // This is just simulating the API response
-      await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
-      
-      // Mock data
-      const mockTeam: Team = {
-        _id: params.id,
-        name: "Worship Team",
-        description: "The worship team is responsible for leading the congregation in worship during services and events.",
-        category: "Worship",
-        leaderId: {
-          _id: "member1",
-          firstName: "John",
-          lastName: "Smith",
-          email: "john.smith@example.com",
-        },
-        assistantLeaderIds: [
-          {
-            _id: "member2",
-            firstName: "Sarah",
-            lastName: "Johnson",
-            email: "sarah.johnson@example.com",
+        // Mock data
+        const mockTeam: Team = {
+          _id: params.id,
+          name: "Worship Team",
+          description: "The worship team is responsible for leading the congregation in worship during services and events.",
+          category: "Worship",
+          leaderId: {
+            _id: "member1",
+            firstName: "John",
+            lastName: "Smith",
+            email: "john.smith@example.com",
+          },
+          assistantLeaderIds: [
+            {
+              _id: "member2",
+              firstName: "Sarah",
+              lastName: "Johnson",
+              email: "sarah.johnson@example.com",
+            }
+          ],
+          members: Array.from({ length: 12 }).map((_, i) => ({
+            _id: `member${i + 1}`,
+            firstName: `First${i + 1}`,
+            lastName: `Last${i + 1}`,
+            email: i % 2 === 0 ? `member${i + 1}@example.com` : undefined,
+            phoneNumber: `+123456789${i}`,
+            role: i === 0 ? 'Lead' : i === 1 ? 'Assistant' : 'Member',
+            joinDate: new Date(new Date().getTime() - (Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
+          })),
+          responsibilities: [
+            "Lead worship during Sunday services",
+            "Conduct rehearsals before each service",
+            "Maintain instruments and equipment",
+            "Develop new worship songs and arrangements",
+            "Train new worship team members"
+          ],
+          meetingSchedule: {
+            day: "Saturday",
+            time: "16:00",
+            frequency: "Weekly"
           }
-        ],
-        members: Array.from({ length: 12 }).map((_, i) => ({
-          _id: `member${i + 1}`,
-          firstName: `First${i + 1}`,
-          lastName: `Last${i + 1}`,
-          email: i % 2 === 0 ? `member${i + 1}@example.com` : undefined,
-          phoneNumber: `+123456789${i}`,
-          role: i === 0 ? 'Lead' : i === 1 ? 'Assistant' : 'Member',
-          joinDate: new Date(new Date().getTime() - (Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
-        })),
-        responsibilities: [
-          "Lead worship during Sunday services",
-          "Conduct rehearsals before each service",
-          "Maintain instruments and equipment",
-          "Develop new worship songs and arrangements",
-          "Train new worship team members"
-        ],
-        meetingSchedule: {
-          day: "Saturday",
-          time: "16:00",
-          frequency: "Weekly"
         }
+        
+        setTeam(mockTeam)
+      } catch (error) {
+        console.error("Error fetching team:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load team details. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
       }
-      
-      setTeam(mockTeam)
-    } catch (error) {
-      console.error("Error fetching team:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load team details. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
     }
-  }
+    
+    fetchTeamData();
+  }, [params.id, toast])
 
   const handleDelete = async () => {
     try {

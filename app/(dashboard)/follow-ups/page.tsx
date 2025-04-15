@@ -491,7 +491,7 @@ export default function FollowUpsPage() {
     })
     
     fetchFollowUps(page, search, status, personType, assignedTo)
-  }, [searchParams])
+  }, [searchParams, fetchFollowUps])
 
   const fetchFollowUps = async (
     page: number, 
@@ -504,7 +504,7 @@ export default function FollowUpsPage() {
       setIsLoading(true)
       
       // Build query string
-      let queryParams = new URLSearchParams()
+      const queryParams = new URLSearchParams()
       queryParams.append("page", page.toString())
       queryParams.append("limit", pagination.limit.toString())
       
@@ -524,7 +524,7 @@ export default function FollowUpsPage() {
         personName: `Person ${i + 1}`,
         personEmail: `person${i + 1}@example.com`,
         personPhone: `+1234567890${i}`,
-        status: ['Pending', 'In Progress', 'Completed', 'Failed'][i % 4] as any,
+        status: ['Pending', 'In Progress', 'Completed', 'Failed'][i % 4] as 'Pending' | 'In Progress' | 'Completed' | 'Failed',
         assignedTo: {
           _id: 'user1',
           email: 'user@example.com'
@@ -584,7 +584,7 @@ export default function FollowUpsPage() {
     router.push("/dashboard/follow-ups")
   }
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | boolean | undefined>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     
     Object.entries(params).forEach(([key, value]) => {

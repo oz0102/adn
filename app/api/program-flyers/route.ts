@@ -48,7 +48,13 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
     
     // Build query
-    let query: any = {};
+    interface ProgramFlyerQueryType {
+      $or?: Array<{[key: string]: {$regex: string, $options: string}}>;
+      status?: string;
+      eventId?: string;
+    }
+    
+    const query: ProgramFlyerQueryType = {};
     
     if (search) {
       query.$or = [

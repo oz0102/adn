@@ -1,7 +1,8 @@
 // components/dashboard/sidebar.tsx
 "use client"
 
-import { useState } from "react"
+// Removed unused import
+// import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -50,7 +51,8 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuthStore()
   const { isOpen, toggle } = useSidebarStore()
-  const [openSection] = useState<string | null>("dashboard")
+  // Removed unused state variable
+  // const [openSection] = useState<string | null>("dashboard")
 
   const isAdmin = user?.role === "Admin" || user?.role === "Pastor"
 

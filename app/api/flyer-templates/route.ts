@@ -41,7 +41,13 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
     
     // Build query
-    let query: any = {};
+    interface QueryType {
+      $or?: Array<{[key: string]: {$regex: string, $options: string}}>;
+      category?: string;
+      isActive?: boolean;
+    }
+    
+    const query: QueryType = {};
     
     if (search) {
       query.$or = [

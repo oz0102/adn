@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -9,7 +10,6 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card"
@@ -399,10 +399,12 @@ export default function CreateFlyerPage() {
                       <div className="mt-4">
                         <p className="text-sm font-medium mb-2">Image Preview:</p>
                         <div className="relative w-full max-w-md h-48 border rounded-md overflow-hidden">
-                          <img 
+                          <Image 
                             src={imagePreview} 
                             alt="Preview" 
                             className="w-full h-full object-cover"
+                            width={300}
+                            height={200}
                           />
                           <Button
                             type="button"

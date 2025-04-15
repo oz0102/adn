@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+// z is not used in this file
+// import { z } from 'zod';
 import connectToDatabase from '@/lib/db';
 import Team from '@/models/team';
 import Member from '@/models/member';

@@ -65,10 +65,12 @@ export async function sendFollowUp(request: FollowUpRequest) {
       : `We missed you at ${eventName} on ${eventDate}. Hope to see you at our next event!`;
   }
   
+  type ErrorType = { recipient: string; error: Error | unknown };
+  
   const results = {
-    email: { success: false, sent: 0, failed: 0, errors: [] as any[] },
-    sms: { success: false, sent: 0, failed: 0, errors: [] as any[] },
-    whatsapp: { success: false, sent: 0, failed: 0, errors: [] as any[] }
+    email: { success: false, sent: 0, failed: 0, errors: [] as ErrorType[] },
+    sms: { success: false, sent: 0, failed: 0, errors: [] as ErrorType[] },
+    whatsapp: { success: false, sent: 0, failed: 0, errors: [] as ErrorType[] }
   };
 
   // Process email follow-up
@@ -138,10 +140,17 @@ export async function sendFollowUp(request: FollowUpRequest) {
 export async function sendBatchFollowUps(requests: FollowUpRequest[]) {
   const totalRequests = requests.length;
   
+  type FollowUpError = {
+    memberId?: string;
+    memberName: string;
+    errors: Array<{recipient: string; error: Error | unknown}>;
+    error?: Error | unknown;
+  };
+  
   let processed = 0;
   let successful = 0;
   let failed = 0;
-  const errors: any[] = [];
+  const errors: FollowUpError[] = [];
   
   for (const request of requests) {
     try {

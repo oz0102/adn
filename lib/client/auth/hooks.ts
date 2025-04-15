@@ -48,7 +48,6 @@ export function useAuthActions() {
       
       return { success: true };
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       console.error("Login error:", error);
       return {
         success: false,

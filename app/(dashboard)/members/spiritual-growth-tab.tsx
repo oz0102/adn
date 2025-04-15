@@ -56,7 +56,7 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
 
   useEffect(() => {
     fetchSpiritualGrowth()
-  }, [memberId])
+  }, [memberId, fetchSpiritualGrowth])
 
   const fetchSpiritualGrowth = async () => {
     try {

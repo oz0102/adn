@@ -6,9 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface MemberAttendanceTabProps {
-  // We'll keep the memberId prop but add an eslint disable comment since it's required for the interface
-  // but not currently used in the implementation
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // This prop is defined for future implementation but not currently used
   memberId: string
 }
 
