@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import Image from 'next/image';
 
 interface UploadedImageData {
   url: string;

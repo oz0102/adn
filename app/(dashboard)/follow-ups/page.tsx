@@ -430,7 +430,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Pagination } from "@/components/ui/pagination"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Filter, UserCheck, ChevronRight, X, Mail, Phone } from "lucide-react"
+import { Search, Plus, ChevronRight, X, Mail, Phone } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate, getInitials, getStatusColor } from "@/lib/utils"
 

@@ -6,11 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface MemberSpiritualGrowthTabProps {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   memberId: string
 }
 
 export function MemberSpiritualGrowthTab({ memberId }: MemberSpiritualGrowthTabProps) {
-  const [activeTab, setActiveTab] = useState("discipleship")
+  // We're using setActiveTab in the onValueChange prop, but activeTab isn't used
+  // So we'll keep the state but not destructure the value
+  const [, setActiveTab] = useState("discipleship")
 
   return (
     <Card>

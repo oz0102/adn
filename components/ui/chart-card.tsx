@@ -35,8 +35,8 @@ export type ChartType = 'line' | 'bar' | 'doughnut' | 'pie';
 interface ChartCardProps {
   title: string;
   type: ChartType;
-  data: ChartData<any>;
-  options?: ChartOptions<any>;
+  data: ChartData<'line' | 'bar' | 'doughnut' | 'pie', number[], string>;
+  options?: ChartOptions<'line' | 'bar' | 'doughnut' | 'pie'>;
   className?: string;
   height?: number;
 }
@@ -49,7 +49,7 @@ export function ChartCard({
   className,
   height = 300,
 }: ChartCardProps) {
-  const defaultOptions: ChartOptions<any> = {
+  const defaultOptions: ChartOptions<'line' | 'bar' | 'doughnut' | 'pie'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {

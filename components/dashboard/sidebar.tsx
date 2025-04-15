@@ -50,17 +50,11 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuthStore()
   const { isOpen, toggle } = useSidebarStore()
-  const [openSection, setOpenSection] = useState<string | null>("dashboard")
+  const [openSection] = useState<string | null>("dashboard")
 
   const isAdmin = user?.role === "Admin" || user?.role === "Pastor"
 
-  const toggleSection = (section: string) => {
-    if (openSection === section) {
-      setOpenSection(null)
-    } else {
-      setOpenSection(section)
-    }
-  }
+  // Removed unused toggleSection function
 
   return (
     <aside className={cn(

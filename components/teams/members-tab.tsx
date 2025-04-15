@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, UserPlus, Filter, X } from "lucide-react"
+import { Search, UserPlus, X } from "lucide-react"
 import { 
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ interface TeamMember {
 }
 
 interface TeamMembersTabProps {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   teamId: string;
   members: TeamMember[];
 }

@@ -6,12 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface MemberAttendanceTabProps {
+  // We'll keep the memberId prop but add an eslint disable comment since it's required for the interface
+  // but not currently used in the implementation
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   memberId: string
 }
 
 export function MemberAttendanceTab({ memberId }: MemberAttendanceTabProps) {
-  const [attendance, setAttendance] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
+  // Using array destructuring to only get the first element (the state value)
+  // and not the setter which is unused
+  const [attendance] = useState([])
+  
+  // Remove unused state variables
+  // const [isLoading, setIsLoading] = useState(false)
 
   return (
     <Card>

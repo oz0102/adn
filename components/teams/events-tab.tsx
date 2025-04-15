@@ -6,12 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface TeamEventsTabProps {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   teamId: string
 }
 
 export function TeamEventsTab({ teamId }: TeamEventsTabProps) {
-  const [events, setEvents] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
+  // Using array destructuring to only get the first element (the state value)
+  const [events] = useState([])
+  // Removed unused state variables
+  // const [isLoading, setIsLoading] = useState(false)
 
   return (
     <Card>

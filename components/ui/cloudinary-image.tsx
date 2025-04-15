@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Image as ImageIcon, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import Image from 'next/image';
 
 interface CloudinaryImageProps {
   src: string;
@@ -54,6 +52,8 @@ export function CloudinaryImage({
         </Alert>
       ) : (
         <>
+          {/* Using img tag with ESLint disable because Next/Image has issues with dynamic Cloudinary URLs */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={src}
             alt={alt}

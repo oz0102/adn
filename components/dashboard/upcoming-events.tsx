@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, Clock, MapPin } from "lucide-react"
-import { formatDate, formatDateTime } from "@/lib/utils"
+import { formatDate } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
 interface Event {

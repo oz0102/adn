@@ -5,9 +5,24 @@ import { userRepository } from '@/lib/server/db/repositories/user-repository';
 import { ApiResponse, UserData, CreateUserRequest } from '@/lib/shared/types/user';
 
 /**
+ * Database user interface
+ */
+interface DbUser {
+  _id: {
+    toString: () => string;
+  };
+  email: string;
+  role: string;
+  permissions?: string[];
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+/**
  * Convert database user to API user data
  */
-function mapUserToUserData(user: any): UserData {
+function mapUserToUserData(user: DbUser): UserData {
   return {
     id: user._id.toString(),
     email: user.email,
@@ -31,7 +46,7 @@ export const GET = withMongoDBHandler(async (req: NextRequest) => {
   
   const response: ApiResponse<UserData[]> = {
     success: true,
-    data: users.map(mapUserToUserData)
+    data: users.map((user) => mapUserToUserData(user as DbUser))
   };
   
   return NextResponse.json(response);
@@ -80,7 +95,7 @@ export const POST = withMongoDBHandler(async (req: NextRequest) => {
   
   const response: ApiResponse<UserData> = {
     success: true,
-    data: mapUserToUserData(user)
+    data: mapUserToUserData(user as DbUser)
   };
   
   return NextResponse.json(response, { status: 201 });

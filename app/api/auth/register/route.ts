@@ -10,7 +10,15 @@ import { ApiResponse, UserData, CreateUserRequest } from '@/lib/shared/types/use
 /**
  * Convert database user to API user data
  */
-function mapUserToUserData(user: any): UserData {
+function mapUserToUserData(user: {
+  _id: { toString: () => string };
+  email: string;
+  role: string;
+  permissions?: string[];
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}): UserData {
   return {
     id: user._id.toString(),
     email: user.email,

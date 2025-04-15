@@ -13,7 +13,7 @@ export interface NotificationRequest {
     name: string;
   }[];
   channels: ('email' | 'sms' | 'whatsapp')[];
-  templateData?: Record<string, any>;
+  templateData?: Record<string, string | number | boolean | Record<string, unknown>>;
 }
 
 /**
@@ -25,9 +25,9 @@ export async function sendNotification(notification: NotificationRequest) {
   const { title, message, recipients, channels, templateData } = notification;
   
   const results = {
-    email: { success: false, sent: 0, failed: 0, errors: [] as any[] },
-    sms: { success: false, sent: 0, failed: 0, errors: [] as any[] },
-    whatsapp: { success: false, sent: 0, failed: 0, errors: [] as any[] }
+    email: { success: false, sent: 0, failed: 0, errors: [] as Array<{recipient: string; error: Error | string | Record<string, unknown>}> },
+    sms: { success: false, sent: 0, failed: 0, errors: [] as Array<{recipient: string; error: Error | string | Record<string, unknown>}> },
+    whatsapp: { success: false, sent: 0, failed: 0, errors: [] as Array<{recipient: string; error: Error | string | Record<string, unknown>}> }
   };
 
   // Process email notifications
@@ -136,7 +136,7 @@ export async function sendBatchNotification(notification: NotificationRequest) {
   let processed = 0;
   let successful = 0;
   let failed = 0;
-  const errors: any[] = [];
+  const errors: Array<{batch?: number; recipient?: string; error: Error | string | Record<string, unknown>}> = [];
   
   // Process in batches
   for (let i = 0; i < totalRecipients; i += batchSize) {

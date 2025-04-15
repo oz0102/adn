@@ -18,6 +18,15 @@ const teamSchema = z.object({
   }).optional()
 });
 
+interface TeamQuery {
+  $or?: Array<{
+    name: { $regex: string, $options: string };
+  } | {
+    description: { $regex: string, $options: string };
+  }>;
+  category?: string;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req, secret: process.env.AUTH_SECRET });
@@ -40,7 +49,7 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
     
     // Build query
-    let query: any = {};
+    const query: TeamQuery = {};
     
     if (search) {
       query.$or = [

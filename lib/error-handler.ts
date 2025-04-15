@@ -5,13 +5,13 @@ export interface ApiError {
   status: number;
   code: string;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export class ApiErrorResponse extends Error {
   status: number;
   code: string;
-  details?: any;
+  details?: Record<string, unknown>;
 
   constructor(error: ApiError) {
     super(error.message);
@@ -21,7 +21,7 @@ export class ApiErrorResponse extends Error {
     this.name = 'ApiErrorResponse';
   }
 
-  static badRequest(message: string, details?: any): ApiErrorResponse {
+  static badRequest(message: string, details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 400,
       code: 'BAD_REQUEST',
@@ -30,7 +30,7 @@ export class ApiErrorResponse extends Error {
     });
   }
 
-  static unauthorized(message: string = 'Not authenticated', details?: any): ApiErrorResponse {
+  static unauthorized(message: string = 'Not authenticated', details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 401,
       code: 'UNAUTHORIZED',
@@ -39,7 +39,7 @@ export class ApiErrorResponse extends Error {
     });
   }
 
-  static forbidden(message: string = 'Access denied', details?: any): ApiErrorResponse {
+  static forbidden(message: string = 'Access denied', details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 403,
       code: 'FORBIDDEN',
@@ -48,7 +48,7 @@ export class ApiErrorResponse extends Error {
     });
   }
 
-  static notFound(message: string = 'Resource not found', details?: any): ApiErrorResponse {
+  static notFound(message: string = 'Resource not found', details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 404,
       code: 'NOT_FOUND',
@@ -57,7 +57,7 @@ export class ApiErrorResponse extends Error {
     });
   }
 
-  static conflict(message: string, details?: any): ApiErrorResponse {
+  static conflict(message: string, details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 409,
       code: 'CONFLICT',
@@ -66,7 +66,7 @@ export class ApiErrorResponse extends Error {
     });
   }
 
-  static validationError(message: string = 'Validation error', details?: any): ApiErrorResponse {
+  static validationError(message: string = 'Validation error', details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 422,
       code: 'VALIDATION_ERROR',
@@ -75,7 +75,7 @@ export class ApiErrorResponse extends Error {
     });
   }
 
-  static serverError(message: string = 'Internal server error', details?: any): ApiErrorResponse {
+  static serverError(message: string = 'Internal server error', details?: Record<string, unknown>): ApiErrorResponse {
     return new ApiErrorResponse({
       status: 500,
       code: 'SERVER_ERROR',
@@ -117,7 +117,7 @@ export function handleApiError(error: unknown): NextResponse {
       status: 422,
       code: 'VALIDATION_ERROR',
       message: 'Validation error',
-      details: error.message,
+      details: { message: error.message },
     }).toResponse();
   }
   
@@ -128,7 +128,7 @@ export function handleApiError(error: unknown): NextResponse {
         status: 409,
         code: 'CONFLICT',
         message: 'Resource already exists',
-        details: error.message,
+        details: { message: error.message },
       }).toResponse();
     }
     
@@ -152,10 +152,10 @@ export function handleApiError(error: unknown): NextResponse {
  * @param handler The API handler function to wrap
  * @returns A wrapped function that handles errors
  */
-export function withErrorHandling(
-  handler: (...args: any[]) => Promise<NextResponse>
+export function withErrorHandling<T extends unknown[]>(
+  handler: (...args: T) => Promise<NextResponse>
 ) {
-  return async (...args: any[]): Promise<NextResponse> => {
+  return async (...args: T): Promise<NextResponse> => {
     try {
       return await handler(...args);
     } catch (error) {

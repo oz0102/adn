@@ -27,7 +27,7 @@ interface ChannelResult {
   failed: number;
   errors: Array<{
     recipient: string;
-    error: unknown;
+    error: Error | string | Record<string, unknown>;
   }>;
 }
 
@@ -150,7 +150,7 @@ interface BatchResult {
   failed: number;
   errors: Array<{
     batch?: number;
-    error: unknown;
+    error: Error | string | Record<string, unknown>;
   }>;
 }
 

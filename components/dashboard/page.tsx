@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, Users, Star, UserCheck, Calendar as CalendarIcon } from "lucide-react"
+import { Clock, Users, Star, UserCheck, Calendar as CalendarIcon } from "lucide-react"
 import { DashboardChart } from "@/components/dashboard/dashboard-chart"
 import { RecentActivity } from "@/components/dashboard/recent-activity"
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events"

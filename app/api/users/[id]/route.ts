@@ -8,9 +8,24 @@ import { userRepository } from '@/lib/server/db/repositories/user-repository';
 import { ApiResponse, UserData, UpdateUserRequest, ChangePasswordRequest } from '@/lib/shared/types/user';
 
 /**
+ * Database user interface
+ */
+interface DbUser {
+  _id: {
+    toString: () => string;
+  };
+  email: string;
+  role: string;
+  permissions?: string[];
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+/**
  * Convert database user to API user data
  */
-function mapUserToUserData(user: any): UserData {
+function mapUserToUserData(user: DbUser): UserData {
   return {
     id: user._id.toString(),
     email: user.email,
@@ -48,7 +63,7 @@ export async function GET(
     
     const response: ApiResponse<UserData> = {
       success: true,
-      data: mapUserToUserData(user)
+      data: mapUserToUserData(user as DbUser)
     };
     
     return NextResponse.json(response);
@@ -97,7 +112,7 @@ export async function PUT(
     
     const response: ApiResponse<UserData> = {
       success: true,
-      data: mapUserToUserData(updatedUser!)
+      data: mapUserToUserData(updatedUser as DbUser)
     };
     
     return NextResponse.json(response);
@@ -199,7 +214,7 @@ export async function PATCH(
     
     const response: ApiResponse<UserData> = {
       success: true,
-      data: mapUserToUserData(user)
+      data: mapUserToUserData(user as DbUser)
     };
     
     return NextResponse.json(response);

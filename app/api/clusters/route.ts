@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'asc';
 
     // Build query
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     
     if (search) {
       query.$or = [
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const total = await Cluster.countDocuments(query);
     
     // Get paginated results
-    const sort: any = {};
+    const sort: Record<string, 1 | -1> = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
     
     const skip = (page - 1) * limit;

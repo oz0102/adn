@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     await connectToDatabase();
     
     // Build query
-    let query: any = {};
+    let query: Record<string, unknown> = {};
     
     if (eventId) {
       query.eventId = eventId;

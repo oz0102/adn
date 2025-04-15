@@ -20,6 +20,15 @@ interface EventItem {
   location: string;
 }
 
+interface ApiEventData {
+  _id: string;
+  name: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  location?: string;
+}
+
 interface UpcomingEventsCardProps {
   className?: string;
   limit?: number;
@@ -52,7 +61,7 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
         
         if (data.success && data.data.events) {
           // Transform the data
-          const transformedEvents: EventItem[] = data.data.events.map((event: any) => ({
+          const transformedEvents: EventItem[] = data.data.events.map((event: ApiEventData) => ({
             id: event._id,
             title: event.name,
             eventType: event.type as EventType,
@@ -106,12 +115,13 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
     };
     
     fetchUpcomingEvents();
-  }, [toast]);
+  }, [toast, limit]);
 
   const handleViewDetails = (eventId: string) => {
     router.push(`/events/${eventId}`);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleRegister = (eventId: string) => {
     // In a real implementation, this would open a registration form or process
     toast({

@@ -57,7 +57,7 @@ export async function generateFlyer(request: FlyerGenerationRequest) {
 export async function saveFlyerContent(flyerData: {
   eventId: string;
   title: string;
-  content: any;
+  content: string | Record<string, unknown>;
   templateId?: string;
   imageUrl?: string;
   status: 'Draft' | 'Published';

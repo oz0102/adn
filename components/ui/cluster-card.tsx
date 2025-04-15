@@ -1,11 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface ClusterCardProps {
-  id: string;
   name: string;
   location: string;
   leaderName?: string;
@@ -20,7 +19,6 @@ interface ClusterCardProps {
 }
 
 export function ClusterCard({
-  id,
   name,
   location,
   leaderName,
@@ -44,10 +42,11 @@ export function ClusterCard({
     >
       {imageUrl && (
         <div className="relative h-40 w-full">
-          <img 
+          <Image 
             src={imageUrl} 
-            alt={name} 
-            className="h-full w-full object-cover"
+            alt={name}
+            fill
+            className="object-cover"
           />
         </div>
       )}

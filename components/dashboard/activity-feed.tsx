@@ -21,6 +21,55 @@ interface ActivityItem {
   };
 }
 
+interface MemberData {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+  createdBy?: {
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
+interface EventData {
+  _id: string;
+  name: string;
+  createdAt: string;
+  organizer?: {
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
+interface FollowUpData {
+  _id: string;
+  completedAt?: string;
+  updatedAt: string;
+  memberId?: {
+    firstName: string;
+    lastName: string;
+  };
+  assignedTo?: {
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
+interface NotificationData {
+  _id: string;
+  title: string;
+  createdAt: string;
+  senderId?: {
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
 interface ActivityFeedProps {
   className?: string;
   limit?: number;
@@ -57,7 +106,7 @@ export function ActivityFeed({ className, limit = 5 }: ActivityFeedProps) {
         
         // Add members
         if (membersData.success && membersData.data.members) {
-          membersData.data.members.forEach((member: any) => {
+          membersData.data.members.forEach((member: MemberData) => {
             combinedActivities.push({
               id: `member-${member._id}`,
               type: 'member_added',
@@ -74,7 +123,7 @@ export function ActivityFeed({ className, limit = 5 }: ActivityFeedProps) {
         
         // Add events
         if (eventsData.success && eventsData.data.events) {
-          eventsData.data.events.forEach((event: any) => {
+          eventsData.data.events.forEach((event: EventData) => {
             combinedActivities.push({
               id: `event-${event._id}`,
               type: 'event_created',
@@ -91,7 +140,7 @@ export function ActivityFeed({ className, limit = 5 }: ActivityFeedProps) {
         
         // Add follow-ups
         if (followUpsData.success && followUpsData.data.followUps) {
-          followUpsData.data.followUps.forEach((followUp: any) => {
+          followUpsData.data.followUps.forEach((followUp: FollowUpData) => {
             combinedActivities.push({
               id: `followup-${followUp._id}`,
               type: 'follow_up_completed',
@@ -108,7 +157,7 @@ export function ActivityFeed({ className, limit = 5 }: ActivityFeedProps) {
         
         // Add notifications
         if (notificationsData.success && notificationsData.data.notifications) {
-          notificationsData.data.notifications.forEach((notification: any) => {
+          notificationsData.data.notifications.forEach((notification: NotificationData) => {
             combinedActivities.push({
               id: `notification-${notification._id}`,
               type: 'notification_sent',

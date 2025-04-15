@@ -16,7 +16,6 @@ import {
   User, 
   Edit, 
   Trash2,
-  CheckCircle,
   AlertCircle,
   Plus
 } from "lucide-react"

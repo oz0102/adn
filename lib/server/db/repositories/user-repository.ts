@@ -77,7 +77,7 @@ export class UserRepository {
   async updateUser(id: string, userData: UpdateUserData): Promise<IUser | null> {
     await connectToMongoose();
     
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (userData.email) updateData.email = userData.email.toLowerCase();
     if (userData.role) updateData.role = userData.role;
