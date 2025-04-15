@@ -1,424 +1,25 @@
 // // app/(dashboard)/follow-ups/page.tsx
-// "use client"
-
-// import { useState, useEffect } from "react"
-// import Link from "next/link"
-// import { useRouter, useSearchParams } from "next/navigation"
-// import { 
-//   Table, 
-//   TableBody, 
-//   TableCell, 
-//   TableHead, 
-//   TableHeader, 
-//   TableRow 
-// } from "@/components/ui/table"
-// import { Button } from "@/components/ui/button"
-// import { Input } from "@/components/ui/input"
-// import { 
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select"
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-// import { Pagination } from "@/components/ui/pagination"
-// import { Badge } from "@/components/ui/badge"
-// import { Search, Plus, Filter, UserCheck, ChevronRight, X, Mail, Phone } from "lucide-react"
-// import { useToast } from "@/hooks/use-toast"
-// import { formatDate, getInitials, getStatusColor } from "@/lib/utils"
-
-// interface FollowUp {
-//   _id: string
-//   personType: 'New Attendee' | 'Member'
-//   personName: string
-//   personEmail?: string
-//   personPhone: string
-//   status: 'Pending' | 'In Progress' | 'Completed' | 'Failed'
-//   assignedTo: {
-//     _id: string;
-//     email: string;
-//   }
-//   nextFollowUpDate?: string
-//   createdAt: string
-// }
-
-// interface PaginationInfo {
-//   page: number
-//   limit: number
-//   total: number
-//   pages: number
-// }
-
-// export default function FollowUpsPage() {
-//   const router = useRouter()
-//   const searchParams = useSearchParams()
-//   const { toast } = useToast()
-  
-//   const [followUps, setFollowUps] = useState<FollowUp[]>([])
-//   const [pagination, setPagination] = useState<PaginationInfo>({
-//     page: 1,
-//     limit: 10,
-//     total: 0,
-//     pages: 0,
-//   })
-//   const [isLoading, setIsLoading] = useState(true)
-//   const [searchTerm, setSearchTerm] = useState("")
-//   const [filters, setFilters] = useState({
-//     status: "",
-//     personType: "",
-//     assignedTo: "",
-//   })
-  
-//   useEffect(() => {
-//     const page = parseInt(searchParams.get("page") || "1")
-//     const search = searchParams.get("search") || ""
-//     const status = searchParams.get("status") || ""
-//     const personType = searchParams.get("personType") || ""
-//     const assignedTo = searchParams.get("assignedTo") || ""
-    
-//     setSearchTerm(search)
-//     setFilters({
-//       status,
-//       personType,
-//       assignedTo,
-//     })
-    
-//     fetchFollowUps(page, search, status, personType, assignedTo)
-//   }, [searchParams])
-
-//   const fetchFollowUps = async (
-//     page: number, 
-//     search: string, 
-//     status: string, 
-//     personType: string, 
-//     assignedTo: string
-//   ) => {
-//     try {
-//       setIsLoading(true)
-      
-//       // Build query string
-//       let queryParams = new URLSearchParams()
-//       queryParams.append("page", page.toString())
-//       queryParams.append("limit", pagination.limit.toString())
-      
-//       if (search) queryParams.append("search", search)
-//       if (status) queryParams.append("status", status)
-//       if (personType) queryParams.append("personType", personType)
-//       if (assignedTo) queryParams.append("assignedTo", assignedTo)
-      
-//       // In a real implementation, you would fetch actual data from your API
-//       // This is just simulating the API response
-//       await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
-      
-//       // Mock data
-//       const mockFollowUps: FollowUp[] = Array.from({ length: 10 }).map((_, i) => ({
-//         _id: `followup${i + 1}`,
-//         personType: i % 2 === 0 ? 'New Attendee' : 'Member',
-//         personName: `Person ${i + 1}`,
-//         personEmail: `person${i + 1}@example.com`,
-//         personPhone: `+1234567890${i}`,
-//         status: ['Pending', 'In Progress', 'Completed', 'Failed'][i % 4] as any,
-//         assignedTo: {
-//           _id: 'user1',
-//           email: 'user@example.com'
-//         },
-//         nextFollowUpDate: i % 3 === 0 ? new Date(Date.now() + 86400000 * (i + 1)).toISOString() : undefined,
-//         createdAt: new Date(Date.now() - 86400000 * i).toISOString(),
-//       }))
-      
-//       setFollowUps(mockFollowUps)
-//       setPagination({
-//         page,
-//         limit: 10,
-//         total: 35, // Mock total
-//         pages: 4,  // Mock pages
-//       })
-//     } catch (error) {
-//       console.error("Error fetching follow-ups:", error)
-//       toast({
-//         title: "Error",
-//         description: "Failed to load follow-ups data. Please try again.",
-//         variant: "destructive",
-//       })
-//     } finally {
-//       setIsLoading(false)
-//     }
-//   }
-
-//   const handleSearch = (e: React.FormEvent) => {
-//     e.preventDefault()
-//     updateUrlParams({ search: searchTerm, page: 1 })
-//   }
-
-//   const handleFilterChange = (key: string, value: string) => {
-//     setFilters(prev => ({ ...prev, [key]: value }))
-//     updateUrlParams({ [key]: value, page: 1 })
-//   }
-
-//   const clearFilters = () => {
-//     setFilters({
-//       status: "",
-//       personType: "",
-//       assignedTo: "",
-//     })
-//     setSearchTerm("")
-//     router.push("/dashboard/follow-ups")
-//   }
-
-//   const updateUrlParams = (params: Record<string, any>) => {
-//     const newParams = new URLSearchParams(searchParams.toString())
-    
-//     Object.entries(params).forEach(([key, value]) => {
-//       if (value) {
-//         newParams.set(key, value.toString())
-//       } else {
-//         newParams.delete(key)
-//       }
-//     })
-    
-//     router.push(`/dashboard/follow-ups?${newParams.toString()}`)
-//   }
-
-//   const handlePageChange = (page: number) => {
-//     updateUrlParams({ page })
-//   }
-
-//   return (
-//     <div className="space-y-6">
-//       <div className="flex items-center justify-between">
-//         <h1 className="text-3xl font-bold tracking-tight">Follow-ups</h1>
-//         <Button asChild>
-//           <Link href="/dashboard/follow-ups/new">
-//             <Plus className="mr-2 h-4 w-4" /> New Follow-up
-//           </Link>
-//         </Button>
-//       </div>
-      
-//       <Card>
-//         <CardHeader className="pb-3">
-//           <CardTitle>Follow-up Management</CardTitle>
-//         </CardHeader>
-//         <CardContent>
-//           <div className="space-y-4">
-//             <div className="flex flex-col sm:flex-row gap-2">
-//               <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-//                 <div className="relative flex-1">
-//                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-//                   <Input
-//                     type="search"
-//                     placeholder="Search by name, email, or phone..."
-//                     className="pl-8"
-//                     value={searchTerm}
-//                     onChange={(e) => setSearchTerm(e.target.value)}
-//                   />
-//                 </div>
-//                 <Button type="submit">Search</Button>
-//               </form>
-              
-//               <div className="flex items-center gap-2">
-//                 <Select
-//                   value={filters.status}
-//                   onValueChange={(value) => handleFilterChange("status", value)}
-//                 >
-//                   <SelectTrigger className="w-[180px]">
-//                     <SelectValue placeholder="Status" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="">All Statuses</SelectItem>
-//                     <SelectItem value="Pending">Pending</SelectItem>
-//                     <SelectItem value="In Progress">In Progress</SelectItem>
-//                     <SelectItem value="Completed">Completed</SelectItem>
-//                     <SelectItem value="Failed">Failed</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-                
-//                 <Select
-//                   value={filters.personType}
-//                   onValueChange={(value) => handleFilterChange("personType", value)}
-//                 >
-//                   <SelectTrigger className="w-[180px]">
-//                     <SelectValue placeholder="Person Type" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="">All Types</SelectItem>
-//                     <SelectItem value="New Attendee">New Attendee</SelectItem>
-//                     <SelectItem value="Member">Member</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-                
-//                 <Button
-//                   variant="outline"
-//                   size="icon"
-//                   onClick={clearFilters}
-//                   title="Clear filters"
-//                 >
-//                   <X className="h-4 w-4" />
-//                 </Button>
-//               </div>
-//             </div>
-            
-//             {(searchTerm || filters.status || filters.personType) && (
-//               <div className="flex flex-wrap gap-2">
-//                 {searchTerm && (
-//                   <Badge variant="secondary" className="flex items-center gap-1">
-//                     Search: {searchTerm}
-//                     <Button
-//                       variant="ghost"
-//                       size="icon"
-//                       className="h-4 w-4 p-0 ml-1"
-//                       onClick={() => {
-//                         setSearchTerm("")
-//                         updateUrlParams({ search: "" })
-//                       }}
-//                     >
-//                       <X className="h-3 w-3" />
-//                     </Button>
-//                   </Badge>
-//                 )}
-                
-//                 {filters.status && (
-//                   <Badge variant="secondary" className="flex items-center gap-1">
-//                     Status: {filters.status}
-//                     <Button
-//                       variant="ghost"
-//                       size="icon"
-//                       className="h-4 w-4 p-0 ml-1"
-//                       onClick={() => handleFilterChange("status", "")}
-//                     >
-//                       <X className="h-3 w-3" />
-//                     </Button>
-//                   </Badge>
-//                 )}
-                
-//                 {filters.personType && (
-//                   <Badge variant="secondary" className="flex items-center gap-1">
-//                     Type: {filters.personType}
-//                     <Button
-//                       variant="ghost"
-//                       size="icon"
-//                       className="h-4 w-4 p-0 ml-1"
-//                       onClick={() => handleFilterChange("personType", "")}
-//                     >
-//                       <X className="h-3 w-3" />
-//                     </Button>
-//                   </Badge>
-//                 )}
-//               </div>
-//             )}
-            
-//             <div className="rounded-md border">
-//               <Table>
-//                 <TableHeader>
-//                   <TableRow>
-//                     <TableHead>Person</TableHead>
-//                     <TableHead>Contact</TableHead>
-//                     <TableHead>Status</TableHead>
-//                     <TableHead>Assigned To</TableHead>
-//                     <TableHead>Next Follow-up</TableHead>
-//                     <TableHead>Actions</TableHead>
-//                   </TableRow>
-//                 </TableHeader>
-//                 <TableBody>
-//                   {isLoading ? (
-//                     <TableRow>
-//                       <TableCell colSpan={6} className="text-center py-10">
-//                         Loading follow-ups...
-//                       </TableCell>
-//                     </TableRow>
-//                   ) : followUps.length === 0 ? (
-//                     <TableRow>
-//                       <TableCell colSpan={6} className="text-center py-10">
-//                         No follow-ups found. Try adjusting your search or filters.
-//                       </TableCell>
-//                     </TableRow>
-//                   ) : (
-//                     followUps.map((followUp) => (
-//                       <TableRow key={followUp._id}>
-//                         <TableCell>
-//                           <div className="flex items-center gap-2">
-//                             <Avatar className="h-8 w-8">
-//                               <AvatarFallback>{getInitials(followUp.personName, "")}</AvatarFallback>
-//                             </Avatar>
-//                             <div>
-//                               <p className="font-medium">{followUp.personName}</p>
-//                               <Badge variant="outline">{followUp.personType}</Badge>
-//                             </div>
-//                           </div>
-//                         </TableCell>
-//                         <TableCell>
-//                           <div className="flex flex-col space-y-1">
-//                             {followUp.personEmail && (
-//                               <div className="flex items-center gap-1">
-//                                 <Mail className="h-3 w-3 text-gray-500" />
-//                                 <span className="text-sm">{followUp.personEmail}</span>
-//                               </div>
-//                             )}
-//                             <div className="flex items-center gap-1">
-//                               <Phone className="h-3 w-3 text-gray-500" />
-//                               <span className="text-sm">{followUp.personPhone}</span>
-//                             </div>
-//                           </div>
-//                         </TableCell>
-//                         <TableCell>
-//                           <Badge className={getStatusColor(followUp.status)}>
-//                             {followUp.status}
-//                           </Badge>
-//                         </TableCell>
-//                         <TableCell>
-//                           <span className="text-sm">{followUp.assignedTo.email}</span>
-//                         </TableCell>
-//                         <TableCell>
-//                           {followUp.nextFollowUpDate ? (
-//                             formatDate(new Date(followUp.nextFollowUpDate))
-//                           ) : (
-//                             <span className="text-gray-500">Not scheduled</span>
-//                           )}
-//                         </TableCell>
-//                         <TableCell>
-//                           <div className="flex items-center gap-2">
-//                             <Button variant="ghost" size="icon" asChild>
-//                               <Link href={`/dashboard/follow-ups/${followUp._id}`}>
-//                                 <ChevronRight className="h-4 w-4" />
-//                               </Link>
-//                             </Button>
-//                           </div>
-//                         </TableCell>
-//                       </TableRow>
-//                     ))
-//                   )}
-//                 </TableBody>
-//               </Table>
-//             </div>
-            
-//             <Pagination
-//               currentPage={pagination.page}
-//               totalPages={pagination.pages}
-//               onPageChange={handlePageChange}
-//             />
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   )
-// }
 
 "use client"
 
 import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card"
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { 
   Select,
   SelectContent,
@@ -426,13 +27,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Pagination } from "@/components/ui/pagination"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, ChevronRight, X, Mail, Phone } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { 
+  ArrowLeft, 
+  Calendar, 
+  Mail, 
+  Phone, 
+  User, 
+  Clock, 
+  MessageCircle,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Edit,
+  Clipboard,
+  Send
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate, getInitials, getStatusColor } from "@/lib/utils"
+
+interface FollowUpAttempt {
+  attemptNumber: number
+  date: string
+  contactMethod: 'Email' | 'SMS' | 'WhatsApp' | 'Call' | 'In Person'
+  response: 'Positive' | 'Negative' | 'No Response'
+  notes?: string
+  conductedBy: {
+    _id: string
+    email: string
+  }
+}
 
 interface FollowUp {
   _id: string
@@ -442,386 +71,544 @@ interface FollowUp {
   personPhone: string
   status: 'Pending' | 'In Progress' | 'Completed' | 'Failed'
   assignedTo: {
-    _id: string;
-    email: string;
+    _id: string
+    email: string
   }
   nextFollowUpDate?: string
+  attempts: FollowUpAttempt[]
+  eventDetails?: {
+    eventName: string
+    eventDate: string
+  }
+  notes?: string
   createdAt: string
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  pages: number
-}
-
-export default function FollowUpsPage() {
+export default function FollowUpDetailPage() {
+  const params = useParams<{ id: string }>()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { toast } = useToast()
   
-  const [followUps, setFollowUps] = useState<FollowUp[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0,
-  })
+  const [followUp, setFollowUp] = useState<FollowUp | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filters, setFilters] = useState({
-    status: "",
-    personType: "",
-    assignedTo: "",
+  const [newAttempt, setNewAttempt] = useState({
+    contactMethod: 'Call' as 'Email' | 'SMS' | 'WhatsApp' | 'Call' | 'In Person',
+    response: 'No Response' as 'Positive' | 'Negative' | 'No Response',
+    notes: ''
   })
+  const [status, setStatus] = useState<FollowUp['status']>('Pending')
+  const [nextFollowUpDate, setNextFollowUpDate] = useState('')
   
   useEffect(() => {
-    const page = parseInt(searchParams.get("page") || "1")
-    const search = searchParams.get("search") || ""
-    const status = searchParams.get("status") || ""
-    const personType = searchParams.get("personType") || ""
-    const assignedTo = searchParams.get("assignedTo") || ""
+    const fetchFollowUpData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // In a real implementation, you would fetch actual data from your API
+        // This is just simulating the API response
+        await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
+        
+        // Mock data
+        const mockFollowUp: FollowUp = {
+          _id: params.id,
+          personType: Math.random() > 0.5 ? 'New Attendee' : 'Member',
+          personName: 'John Smith',
+          personEmail: 'john.smith@example.com',
+          personPhone: '+1234567890',
+          status: 'In Progress',
+          assignedTo: {
+            _id: 'user1',
+            email: 'pastor@church.org'
+          },
+          nextFollowUpDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+          attempts: [
+            {
+              attemptNumber: 1,
+              date: new Date(Date.now() - 7 * 86400000).toISOString(),
+              contactMethod: 'Call',
+              response: 'No Response',
+              notes: 'Called but no answer. Left voicemail.',
+              conductedBy: {
+                _id: 'user1',
+                email: 'pastor@church.org'
+              }
+            },
+            {
+              attemptNumber: 2,
+              date: new Date(Date.now() - 3 * 86400000).toISOString(),
+              contactMethod: 'SMS',
+              response: 'Positive',
+              notes: 'Responded to text message. Will try to attend next service.',
+              conductedBy: {
+                _id: 'user1',
+                email: 'pastor@church.org'
+              }
+            }
+          ],
+          eventDetails: {
+            eventName: 'Sunday Service',
+            eventDate: new Date(Date.now() - 14 * 86400000).toISOString()
+          },
+          notes: 'First-time visitor. Seemed interested in small groups.',
+          createdAt: new Date(Date.now() - 10 * 86400000).toISOString()
+        }
+        
+        setFollowUp(mockFollowUp)
+        setStatus(mockFollowUp.status)
+        
+        if (mockFollowUp.nextFollowUpDate) {
+          setNextFollowUpDate(new Date(mockFollowUp.nextFollowUpDate).toISOString().split('T')[0])
+        }
+      } catch (error) {
+        console.error("Error fetching follow-up:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load follow-up data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    };
     
-    setSearchTerm(search)
-    setFilters({
-      status,
-      personType,
-      assignedTo,
-    })
+    fetchFollowUpData();
+  }, [params.id, toast]);
+  
+  const handleStatusChange = (newStatus: string) => {
+    setStatus(newStatus as FollowUp['status'])
+  }
+  
+  const handleNewAttemptChange = (field: keyof typeof newAttempt, value: string) => {
+    setNewAttempt(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+  
+  const handleSubmitAttempt = async (e: React.FormEvent) => {
+    e.preventDefault()
     
-    fetchFollowUps(page, search, status, personType, assignedTo)
-  }, [searchParams, fetchFollowUps])
-
-  const fetchFollowUps = async (
-    page: number, 
-    search: string, 
-    status: string, 
-    personType: string, 
-    assignedTo: string
-  ) => {
-    try {
-      setIsLoading(true)
-      
-      // Build query string
-      const queryParams = new URLSearchParams()
-      queryParams.append("page", page.toString())
-      queryParams.append("limit", pagination.limit.toString())
-      
-      if (search) queryParams.append("search", search)
-      if (status) queryParams.append("status", status)
-      if (personType) queryParams.append("personType", personType)
-      if (assignedTo) queryParams.append("assignedTo", assignedTo)
-      
-      // In a real implementation, you would fetch actual data from your API
-      // This is just simulating the API response
-      await new Promise(resolve => setTimeout(resolve, 500)) // Fake loading delay
-      
-      // Mock data
-      const mockFollowUps: FollowUp[] = Array.from({ length: 10 }).map((_, i) => ({
-        _id: `followup${i + 1}`,
-        personType: i % 2 === 0 ? 'New Attendee' : 'Member',
-        personName: `Person ${i + 1}`,
-        personEmail: `person${i + 1}@example.com`,
-        personPhone: `+1234567890${i}`,
-        status: ['Pending', 'In Progress', 'Completed', 'Failed'][i % 4] as 'Pending' | 'In Progress' | 'Completed' | 'Failed',
-        assignedTo: {
-          _id: 'user1',
-          email: 'user@example.com'
-        },
-        nextFollowUpDate: i % 3 === 0 ? new Date(Date.now() + 86400000 * (i + 1)).toISOString() : undefined,
-        createdAt: new Date(Date.now() - 86400000 * i).toISOString(),
-      }))
-      
-      setFollowUps(mockFollowUps)
-      setPagination({
-        page,
-        limit: 10,
-        total: 35, // Mock total
-        pages: 4,  // Mock pages
+    if (!newAttempt.notes) {
+      toast({
+        title: "Missing information",
+        description: "Please provide notes about the follow-up attempt",
+        variant: "destructive",
       })
+      return
+    }
+    
+    try {
+      // In a real implementation, you would send data to your API
+      // This is just simulating the API call
+      setIsLoading(true)
+      await new Promise(resolve => setTimeout(resolve, 500)) // Fake API call delay
+      
+      // Update local state to simulate successful save
+      if (followUp) {
+        const newAttemptNumber = followUp.attempts.length + 1
+        const newAttemptData: FollowUpAttempt = {
+          attemptNumber: newAttemptNumber,
+          date: new Date().toISOString(),
+          contactMethod: newAttempt.contactMethod,
+          response: newAttempt.response,
+          notes: newAttempt.notes,
+          conductedBy: {
+            _id: 'user1',
+            email: 'pastor@church.org' // In a real app, this would be the current user
+          }
+        }
+        
+        setFollowUp({
+          ...followUp,
+          attempts: [...followUp.attempts, newAttemptData],
+          status: status,
+          nextFollowUpDate: nextFollowUpDate ? new Date(nextFollowUpDate).toISOString() : undefined
+        })
+        
+        // Reset the form
+        setNewAttempt({
+          contactMethod: 'Call',
+          response: 'No Response',
+          notes: ''
+        })
+        
+        toast({
+          title: "Success",
+          description: "Follow-up attempt recorded successfully",
+        })
+      }
     } catch (error) {
-      console.error("Error fetching follow-ups:", error)
+      console.error("Error saving follow-up attempt:", error)
       toast({
         title: "Error",
-        description: "Failed to load follow-ups data. Please try again.",
+        description: "Failed to save follow-up attempt. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsLoading(false)
     }
   }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    updateUrlParams({ search: searchTerm, page: 1 })
-  }
-
-  const handleFilterChange = (key: string, value: string) => {
-    // If "all" is selected, treat it as an empty string in the state and URL
-    const actualValue = value === "all" ? "" : value
-    
-    setFilters(prev => ({ ...prev, [key]: actualValue }))
-    
-    // Update URL parameters - remove the parameter if value is "all"
-    if (value === "all") {
-      const newParams = new URLSearchParams(searchParams.toString())
-      newParams.delete(key)
-      newParams.set("page", "1")
-      router.push(`/dashboard/follow-ups?${newParams.toString()}`)
-    } else {
-      updateUrlParams({ [key]: value, page: 1 })
+  
+  const handleSaveChanges = async () => {
+    try {
+      // In a real implementation, you would send data to your API
+      // This is just simulating the API call
+      setIsLoading(true)
+      await new Promise(resolve => setTimeout(resolve, 500)) // Fake API call delay
+      
+      // Update local state to simulate successful save
+      if (followUp) {
+        setFollowUp({
+          ...followUp,
+          status: status,
+          nextFollowUpDate: nextFollowUpDate ? new Date(nextFollowUpDate).toISOString() : undefined
+        })
+        
+        toast({
+          title: "Success",
+          description: "Follow-up details updated successfully",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating follow-up:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update follow-up details. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
-
-  const clearFilters = () => {
-    setFilters({
-      status: "",
-      personType: "",
-      assignedTo: "",
-    })
-    setSearchTerm("")
-    router.push("/dashboard/follow-ups")
+  
+  const getStatusIcon = (status: FollowUp['status']) => {
+    switch (status) {
+      case 'Completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'Failed':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      case 'In Progress':
+        return <Clock className="h-4 w-4 text-blue-500" />
+      case 'Pending':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+    }
   }
-
-  const updateUrlParams = (params: Record<string, string | number | boolean | undefined>) => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) {
-        newParams.set(key, value.toString())
-      } else {
-        newParams.delete(key)
-      }
-    })
-    
-    router.push(`/dashboard/follow-ups?${newParams.toString()}`)
+  
+  const getResponseIcon = (response: FollowUpAttempt['response']) => {
+    switch (response) {
+      case 'Positive':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'Negative':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      case 'No Response':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+    }
   }
-
-  const handlePageChange = (page: number) => {
-    updateUrlParams({ page })
+  
+  if (isLoading && !followUp) {
+    return (
+      <div className="flex items-center justify-center h-full py-16">
+        <div className="text-center">
+          <h2 className="text-xl font-medium mb-2">Loading follow-up details...</h2>
+          <p className="text-gray-500">Please wait while we fetch the data.</p>
+        </div>
+      </div>
+    )
   }
-
-  // Helper to get the select value (handles the "all" case)
-  const getSelectValue = (value: string) => {
-    return value || "all"
+  
+  if (!followUp) {
+    return (
+      <div className="flex items-center justify-center h-full py-16">
+        <div className="text-center">
+          <h2 className="text-xl font-medium mb-2">Follow-up not found</h2>
+          <p className="text-gray-500 mb-4">The requested follow-up record could not be found.</p>
+          <Button asChild>
+            <Link href="/dashboard/follow-ups">Back to Follow-ups</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
-
+  
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Follow-ups</h1>
-        <Button asChild>
-          <Link href="/dashboard/follow-ups/new">
-            <Plus className="mr-2 h-4 w-4" /> New Follow-up
-          </Link>
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center">
+          <Button variant="ghost" size="icon" className="mr-2" asChild>
+            <Link href="/dashboard/follow-ups">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight">Follow-up Details</h1>
+        </div>
+        <Badge className={`${getStatusColor(followUp.status)} text-base px-3 py-1`}>
+          {getStatusIcon(followUp.status)}
+          <span className="ml-1">{followUp.status}</span>
+        </Badge>
       </div>
       
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Follow-up Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                  <Input
-                    type="search"
-                    placeholder="Search by name, email, or phone..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Person Details</CardTitle>
+              <CardDescription>Information about the person being followed up</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback>{getInitials(followUp.personName, "")}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-medium text-lg">{followUp.personName}</h3>
+                  <Badge variant="outline">{followUp.personType}</Badge>
                 </div>
-                <Button type="submit">Search</Button>
-              </form>
+              </div>
               
-              <div className="flex items-center gap-2">
-                <Select
-                  value={getSelectValue(filters.status)}
-                  onValueChange={(value) => handleFilterChange("status", value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select
-                  value={getSelectValue(filters.personType)}
-                  onValueChange={(value) => handleFilterChange("personType", value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Person Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="New Attendee">New Attendee</SelectItem>
-                    <SelectItem value="Member">Member</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={clearFilters}
-                  title="Clear filters"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              <Separator />
+              
+              <div className="space-y-3">
+                {followUp.personEmail && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-500" />
+                    <span>{followUp.personEmail}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span>{followUp.personPhone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span>Assigned to: {followUp.assignedTo.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span>Created: {formatDate(new Date(followUp.createdAt))}</span>
+                </div>
               </div>
-            </div>
+              
+              {followUp.eventDetails && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-medium mb-2">Event Details</h4>
+                    <p className="text-sm">
+                      <strong>Event:</strong> {followUp.eventDetails.eventName}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Date:</strong> {formatDate(new Date(followUp.eventDetails.eventDate))}
+                    </p>
+                  </div>
+                </>
+              )}
+              
+              {followUp.notes && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-medium mb-2">Notes</h4>
+                    <p className="text-sm">{followUp.notes}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="md:col-span-2">
+          <Tabs defaultValue="attempts">
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger value="attempts">Past Attempts</TabsTrigger>
+              <TabsTrigger value="new">New Attempt</TabsTrigger>
+            </TabsList>
             
-            {(searchTerm || filters.status || filters.personType) && (
-              <div className="flex flex-wrap gap-2">
-                {searchTerm && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Search: {searchTerm}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 p-0 ml-1"
-                      onClick={() => {
-                        setSearchTerm("")
-                        updateUrlParams({ search: "" })
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                )}
-                
-                {filters.status && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Status: {filters.status}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 p-0 ml-1"
-                      onClick={() => handleFilterChange("status", "all")}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                )}
-                
-                {filters.personType && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Type: {filters.personType}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 p-0 ml-1"
-                      onClick={() => handleFilterChange("personType", "all")}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                )}
-              </div>
-            )}
-            
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Person</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Next Follow-up</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
-                        Loading follow-ups...
-                      </TableCell>
-                    </TableRow>
-                  ) : followUps.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
-                        No follow-ups found. Try adjusting your search or filters.
-                      </TableCell>
-                    </TableRow>
+            <TabsContent value="attempts" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Follow-up Attempts</CardTitle>
+                  <CardDescription>History of past follow-up attempts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {followUp.attempts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No follow-up attempts recorded yet.</p>
+                    </div>
                   ) : (
-                    followUps.map((followUp) => (
-                      <TableRow key={followUp._id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback>{getInitials(followUp.personName, "")}</AvatarFallback>
-                            </Avatar>
+                    <div className="space-y-6">
+                      {followUp.attempts.map((attempt) => (
+                        <div key={attempt.attemptNumber} className="border rounded-md p-4">
+                          <div className="flex justify-between items-start mb-3">
                             <div>
-                              <p className="font-medium">{followUp.personName}</p>
-                              <Badge variant="outline">{followUp.personType}</Badge>
+                              <h4 className="font-medium">Attempt #{attempt.attemptNumber}</h4>
+                              <p className="text-sm text-gray-500">
+                                {formatDate(new Date(attempt.date))}
+                              </p>
+                            </div>
+                            <Badge className={`flex items-center gap-1 ${
+                              attempt.response === "Positive" 
+                                ? "bg-green-100 text-green-800" 
+                                : attempt.response === "Negative"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                            }`}>
+                              {getResponseIcon(attempt.response)}
+                              <span>{attempt.response}</span>
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <p className="text-sm font-medium">Contact Method</p>
+                              <p className="text-sm">{attempt.contactMethod}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Conducted By</p>
+                              <p className="text-sm">{attempt.conductedBy.email}</p>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col space-y-1">
-                            {followUp.personEmail && (
-                              <div className="flex items-center gap-1">
-                                <Mail className="h-3 w-3 text-gray-500" />
-                                <span className="text-sm">{followUp.personEmail}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-gray-500" />
-                              <span className="text-sm">{followUp.personPhone}</span>
-                            </div>
+                          
+                          <div>
+                            <p className="text-sm font-medium">Notes</p>
+                            <p className="text-sm">{attempt.notes || "No notes provided."}</p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(followUp.status)}>
-                            {followUp.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{followUp.assignedTo.email}</span>
-                        </TableCell>
-                        <TableCell>
-                          {followUp.nextFollowUpDate ? (
-                            formatDate(new Date(followUp.nextFollowUpDate))
-                          ) : (
-                            <span className="text-gray-500">Not scheduled</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link href={`/dashboard/follow-ups/${followUp._id}`}>
-                                <ChevronRight className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </TableBody>
-              </Table>
-            </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Update Status</CardTitle>
+                  <CardDescription>Update the follow-up status and next scheduled date</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={status} onValueChange={handleStatusChange}>
+                        <SelectTrigger id="status">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="In Progress">In Progress</SelectItem>
+                          <SelectItem value="Completed">Completed</SelectItem>
+                          <SelectItem value="Failed">Failed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="nextFollowUpDate">Next Follow-up Date</Label>
+                      <Input
+                        id="nextFollowUpDate"
+                        type="date"
+                        value={nextFollowUpDate}
+                        onChange={(e) => setNextFollowUpDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={handleSaveChanges} disabled={isLoading}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
             
-            <Pagination
-              currentPage={pagination.page}
-              totalPages={pagination.pages}
-              onPageChange={handlePageChange}
-            />
-          </div>
-        </CardContent>
-      </Card>
+            <TabsContent value="new">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Record New Follow-up Attempt</CardTitle>
+                  <CardDescription>Document a new communication with this person</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmitAttempt} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="contactMethod">Contact Method</Label>
+                        <Select 
+                          value={newAttempt.contactMethod} 
+                          onValueChange={(value) => handleNewAttemptChange('contactMethod', value)}
+                        >
+                          <SelectTrigger id="contactMethod">
+                            <SelectValue placeholder="Select method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Call">Call</SelectItem>
+                            <SelectItem value="SMS">SMS</SelectItem>
+                            <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                            <SelectItem value="Email">Email</SelectItem>
+                            <SelectItem value="In Person">In Person</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="response">Response</Label>
+                        <Select 
+                          value={newAttempt.response} 
+                          onValueChange={(value) => handleNewAttemptChange('response', value)}
+                        >
+                          <SelectTrigger id="response">
+                            <SelectValue placeholder="Select response" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Positive">Positive</SelectItem>
+                            <SelectItem value="Negative">Negative</SelectItem>
+                            <SelectItem value="No Response">No Response</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        placeholder="Describe the interaction details..."
+                        value={newAttempt.notes}
+                        onChange={(e) => handleNewAttemptChange('notes', e.target.value)}
+                        rows={5}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        type="submit" 
+                        disabled={isLoading || !newAttempt.notes}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Record Attempt
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          // In a real app, this would generate a follow-up message template
+                          toast({
+                            title: "Template generated",
+                            description: "Follow-up message template copied to clipboard.",
+                          })
+                        }}
+                      >
+                        <Clipboard className="mr-2 h-4 w-4" />
+                        Generate Template
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   )
 }
