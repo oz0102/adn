@@ -25,7 +25,6 @@ import {
   X,
   Clock,
   Search,
-  Filter,
   Download
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -37,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { formatDate, formatDateTime, getInitials, getStatusColor } from "@/lib/utils"
+import { formatDate, formatDateTime, getInitials } from "@/lib/utils"
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -94,30 +93,6 @@ export default function AttendanceDetailPage({ params }: { params: { id: string 
   const [statusFilter, setStatusFilter] = useState("")
   const [filteredMembers, setFilteredMembers] = useState<AttendanceMember[]>([])
 
-  useEffect(() => {
-    fetchAttendance()
-  }, [params.id])
-
-  useEffect(() => {
-    if (attendance) {
-      let filtered = [...attendance.members]
-      
-      if (memberFilter) {
-        filtered = filtered.filter(member => 
-          member.memberId.firstName.toLowerCase().includes(memberFilter.toLowerCase()) ||
-          member.memberId.lastName.toLowerCase().includes(memberFilter.toLowerCase()) ||
-          (member.memberId.email && member.memberId.email.toLowerCase().includes(memberFilter.toLowerCase()))
-        )
-      }
-      
-      if (statusFilter) {
-        filtered = filtered.filter(member => member.status === statusFilter)
-      }
-      
-      setFilteredMembers(filtered)
-    }
-  }, [attendance, memberFilter, statusFilter])
-
   const fetchAttendance = async () => {
     try {
       setIsLoading(true)
@@ -146,7 +121,7 @@ export default function AttendanceDetailPage({ params }: { params: { id: string 
             email: i % 3 !== 0 ? `member${i}@example.com` : undefined,
             phoneNumber: `+123456789${i % 10}`,
           },
-          status: ['Present', 'Absent', 'Excused'][i % 3] as any,
+          status: ['Present', 'Absent', 'Excused'][i % 3] as 'Present' | 'Absent' | 'Excused',
           checkInTime: i % 3 === 0 ? new Date(new Date("2023-06-18T09:00:00.000Z").getTime() + (i * 2 * 60000)).toISOString() : undefined,
         })),
         totalPresent: 20,
@@ -172,6 +147,31 @@ export default function AttendanceDetailPage({ params }: { params: { id: string 
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchAttendance()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id])
+
+  useEffect(() => {
+    if (attendance) {
+      let filtered = [...attendance.members]
+      
+      if (memberFilter) {
+        filtered = filtered.filter(member => 
+          member.memberId.firstName.toLowerCase().includes(memberFilter.toLowerCase()) ||
+          member.memberId.lastName.toLowerCase().includes(memberFilter.toLowerCase()) ||
+          (member.memberId.email && member.memberId.email.toLowerCase().includes(memberFilter.toLowerCase()))
+        )
+      }
+      
+      if (statusFilter) {
+        filtered = filtered.filter(member => member.status === statusFilter)
+      }
+      
+      setFilteredMembers(filtered)
+    }
+  }, [attendance, memberFilter, statusFilter])
 
   const handleDelete = async () => {
     try {

@@ -75,15 +75,6 @@ export default function ClustersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   
-  useEffect(() => {
-    const page = parseInt(searchParams.get("page") || "1")
-    const search = searchParams.get("search") || ""
-    
-    setSearchTerm(search)
-    
-    fetchClusters(page, search)
-  }, [searchParams])
-
   const fetchClusters = async (
     page: number, 
     search: string
@@ -92,7 +83,7 @@ export default function ClustersPage() {
       setIsLoading(true)
       
       // Build query string
-      let queryParams = new URLSearchParams()
+      const queryParams = new URLSearchParams()
       queryParams.append("page", page.toString())
       queryParams.append("limit", pagination.limit.toString())
       
@@ -155,6 +146,16 @@ export default function ClustersPage() {
     }
   }
 
+  useEffect(() => {
+    const page = parseInt(searchParams.get("page") || "1")
+    const search = searchParams.get("search") || ""
+    
+    setSearchTerm(search)
+    
+    fetchClusters(page, search)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     updateUrlParams({ search: searchTerm, page: 1 })
@@ -165,7 +166,7 @@ export default function ClustersPage() {
     router.push("/dashboard/clusters")
   }
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     
     Object.entries(params).forEach(([key, value]) => {

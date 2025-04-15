@@ -39,7 +39,7 @@ export default function LoginPage() {
 
       // Redirect to dashboard on successful login
       router.push('/dashboard');
-    } catch (err) {
+    } catch (_) {
       setError('An unexpected error occurred');
       setIsLoading(false);
     }
