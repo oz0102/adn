@@ -1,6 +1,3 @@
-
-
-
 // app/(dashboard)/page.tsx
 "use client"
 
@@ -10,7 +7,7 @@ import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { UpcomingEventsCard } from '@/components/dashboard/upcoming-events-card';
 import { ChartCard } from '@/components/ui/chart-card';
 import { DataCard } from '@/components/ui/data-card';
-import { Users, UserCheck, Calendar, Clock } from 'lucide-react';
+import { Users, UserCheck, Calendar } from 'lucide-react';
 
 export default function DashboardPage() {
   // Sample chart data for attendance trends

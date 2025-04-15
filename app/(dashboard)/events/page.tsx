@@ -59,6 +59,10 @@ interface PaginationInfo {
   pages: number
 }
 
+interface UrlParams {
+  [key: string]: string | number | undefined;
+}
+
 export default function EventsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -94,6 +98,7 @@ export default function EventsPage() {
     })
     
     fetchEvents(page, search, eventType, startDate, endDate)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
   const fetchEvents = async (
@@ -107,7 +112,7 @@ export default function EventsPage() {
       setIsLoading(true)
       
       // Build query string
-      let queryParams = new URLSearchParams()
+      const queryParams = new URLSearchParams()
       queryParams.append("page", page.toString())
       queryParams.append("limit", pagination.limit.toString())
       
@@ -187,11 +192,11 @@ export default function EventsPage() {
     router.push("/dashboard/events")
   }
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: UrlParams) => {
     const newParams = new URLSearchParams(searchParams.toString())
     
     Object.entries(params).forEach(([key, value]) => {
-      if (value) {
+      if (value !== undefined) {
         newParams.set(key, value.toString())
       } else {
         newParams.delete(key)

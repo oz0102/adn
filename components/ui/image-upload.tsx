@@ -7,8 +7,17 @@ import { AlertCircle, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 
+interface UploadedImageData {
+  url: string;
+  publicId?: string;
+  width?: number;
+  height?: number;
+  format?: string;
+  size?: number;
+}
+
 interface ImageUploadProps {
-  onUploadComplete?: (imageData: any) => void;
+  onUploadComplete?: (imageData: UploadedImageData) => void;
   folder?: string;
   className?: string;
   buttonText?: string;

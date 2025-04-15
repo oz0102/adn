@@ -1,14 +1,11 @@
-// app/(dashboard)/discipleship-goals/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { 
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card"
@@ -16,7 +13,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  BarChart3,
   Target,
   Plus,
   TrendingUp,
@@ -25,8 +21,7 @@ import {
   Droplet,
   Flame,
   School,
-  UserCog,
-  LucideLayoutGrid
+  UserCog
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { DiscipleshipGoalChart } from "@/components/discipleship-goals/goal-chart"
@@ -43,8 +38,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -104,15 +98,6 @@ export default function DiscipleshipGoalsPage() {
     churchAttendance: '150'
   })
   
-  useEffect(() => {
-    fetchGoals()
-  }, [])
-
-  useEffect(() => {
-    // Find the appropriate goal to display based on selected filters
-    updateCurrentGoal()
-  }, [goals, viewType, selectedYear, selectedPeriod])
-
   const fetchGoals = async () => {
     try {
       setIsLoading(true)
@@ -286,6 +271,11 @@ export default function DiscipleshipGoalsPage() {
     }
   }
 
+  useEffect(() => {
+    fetchGoals()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const updateCurrentGoal = () => {
     if (goals.length === 0) return
     
@@ -309,6 +299,12 @@ export default function DiscipleshipGoalsPage() {
     
     setCurrentGoal(matchingGoal || null)
   }
+
+  useEffect(() => {
+    // Find the appropriate goal to display based on selected filters
+    updateCurrentGoal()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals, viewType, selectedYear, selectedPeriod])
 
   const handleAddGoal = () => {
     // In a real implementation, you would submit this to your API
@@ -630,91 +626,100 @@ export default function DiscipleshipGoalsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Discipleship Goals</h1>
         <Button onClick={() => setIsAddingGoal(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Set New Goal
+          <Plus className="mr-2 h-4 w-4" /> Create Goal
         </Button>
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Goal Progress Overview</CardTitle>
-          <CardDescription>
-            Track your discipleship goals progress over time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="pb-6 space-y-4">
-            <Tabs defaultValue="targets" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="targets">
-                  <Target className="mr-2 h-4 w-4" /> Target Metrics
-                </TabsTrigger>
-                <TabsTrigger value="progress">
-                  <TrendingUp className="mr-2 h-4 w-4" /> Progress Trends
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="targets" className="pt-4">
-                <DiscipleshipGoalChart 
-                  data={goals.filter(goal => goal.goalType === 'Annual')} 
-                  type="targets"
-                />
-              </TabsContent>
-              <TabsContent value="progress" className="pt-4">
-                <DiscipleshipGoalChart 
-                  data={goals.filter(goal => goal.goalType === 'Annual')} 
-                  type="progress"
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Current Goals</h2>
-            <p className="text-sm text-gray-500">View and track your discipleship goals</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={viewType} onValueChange={(value: any) => setViewType(value)}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="View type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Annual">Annual</SelectItem>
-                <SelectItem value="Quarterly">Quarterly</SelectItem>
-                <SelectItem value="Monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2022">2022</SelectItem>
-                <SelectItem value="2023">2023</SelectItem>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {renderPeriodSelector()}
-          </div>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <Tabs 
+          value={viewType} 
+          onValueChange={(value) => setViewType(value as 'Monthly' | 'Quarterly' | 'Annual')}
+          className="w-full sm:w-auto"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="Annual">Annual</TabsTrigger>
+            <TabsTrigger value="Quarterly">Quarterly</TabsTrigger>
+            <TabsTrigger value="Monthly">Monthly</TabsTrigger>
+          </TabsList>
+        </Tabs>
         
-        {renderGoalCard()}
+        <div className="flex flex-wrap gap-2 items-center">
+          <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 5 }).map((_, i) => {
+                const year = new Date().getFullYear() - 2 + i
+                return (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+          
+          {renderPeriodSelector()}
+        </div>
+      </div>
+      
+      {renderGoalCard()}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Targets</CardTitle>
+            <CardDescription>
+              Goal targets for each category
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {currentGoal ? (
+              <DiscipleshipGoalChart 
+                data={[currentGoal]} 
+                type="targets" 
+              />
+            ) : (
+              <div className="flex items-center justify-center h-72">
+                <p className="text-gray-500">No data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Progress</CardTitle>
+            <CardDescription>
+              Current progress towards goals (%)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {currentGoal ? (
+              <DiscipleshipGoalChart 
+                data={[currentGoal]} 
+                type="progress" 
+              />
+            ) : (
+              <div className="flex items-center justify-center h-72">
+                <p className="text-gray-500">No data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
       
       <Dialog open={isAddingGoal} onOpenChange={setIsAddingGoal}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Set New Discipleship Goal</DialogTitle>
+            <DialogTitle>Create New Goal</DialogTitle>
             <DialogDescription>
-              Define your targets for each discipleship area
+              Set targets for your discipleship goals.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          
+          <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="goalType">Goal Type</Label>
@@ -723,7 +728,7 @@ export default function DiscipleshipGoalsPage() {
                   onValueChange={(value) => setNewGoalData({...newGoalData, goalType: value})}
                 >
                   <SelectTrigger id="goalType">
-                    <SelectValue placeholder="Goal Type" />
+                    <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Annual">Annual</SelectItem>
@@ -740,12 +745,17 @@ export default function DiscipleshipGoalsPage() {
                   onValueChange={(value) => setNewGoalData({...newGoalData, year: parseInt(value)})}
                 >
                   <SelectTrigger id="year">
-                    <SelectValue placeholder="Year" />
+                    <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2024">2024</SelectItem>
-                    <SelectItem value="2025">2025</SelectItem>
-                    <SelectItem value="2026">2026</SelectItem>
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const year = new Date().getFullYear() - 2 + i
+                      return (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -756,121 +766,90 @@ export default function DiscipleshipGoalsPage() {
                 <Label htmlFor="period">
                   {newGoalData.goalType === 'Quarterly' ? 'Quarter' : 'Month'}
                 </Label>
-                {newGoalData.goalType === 'Quarterly' ? (
-                  <Select 
-                    value={newGoalData.period} 
-                    onValueChange={(value) => setNewGoalData({...newGoalData, period: value})}
-                  >
-                    <SelectTrigger id="period">
-                      <SelectValue placeholder="Select Quarter" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Q1</SelectItem>
-                      <SelectItem value="2">Q2</SelectItem>
-                      <SelectItem value="3">Q3</SelectItem>
-                      <SelectItem value="4">Q4</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Select 
-                    value={newGoalData.period} 
-                    onValueChange={(value) => setNewGoalData({...newGoalData, period: value})}
-                  >
-                                       <SelectTrigger id="period">
-                      <SelectValue placeholder="Select Month" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">January</SelectItem>
-                      <SelectItem value="2">February</SelectItem>
-                      <SelectItem value="3">March</SelectItem>
-                      <SelectItem value="4">April</SelectItem>
-                      <SelectItem value="5">May</SelectItem>
-                      <SelectItem value="6">June</SelectItem>
-                      <SelectItem value="7">July</SelectItem>
-                      <SelectItem value="8">August</SelectItem>
-                      <SelectItem value="9">September</SelectItem>
-                      <SelectItem value="10">October</SelectItem>
-                      <SelectItem value="11">November</SelectItem>
-                      <SelectItem value="12">December</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select 
+                  value={newGoalData.period} 
+                  onValueChange={(value) => setNewGoalData({...newGoalData, period: value})}
+                >
+                  <SelectTrigger id="period">
+                    <SelectValue placeholder={`Select ${newGoalData.goalType === 'Quarterly' ? 'quarter' : 'month'}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {newGoalData.goalType === 'Quarterly' ? (
+                      <>
+                        <SelectItem value="1">Q1</SelectItem>
+                        <SelectItem value="2">Q2</SelectItem>
+                        <SelectItem value="3">Q3</SelectItem>
+                        <SelectItem value="4">Q4</SelectItem>
+                      </>
+                    ) : (
+                      Array.from({ length: 12 }).map((_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          {getMonthLabel(i + 1)}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             
-            <div className="space-y-4 pt-2">
-              <h3 className="font-medium">Target Values</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="newConverts" className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-500" /> New Converts
-                </Label>
-                <Input
-                  id="newConverts"
-                  type="number"
-                  value={newGoalData.newConverts}
-                  onChange={(e) => setNewGoalData({...newGoalData, newConverts: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="waterBaptism" className="flex items-center gap-2">
-                  <Droplet className="h-4 w-4 text-indigo-500" /> Water Baptism
-                </Label>
-                <Input
-                  id="waterBaptism"
-                  type="number"
-                  value={newGoalData.waterBaptism}
-                  onChange={(e) => setNewGoalData({...newGoalData, waterBaptism: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="holyGhostBaptism" className="flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-red-500" /> Holy Ghost Baptism
-                </Label>
-                <Input
-                  id="holyGhostBaptism"
-                  type="number"
-                  value={newGoalData.holyGhostBaptism}
-                  onChange={(e) => setNewGoalData({...newGoalData, holyGhostBaptism: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="discipleshipTraining" className="flex items-center gap-2">
-                  <School className="h-4 w-4 text-green-500" /> Discipleship Training
-                </Label>
-                <Input
-                  id="discipleshipTraining"
-                  type="number"
-                  value={newGoalData.discipleshipTraining}
-                  onChange={(e) => setNewGoalData({...newGoalData, discipleshipTraining: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="leadership" className="flex items-center gap-2">
-                  <UserCog className="h-4 w-4 text-purple-500" /> Leadership
-                </Label>
-                <Input
-                  id="leadership"
-                  type="number"
-                  value={newGoalData.leadership}
-                  onChange={(e) => setNewGoalData({...newGoalData, leadership: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="churchAttendance" className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-amber-500" /> Church Attendance
-                </Label>
-                <Input
-                  id="churchAttendance"
-                  type="number"
-                  value={newGoalData.churchAttendance}
-                  onChange={(e) => setNewGoalData({...newGoalData, churchAttendance: e.target.value})}
-                />
+            <div className="space-y-2">
+              <Label>Targets</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="newConverts" className="text-xs">New Converts</Label>
+                  <Input
+                    id="newConverts"
+                    type="number"
+                    value={newGoalData.newConverts}
+                    onChange={(e) => setNewGoalData({...newGoalData, newConverts: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="waterBaptism" className="text-xs">Water Baptism</Label>
+                  <Input
+                    id="waterBaptism"
+                    type="number"
+                    value={newGoalData.waterBaptism}
+                    onChange={(e) => setNewGoalData({...newGoalData, waterBaptism: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="holyGhostBaptism" className="text-xs">Holy Ghost Baptism</Label>
+                  <Input
+                    id="holyGhostBaptism"
+                    type="number"
+                    value={newGoalData.holyGhostBaptism}
+                    onChange={(e) => setNewGoalData({...newGoalData, holyGhostBaptism: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="discipleshipTraining" className="text-xs">Discipleship Training</Label>
+                  <Input
+                    id="discipleshipTraining"
+                    type="number"
+                    value={newGoalData.discipleshipTraining}
+                    onChange={(e) => setNewGoalData({...newGoalData, discipleshipTraining: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="leadership" className="text-xs">Leadership</Label>
+                  <Input
+                    id="leadership"
+                    type="number"
+                    value={newGoalData.leadership}
+                    onChange={(e) => setNewGoalData({...newGoalData, leadership: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="churchAttendance" className="text-xs">Church Attendance</Label>
+                  <Input
+                    id="churchAttendance"
+                    type="number"
+                    value={newGoalData.churchAttendance}
+                    onChange={(e) => setNewGoalData({...newGoalData, churchAttendance: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -880,7 +859,7 @@ export default function DiscipleshipGoalsPage() {
               Cancel
             </Button>
             <Button onClick={handleAddGoal}>
-              Set Goal
+              Create Goal
             </Button>
           </DialogFooter>
         </DialogContent>

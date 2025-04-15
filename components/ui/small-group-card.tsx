@@ -1,11 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface SmallGroupCardProps {
-  id: string;
   name: string;
   location: string;
   leaderName?: string;
@@ -20,7 +18,6 @@ interface SmallGroupCardProps {
 }
 
 export function SmallGroupCard({
-  id,
   name,
   location,
   leaderName,

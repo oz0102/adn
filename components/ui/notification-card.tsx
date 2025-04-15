@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface NotificationCardProps {
-  id: string;
   subject: string;
   content: string;
   type: 'Email' | 'SMS' | 'WhatsApp';
@@ -20,7 +19,6 @@ interface NotificationCardProps {
 }
 
 export function NotificationCard({
-  id,
   subject,
   content,
   type,

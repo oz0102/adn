@@ -1,6 +1,6 @@
 // app/(dashboard)/events/event-service.ts
 import { generateFlyerContent } from "@/services/aiService";
-import { sendEmail, sendEventReminderEmail } from "@/services/emailService";
+import { sendEventReminderEmail } from "@/services/emailService";
 import { sendEventReminderSMS } from "@/services/smsService";
 import { sendEventReminderWhatsApp } from "@/services/whatsappService";
 
@@ -21,6 +21,22 @@ export interface EventNotificationRequest {
   channels: ('email' | 'sms' | 'whatsapp')[];
 }
 
+interface ChannelResult {
+  success: boolean;
+  sent: number;
+  failed: number;
+  errors: Array<{
+    recipient: string;
+    error: unknown;
+  }>;
+}
+
+interface NotificationResults {
+  email: ChannelResult;
+  sms: ChannelResult;
+  whatsapp: ChannelResult;
+}
+
 /**
  * Sends event reminders through multiple channels (email, SMS, WhatsApp)
  * @param notification The event notification request
@@ -29,10 +45,10 @@ export interface EventNotificationRequest {
 export async function sendEventReminders(notification: EventNotificationRequest) {
   const { eventName, eventDate, eventTime, eventLocation, recipients, channels } = notification;
   
-  const results = {
-    email: { success: false, sent: 0, failed: 0, errors: [] as any[] },
-    sms: { success: false, sent: 0, failed: 0, errors: [] as any[] },
-    whatsapp: { success: false, sent: 0, failed: 0, errors: [] as any[] }
+  const results: NotificationResults = {
+    email: { success: false, sent: 0, failed: 0, errors: [] },
+    sms: { success: false, sent: 0, failed: 0, errors: [] },
+    whatsapp: { success: false, sent: 0, failed: 0, errors: [] }
   };
 
   // Process email notifications
@@ -50,7 +66,7 @@ export async function sendEventReminders(notification: EventNotificationRequest)
         results.email.sent++;
       } catch (error) {
         results.email.failed++;
-        results.email.errors.push({ recipient: recipient.email, error });
+        results.email.errors.push({ recipient: recipient.email!, error });
       }
     }
     results.email.success = results.email.sent > 0;
@@ -69,7 +85,7 @@ export async function sendEventReminders(notification: EventNotificationRequest)
         results.sms.sent++;
       } catch (error) {
         results.sms.failed++;
-        results.sms.errors.push({ recipient: recipient.phoneNumber, error });
+        results.sms.errors.push({ recipient: recipient.phoneNumber!, error });
       }
     }
     results.sms.success = results.sms.sent > 0;
@@ -89,7 +105,7 @@ export async function sendEventReminders(notification: EventNotificationRequest)
         results.whatsapp.sent++;
       } catch (error) {
         results.whatsapp.failed++;
-        results.whatsapp.errors.push({ recipient: recipient.whatsappNumber, error });
+        results.whatsapp.errors.push({ recipient: recipient.whatsappNumber!, error });
       }
     }
     results.whatsapp.success = results.whatsapp.sent > 0;
@@ -126,12 +142,24 @@ export async function generateEventFlyerContent(eventDetails: {
   }
 }
 
+interface BatchResult {
+  success: boolean;
+  totalRecipients: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  errors: Array<{
+    batch?: number;
+    error: unknown;
+  }>;
+}
+
 /**
  * Sends event reminders in batches
  * @param notification The event notification request
  * @returns Results of the batch operation
  */
-export async function sendBatchEventReminders(notification: EventNotificationRequest) {
+export async function sendBatchEventReminders(notification: EventNotificationRequest): Promise<BatchResult> {
   const batchSize = parseInt(process.env.NOTIFICATION_BATCH_SIZE || '50');
   const recipients = notification.recipients;
   const totalRecipients = recipients.length;
@@ -139,7 +167,7 @@ export async function sendBatchEventReminders(notification: EventNotificationReq
   let processed = 0;
   let successful = 0;
   let failed = 0;
-  const errors: any[] = [];
+  const errors: Array<{batch?: number; error: unknown}> = [];
   
   // Process in batches
   for (let i = 0; i < totalRecipients; i += batchSize) {

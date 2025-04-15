@@ -47,7 +47,7 @@ export function useAuthActions() {
       }
       
       return { success: true };
-    } catch (error) {
+    } catch (_) {
       return {
         success: false,
         error: "An unexpected error occurred"

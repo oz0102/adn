@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface MemberCardProps {
-  id: string;
   name: string;
   role?: string;
   email?: string;
@@ -18,7 +17,6 @@ interface MemberCardProps {
 }
 
 export function MemberCard({
-  id,
   name,
   role,
   email,
