@@ -124,8 +124,9 @@ SocialMediaAccountSchema.methods.getMonthlyGrowth = function(): { count: number;
 };
 
 // Create or retrieve the model
+// Fix for "Cannot read properties of undefined" error by safely checking if mongoose.models exists
 const SocialMediaAccount: Model<ISocialMediaAccount> = 
-  mongoose.models.SocialMediaAccount || 
+  (mongoose.models && mongoose.models.SocialMediaAccount as Model<ISocialMediaAccount>) || 
   mongoose.model<ISocialMediaAccount>('SocialMediaAccount', SocialMediaAccountSchema);
 
 export default SocialMediaAccount;

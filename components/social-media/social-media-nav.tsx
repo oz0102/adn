@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { BarChart3Icon, UsersIcon, LayoutDashboardIcon } from 'lucide-react';
+import { BarChart3Icon, UsersIcon, HomeIcon } from 'lucide-react';
 
 interface SocialMediaNavProps {
   className?: string;
@@ -15,14 +15,9 @@ export function SocialMediaNav({ className }: SocialMediaNavProps) {
   
   const navItems = [
     {
-      title: "Dashboard",
-      href: "/social-media/dashboard",
-      icon: <LayoutDashboardIcon className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Accounts",
+      title: "Home",
       href: "/social-media",
-      icon: <UsersIcon className="mr-2 h-4 w-4" />,
+      icon: <HomeIcon className="mr-2 h-4 w-4" />,
     },
     {
       title: "Analytics",
