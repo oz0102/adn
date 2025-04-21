@@ -1,4 +1,5 @@
 // Alert dialog component for confirming social media account deletion
+'use client'
 import React from 'react';
 import {
   AlertDialog,

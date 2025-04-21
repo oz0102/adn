@@ -1,4 +1,5 @@
 // Analytics dashboard page for Social Media Tracker
+'use client'
 import React, { useState, useEffect } from 'react';
 import { GrowthSummary, PlatformDistribution, FollowerHistoryChart } from '@/components/social-media/analytics-components';
 import { Button } from '@/components/ui/button';

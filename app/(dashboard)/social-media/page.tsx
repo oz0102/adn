@@ -1,4 +1,7 @@
 // Improved main page component for Social Media Tracker with integrated dashboard
+
+'use client'
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SocialMediaAccountCard } from '@/components/social-media/social-media-card';

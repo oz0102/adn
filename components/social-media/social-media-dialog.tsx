@@ -1,4 +1,6 @@
 // Dialog component for adding/editing social media accounts
+"use client"
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SocialMediaForm } from './social-media-form';
