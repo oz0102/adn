@@ -68,7 +68,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    // Fix for async/await issue - ensure params is properly awaited
+    const id = await Promise.resolve(params.id);
     
     await connectToDatabase();
     

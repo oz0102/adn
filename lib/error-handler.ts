@@ -163,3 +163,9 @@ export function withErrorHandling<T extends unknown[]>(
     }
   };
 }
+
+/**
+ * Export errorHandler as an alias for handleApiError to maintain compatibility
+ * with existing imports
+ */
+export const errorHandler = handleApiError;
