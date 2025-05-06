@@ -46,109 +46,88 @@ interface Center {
   contactEmail?: string
   contactPhone?: string
   description?: string
-  clusterCount?: number
-  memberCount?: number
-  // Add other relevant fields from backend
+  clusterCount?: number // This might be derived or fetched separately
+  memberCount?: number // This might be derived or fetched separately
 }
 
-// Mock interfaces for Clusters and Small Groups for now
+// Frontend Cluster interface
 interface Cluster {
   _id: string;
+  clusterId: string;
   name: string;
-  leaderName: string;
-  memberCount: number;
+  leaderId?: {
+    firstName: string;
+    lastName: string;
+  };
+  memberCount?: number;
+  // Add other fields as returned by API
 }
 
-interface SmallGroup {
-  _id: string;
-  name: string;
-  leaderName: string;
-  memberCount: number;
-}
+// SmallGroup interface is not used in this component directly for listing, so it can be removed if not needed for other logic.
+// interface SmallGroup {
+//   _id: string;
+//   groupId: string;
+//   name: string;
+//   leaderId?: {
+//     firstName: string;
+//     lastName: string;
+//   };
+//   memberCount?: number;
+//   // Add other fields as returned by API
+// }
 
 export default function CenterDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuthStore()
-  const centerId = params.id as string
+  const centerIdFromParams = params.id as string
 
   const [center, setCenter] = useState<Center | null>(null)
-  const [clusters, setClusters] = useState<Cluster[]>([]) // For displaying clusters in this center
-  const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) // For displaying SGs in this center
+  const [clusters, setClusters] = useState<Cluster[]>([]) 
+  // const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) // Removed as it was unused
   const [isLoading, setIsLoading] = useState(true)
 
-  const canEditCenter = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center?._id) : false
-  const canCreateCluster = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center?._id) : false;
+  const canEditCenter = user && center ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id) : false
+  const canCreateCluster = user && center ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id) : false;
 
   const fetchCenterDetails = useCallback(async () => {
-    if (!user || !centerId) return;
+    if (!user || !centerIdFromParams) return;
     try {
       setIsLoading(true)
-      // TODO: Replace with actual API call to fetch center details
-      // const response = await fetch(`/api/centers/${centerId}`)
-      // if (!response.ok) throw new Error("Failed to fetch center details")
-      // const data = await response.json()
-      // setCenter(data.center)
-
-      // TODO: Fetch clusters and small groups for this center
-      // const clustersResponse = await fetch(`/api/clusters?centerId=${centerId}`)
-      // const clustersData = await clustersResponse.json()
-      // setClusters(clustersData.clusters || [])
-
-      // const smallGroupsResponse = await fetch(`/api/small-groups?centerId=${centerId}`)
-      // const smallGroupsData = await smallGroupsResponse.json()
-      // setSmallGroups(smallGroupsData.smallGroups || [])
-
-      // Mock data for now
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const mockCenter: Center = {
-        _id: centerId,
-        centerId: `C${100 + parseInt(centerId.replace("center", ""))}`,
-        name: `City Center ${centerId.replace("center", "")}`,
-        location: `Central District, Main Street ${centerId.replace("center", "")}`,
-        leadPastor: {
-          _id: `pastor${centerId.replace("center", "")}`,
-          firstName: `LeadPastor${centerId.replace("center", "")}`,
-          lastName: "Doe",
-          email: `leadpastor${centerId.replace("center", "")}@example.com`
-        },
-        contactEmail: `contact@citycenter${centerId.replace("center", "")}.org`,
-        contactPhone: `+1-555-010${centerId.replace("center", "")}`,
-        description: `City Center ${centerId.replace("center", "")} is a thriving community hub dedicated to spiritual growth and outreach. We offer a variety of programs and services for all ages. Our mission is to spread love and faith throughout the city.`,
-        clusterCount: 3 + parseInt(centerId.replace("center", "")),
-        memberCount: 250 + parseInt(centerId.replace("center", "")) * 50,
+      
+      // Fetch center details
+      const centerResponse = await fetch(`/api/centers/${centerIdFromParams}`)
+      if (!centerResponse.ok) {
+        if (centerResponse.status === 403) throw new Error("Permission denied to view this center.")
+        if (centerResponse.status === 404) throw new Error("Center not found.")
+        throw new Error(`Failed to fetch center details. Status: ${centerResponse.status}`)
       }
-      setCenter(mockCenter)
+      const centerData = await centerResponse.json()
+      setCenter(centerData.center)
 
-      const mockClustersData: Cluster[] = Array.from({ length: mockCenter.clusterCount || 0 }).map((_, i) => ({
-        _id: `cluster_in_center_${centerId}_${i+1}`,
-        name: `Alpha Cluster ${i+1}`,
-        leaderName: `ClusterLead ${i+1}`,
-        memberCount: 20 + i * 5
-      }));
-      setClusters(mockClustersData);
+      // Fetch clusters for this center
+      const clustersResponse = await fetch(`/api/clusters?centerId=${centerIdFromParams}&limit=100`) // Fetching more clusters, assuming pagination is not on this page for clusters list
+      if (!clustersResponse.ok) {
+        console.warn(`Failed to fetch clusters for center ${centerIdFromParams}. Status: ${clustersResponse.status}`);
+        // Don't throw error, page can still load center details
+      } else {
+        const clustersData = await clustersResponse.json()
+        setClusters(clustersData.clusters || [])
+      }
 
-      const mockSmallGroupsData: SmallGroup[] = Array.from({ length: (mockCenter.clusterCount || 0) * 2 }).map((_, i) => ({
-        _id: `sg_in_center_${centerId}_${i+1}`,
-        name: `Faith Group ${i+1}`,
-        leaderName: `SG Lead ${i+1}`,
-        memberCount: 8 + i
-      }));
-      setSmallGroups(mockSmallGroupsData);
-
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching center details:", error)
       toast({
         title: "Error",
-        description: "Failed to load center details. Please try again.",
+        description: error.message || "Failed to load center details. Please try again.",
         variant: "destructive",
       })
-      setCenter(null) // Clear center on error
+      setCenter(null) 
     } finally {
       setIsLoading(false)
     }
-  }, [centerId, toast, user])
+  }, [centerIdFromParams, toast, user])
 
   useEffect(() => {
     if (user) {
@@ -175,9 +154,15 @@ export default function CenterDetailPage() {
     );
   }
   
-  // Permission check for viewing this specific center
-  if (!checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id)) {
-      return <p>You do not have permission to view this center.</p>;
+  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id)) {
+      return (
+        <div className="text-center py-10">
+            <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
+            <p className="text-gray-500 mb-4">You do not have permission to view this center.</p>
+            <Button onClick={() => router.push("/dashboard/centers")}>Back to Centers</Button>
+        </div>
+      );
   }
 
   return (
@@ -196,7 +181,7 @@ export default function CenterDetailPage() {
         </div>
         {canEditCenter && (
           <Button asChild>
-            <Link href={`/dashboard/centers/${center._id}/edit`}> {/* Assuming an edit page */} 
+            <Link href={`/dashboard/centers/${center._id}/edit`}> 
               <Edit className="mr-2 h-4 w-4" /> Edit Center
             </Link>
           </Button>
@@ -245,17 +230,16 @@ export default function CenterDetailPage() {
             )}
             <div className="flex items-center gap-2">
               <Network className="h-5 w-5 text-gray-500" />
-              <span>{center.clusterCount || 0} Clusters</span>
+              <span>{clusters.length > 0 ? clusters.length : (center.clusterCount || 0)} Clusters</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-gray-500" />
-              <span>{center.memberCount || 0} Members</span>
+              <span>{center.memberCount || 0} Members (Overall)</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section for Clusters within this Center */} 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Clusters in {center.name}</CardTitle>
@@ -272,9 +256,12 @@ export default function CenterDetailPage() {
             <ul className="space-y-2">
               {clusters.map(cluster => (
                 <li key={cluster._id} className="flex justify-between items-center p-2 border rounded-md">
-                  <span>{cluster.name} (Leader: {cluster.leaderName}) - {cluster.memberCount} members</span>
+                  <div>
+                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`} className="font-medium hover:underline">{cluster.name}</Link>
+                    {cluster.leaderId && <span className="text-sm text-gray-500 block">Leader: {cluster.leaderId.firstName} {cluster.leaderId.lastName}</span>}
+                  </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/clusters/${cluster._id}`}>View</Link>
+                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`}>View</Link>
                   </Button>
                 </li>
               ))}
@@ -284,9 +271,6 @@ export default function CenterDetailPage() {
           )}
         </CardContent>
       </Card>
-      
-      {/* Placeholder for Small Groups list if needed directly on Center page, or link to a dedicated view */}
-      {/* For now, we assume Small Groups are primarily viewed under their respective Clusters */}
 
     </div>
   )

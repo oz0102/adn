@@ -1,29 +1,41 @@
-import { NextResponse } from "next/server";
+// app/api/notifications/route.ts
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
+import { authOptions } from "@/auth"; // Assuming authOptions is correctly defined for getServerSession
 import {
   createNotificationService,
-  getAllNotificationsForUserService
+  getAllNotificationsForUserService,
+  INotificationCreationPayload,
+  INotificationFilters,
+  IUserRolesAndScopesForNotifications
 } from "@/services/notificationService";
-import { connectToDB } from "@/lib/mongodb";
+import connectToDB from "@/lib/mongodb"; // Corrected import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
-import User from "@/models/user"; // To fetch user details for scoping notifications
-import Member from "@/models/member"; // To fetch member details for scoping notifications
+import UserModel, { IUser } from "@/models/user"; 
+import MemberModel, { IMember } from "@/models/member"; 
+import { Session } from "next-auth"; // Import Session type
 
-/**
- * Handles POST requests to create a new Notification.
- * Permissions depend on the targetLevel of the notification.
- */
-export async function POST(request: Request) {
+// Extend NextAuth Session to include id on user object if not already there by default
+interface CustomSession extends Session {
+  user?: {
+    id?: string | null;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    assignedRoles?: any[]; // Add this if you use it from session
+  };
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as CustomSession | null;
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
-    const body = await request.json();
+    const currentUserId = new mongoose.Types.ObjectId(session.user.id);
+    const body = await request.json() as Partial<INotificationCreationPayload>; // Use partial as some fields are auto-filled
     const { targetLevel, targetId, originatorCenterId } = body;
 
     if (!targetLevel) {
@@ -33,88 +45,100 @@ export async function POST(request: Request) {
     await connectToDB();
     let hasPermissionToCreate = false;
 
-    // Simplified permission check: HQ_ADMIN can send any notification.
-    // CENTER_ADMIN can send notifications to their center or HQ (if allowed by policy).
-    // More granular checks would be needed for CLUSTER_LEADER, SMALL_GROUP_LEADER to send to their specific scopes.
-    hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN");
-
+    // HQ_ADMIN can send any notification.
+    if (session.user.assignedRoles?.some(role => role.role === "HQ_ADMIN")) {
+        hasPermissionToCreate = true;
+    }
+    
+    // CENTER_ADMIN can send notifications to their center or if originating from their center.
     if (!hasPermissionToCreate && targetLevel === "CENTER" && targetId) {
-      hasPermissionToCreate = await checkPermission(userId, "CENTER_ADMIN", { centerId: targetId });
+        const targetCenterId = new mongoose.Types.ObjectId(targetId.toString());
+        hasPermissionToCreate = session.user.assignedRoles?.some(role => 
+            role.role === "CENTER_ADMIN" && role.scopeId === targetCenterId.toString()
+        ) || false;
     }
-    if (!hasPermissionToCreate && originatorCenterId) { // If originating from a center, check if user is admin of that center
-        hasPermissionToCreate = await checkPermission(userId, "CENTER_ADMIN", { centerId: originatorCenterId });
+    if (!hasPermissionToCreate && originatorCenterId) {
+        const originCenterObjId = new mongoose.Types.ObjectId(originatorCenterId.toString());
+         hasPermissionToCreate = session.user.assignedRoles?.some(role => 
+            role.role === "CENTER_ADMIN" && role.scopeId === originCenterObjId.toString()
+        ) || false;
     }
-    // Add more checks if non-admins can trigger certain types of notifications (e.g. system notifications)
 
     if (!hasPermissionToCreate) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to create this notification" }, { status: 403 });
     }
     
-    const newNotification = await createNotificationService({ ...body, createdBy: userId });
+    const notificationPayload: INotificationCreationPayload = {
+        ...body,
+        message: body.message || "Default message", // Ensure message is provided
+        type: body.type || "INFO", // Ensure type is provided
+        targetLevel: targetLevel, // Already checked
+        createdBy: currentUserId,
+        // originatorCenterId, targetId, etc. are from body
+    };
+
+    const newNotification = await createNotificationService(notificationPayload);
     return NextResponse.json(newNotification, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create notification:", error);
-    if (error.name === "ValidationError") {
+    if (error.name === "ValidationError" || error instanceof mongoose.Error.ValidationError) {
         return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
     }
     return NextResponse.json({ message: "Failed to create notification", error: error.message }, { status: 500 });
   }
 }
 
-/**
- * Handles GET requests to retrieve Notifications for the logged-in user.
- */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as CustomSession | null;
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const currentUserId = new mongoose.Types.ObjectId(session.user.id);
     const { searchParams } = new URL(request.url);
     
-    const filters: any = {};
+    const filters: Partial<INotificationFilters> = {}; // Use partial for filters
     searchParams.forEach((value, key) => {
         if (key === "page" || key === "limit") {
-            filters[key] = parseInt(value, 10);
+            (filters as any)[key] = parseInt(value, 10);
+        } else if (key === "isRead") {
+            filters.isRead = value === "true";
         } else {
-            filters[key] = value;
+            (filters as any)[key] = value;
         }
     });
 
     await connectToDB();
 
-    // Fetch user and their associated member profile to determine scopes
-    const user = await User.findById(userId).lean();
-    if (!user) {
+    const dbUser = await UserModel.findById(currentUserId).lean<IUser>();
+    if (!dbUser) {
         return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
     
-    // Attempt to find a member profile linked to this user's email or a direct link if established
-    // This part is crucial and depends on how User is linked to Member (e.g., via email or a direct memberId field on User)
-    // For this example, let's assume a hypothetical direct link or we search by email.
-    // A more robust system would have a direct `memberProfileId` on the `User` model after first login/setup.
-    let memberProfile = await Member.findOne({ email: user.email }).select("_id centerId clusterId smallGroupId").lean();
-    // If no member profile by email, the user might be an admin without a member profile, or profile uses different email.
-    // This logic needs to be robust based on application design.
+    let memberProfile = await MemberModel.findOne({ email: dbUser.email })
+                            .select("_id centerId clusterId smallGroupId")
+                            .lean<Pick<IMember, "_id" | "centerId" | "clusterId" | "smallGroupId">>();
 
-    const userRolesAndScopes = {
-        isHQAdmin: user.assignedRoles.some(r => r.role === "HQ_ADMIN"),
-        adminCenterIds: user.assignedRoles.filter(r => r.role === "CENTER_ADMIN" && r.centerId).map(r => r.centerId!),
-        leaderClusterIds: user.assignedRoles.filter(r => r.role === "CLUSTER_LEADER" && r.clusterId).map(r => r.clusterId!),
-        leaderSmallGroupIds: user.assignedRoles.filter(r => r.role === "SMALL_GROUP_LEADER" && r.smallGroupId).map(r => r.smallGroupId!),
-        memberOfCenterId: memberProfile?.centerId,
-        memberOfClusterId: memberProfile?.clusterId,
-        memberOfSmallGroupId: memberProfile?.smallGroupId,
+    const userRolesAndScopes: IUserRolesAndScopesForNotifications = {
+        isHQAdmin: dbUser.assignedRoles.some(r => r.role === "HQ_ADMIN"),
+        adminCenterIds: dbUser.assignedRoles.filter(r => r.role === "CENTER_ADMIN" && r.scopeId).map(r => new mongoose.Types.ObjectId(r.scopeId!)),
+        leaderClusterIds: dbUser.assignedRoles.filter(r => r.role === "CLUSTER_LEADER" && r.scopeId).map(r => new mongoose.Types.ObjectId(r.scopeId!)),
+        leaderSmallGroupIds: dbUser.assignedRoles.filter(r => r.role === "SMALL_GROUP_LEADER" && r.scopeId).map(r => new mongoose.Types.ObjectId(r.scopeId!)),
+        memberOfCenterId: memberProfile?.centerId ? new mongoose.Types.ObjectId(memberProfile.centerId.toString()) : undefined,
+        memberOfClusterId: memberProfile?.clusterId ? new mongoose.Types.ObjectId(memberProfile.clusterId.toString()) : undefined,
+        memberOfSmallGroupId: memberProfile?.smallGroupId ? new mongoose.Types.ObjectId(memberProfile.smallGroupId.toString()) : undefined,
     };
 
-    filters.userIdForScope = userId;
-    if (memberProfile) {
-        filters.memberIdForScope = memberProfile._id;
-    }
+    const finalFilters: INotificationFilters = {
+        ...filters,
+        page: filters.page || 1,
+        limit: filters.limit || 10,
+        userIdForScope: currentUserId,
+        memberIdForScope: memberProfile?._id ? new mongoose.Types.ObjectId(memberProfile._id.toString()) : undefined,
+    };
 
-    const result = await getAllNotificationsForUserService(filters, userRolesAndScopes);
+    const result = await getAllNotificationsForUserService(finalFilters, userRolesAndScopes);
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Failed to retrieve notifications:", error);

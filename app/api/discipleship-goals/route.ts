@@ -1,74 +1,100 @@
-import { NextResponse } from "next/server";
+// app/api/discipleship-goals/route.ts
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth";
 import {
   createDiscipleshipGoalService,
-  getAllDiscipleshipGoalsService
+  getAllDiscipleshipGoalsService,
+  IDiscipleshipGoalCreationPayload,
+  IDiscipleshipGoalFilters
 } from "@/services/discipleshipGoalService";
-import { connectToDB } from "@/lib/mongodb";
+import connectToDB from "@/lib/mongodb";
 import { checkPermission } from "@/lib/permissions";
-import mongoose from "mongoose";
-import Center from "@/models/center";
-import Cluster from "@/models/cluster";
-import SmallGroup from "@/models/smallGroup";
-import Member from "@/models/member";
+import mongoose, { Types } from "mongoose";
+import CenterModel, { ICenter } from "@/models/center";
+import ClusterModel, { ICluster } from "@/models/cluster";
+import SmallGroupModel, { ISmallGroup } from "@/models/smallGroup";
+import MemberModel, { IMember } from "@/models/member";
+import UserModel, { IUser, IAssignedRole } from "@/models/user";
+import { Session } from "next-auth";
 
-/**
- * Handles POST requests to create a new Discipleship Goal.
- * Permissions depend on the level of the goal being created.
- */
-export async function POST(request: Request) {
+interface CustomSession extends Session {
+  user?: {
+    id?: string | null;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    assignedRoles?: IAssignedRole[]; 
+  };
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as CustomSession | null;
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
-    const body = await request.json();
-    const { level, centerId, clusterId, smallGroupId, memberId } = body;
+    const currentUserId = new Types.ObjectId(session.user.id);
+    const body = await request.json() as Partial<IDiscipleshipGoalCreationPayload>; // Use partial as some fields are auto-filled
+    const { level, centerId, clusterId, smallGroupId, memberId, title, description, category, startDate, targetDate, status } = body;
 
-    if (!level) {
-      return NextResponse.json({ message: "Goal level is required" }, { status: 400 });
+    if (!level || !title || !category) {
+      return NextResponse.json({ message: "Goal level, title, and category are required" }, { status: 400 });
     }
 
     await connectToDB();
     let hasPermissionToCreate = false;
+    const userRoles = session.user.assignedRoles || [];
+
+    let effectiveCenterId: Types.ObjectId | undefined = centerId ? new Types.ObjectId(centerId.toString()) : undefined;
+    let effectiveClusterId: Types.ObjectId | undefined = clusterId ? new Types.ObjectId(clusterId.toString()) : undefined;
+    let effectiveSmallGroupId: Types.ObjectId | undefined = smallGroupId ? new Types.ObjectId(smallGroupId.toString()) : undefined;
+    let effectiveMemberId: Types.ObjectId | undefined = memberId ? new Types.ObjectId(memberId.toString()) : undefined;
 
     switch (level) {
       case "HQ":
-        hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN");
+        hasPermissionToCreate = userRoles.some(r => r.role === "HQ_ADMIN");
         break;
       case "CENTER":
-        if (!centerId) return NextResponse.json({ message: "Center ID required for CENTER level goal" }, { status: 400 });
-        hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN") || await checkPermission(userId, "CENTER_ADMIN", { centerId });
+        if (!effectiveCenterId) return NextResponse.json({ message: "Center ID required for CENTER level goal" }, { status: 400 });
+        hasPermissionToCreate = userRoles.some(r => r.role === "HQ_ADMIN" || (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()));
         break;
       case "CLUSTER":
-        if (!clusterId || !centerId) return NextResponse.json({ message: "Cluster ID and Center ID required for CLUSTER level goal" }, { status: 400 });
-        hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN") || 
-                                await checkPermission(userId, "CENTER_ADMIN", { centerId }) || 
-                                await checkPermission(userId, "CLUSTER_LEADER", { clusterId, centerId });
+        if (!effectiveClusterId || !effectiveCenterId) return NextResponse.json({ message: "Cluster ID and Center ID required for CLUSTER level goal" }, { status: 400 });
+        hasPermissionToCreate = userRoles.some(r => 
+            r.role === "HQ_ADMIN" || 
+            (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()) ||
+            (r.role === "CLUSTER_LEADER" && r.scopeId === effectiveClusterId!.toString() && r.parentScopeId === effectiveCenterId!.toString())
+        );
         break;
       case "SMALL_GROUP":
-        if (!smallGroupId || !clusterId || !centerId) return NextResponse.json({ message: "Small Group, Cluster, and Center IDs required for SMALL_GROUP level goal" }, { status: 400 });
-        hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN") || 
-                                await checkPermission(userId, "CENTER_ADMIN", { centerId }) || 
-                                await checkPermission(userId, "CLUSTER_LEADER", { clusterId, centerId }) || 
-                                await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId, clusterId, centerId });
+        if (!effectiveSmallGroupId || !effectiveClusterId || !effectiveCenterId) return NextResponse.json({ message: "Small Group, Cluster, and Center IDs required for SMALL_GROUP level goal" }, { status: 400 });
+        hasPermissionToCreate = userRoles.some(r => 
+            r.role === "HQ_ADMIN" || 
+            (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()) ||
+            (r.role === "CLUSTER_LEADER" && r.scopeId === effectiveClusterId!.toString() && r.parentScopeId === effectiveCenterId!.toString()) ||
+            (r.role === "SMALL_GROUP_LEADER" && r.scopeId === effectiveSmallGroupId!.toString() && r.parentScopeId === effectiveClusterId!.toString())
+        );
         break;
       case "INDIVIDUAL":
-        if (!memberId || !centerId) return NextResponse.json({ message: "Member ID and Center ID required for INDIVIDUAL level goal" }, { status: 400 });
-        // For individual goals, the creator could be the member themselves, their leader, or an admin.
-        // This requires more complex permission logic, e.g., checking if userId corresponds to memberId or their leader.
-        // For now, let's assume admins or relevant leaders can create.
-        const member = await Member.findById(memberId).select("smallGroupId clusterId centerId").lean();
-        if (!member || member.centerId.toString() !== centerId) return NextResponse.json({ message: "Member not found or mismatched center"}, {status: 400});
+        if (!effectiveMemberId) return NextResponse.json({ message: "Member ID required for INDIVIDUAL level goal" }, { status: 400 });
+        const member = await MemberModel.findById(effectiveMemberId).select("smallGroupId clusterId centerId userId").lean<IMember>();
+        if (!member) return NextResponse.json({ message: "Member not found"}, {status: 400});
+        
+        effectiveCenterId = member.centerId ? new Types.ObjectId(member.centerId.toString()) : undefined;
+        effectiveClusterId = member.clusterId ? new Types.ObjectId(member.clusterId.toString()) : undefined;
+        effectiveSmallGroupId = member.smallGroupId ? new Types.ObjectId(member.smallGroupId.toString()) : undefined;
 
-        hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN") || 
-                                await checkPermission(userId, "CENTER_ADMIN", { centerId }) || 
-                                (member.clusterId ? await checkPermission(userId, "CLUSTER_LEADER", { clusterId: member.clusterId, centerId }) : false) || 
-                                (member.smallGroupId ? await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: member.smallGroupId, clusterId: member.clusterId, centerId }) : false);
-                                // Add self-creation: || session.user.memberId === memberId (if User is linked to Member)
+        if (!effectiveCenterId) return NextResponse.json({ message: "Member must be associated with a Center for individual goal creation" }, { status: 400 });
+
+        hasPermissionToCreate = userRoles.some(r => 
+            r.role === "HQ_ADMIN" || 
+            (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()) || 
+            (effectiveClusterId && r.role === "CLUSTER_LEADER" && r.scopeId === effectiveClusterId.toString() && r.parentScopeId === effectiveCenterId!.toString()) || 
+            (effectiveSmallGroupId && effectiveClusterId && r.role === "SMALL_GROUP_LEADER" && r.scopeId === effectiveSmallGroupId.toString() && r.parentScopeId === effectiveClusterId.toString()) ||
+            (member.userId && member.userId.toString() === currentUserId.toString()) // Self-creation
+        );
         break;
       default:
         return NextResponse.json({ message: "Invalid goal level" }, { status: 400 });
@@ -78,84 +104,114 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to create goal for this scope" }, { status: 403 });
     }
     
-    body.createdBy = userId;
-    const newGoal = await createDiscipleshipGoalService(body);
+    const goalPayload: IDiscipleshipGoalCreationPayload = {
+        title: title!,
+        description: description,
+        category: category!,
+        level: level,
+        status: status || "PENDING",
+        createdBy: currentUserId,
+        centerId: effectiveCenterId,
+        clusterId: effectiveClusterId,
+        smallGroupId: effectiveSmallGroupId,
+        memberId: effectiveMemberId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        targetDate: targetDate ? new Date(targetDate) : undefined,
+        // tasks, progress, and metrics will be handled by updates or sub-documents if needed
+    };
+
+    const newGoal = await createDiscipleshipGoalService(goalPayload);
     return NextResponse.json(newGoal, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create discipleship goal:", error);
-    if (error.name === "ValidationError") {
+    if (error.name === "ValidationError" || error instanceof mongoose.Error.ValidationError) {
         return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
     }
     return NextResponse.json({ message: "Failed to create discipleship goal", error: error.message }, { status: 500 });
   }
 }
 
-/**
- * Handles GET requests to retrieve Discipleship Goals.
- */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as CustomSession | null;
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const currentUserId = new Types.ObjectId(session.user.id);
     const { searchParams } = new URL(request.url);
+    const userRoles = session.user.assignedRoles || [];
 
-    const filters: any = {};
+    const filters: Partial<IDiscipleshipGoalFilters> = {};
     searchParams.forEach((value, key) => {
         if (key === "page" || key === "limit") {
-            filters[key] = parseInt(value, 10);
-        } else {
-            filters[key] = value;
+            (filters as any)[key] = parseInt(value, 10);
+        } else if (key === "level" || key === "status" || key === "category") {
+            (filters as any)[key] = value;
+        } else if (key === "centerId" || key === "clusterId" || key === "smallGroupId" || key === "memberId" || key === "createdBy") {
+            if (Types.ObjectId.isValid(value)) {
+                (filters as any)[key] = new Types.ObjectId(value);
+            }
         }
     });
 
     await connectToDB();
-    // Permission logic for GET: Users should only see goals relevant to their scope.
-    // HQ_ADMIN sees all. Others see goals at their level and below within their scope.
-    // This is complex. A simpler model: if querying a specific scope, check permission for that scope.
-    // If no scope, HQ_ADMIN sees all; others see goals related to their direct assignments.
+    let canView = false;
+    const isHQAdmin = userRoles.some(r => r.role === "HQ_ADMIN");
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    let canView = hasHQAdminPermission;
-
-    if (!canView) {
-        if (filters.level === "HQ") canView = true; // All logged-in users can see HQ goals
-        else if (filters.level === "CENTER" && filters.centerId) {
-            canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: filters.centerId });
-            // Add logic for members of the center to view center goals
-        } else if (filters.level === "CLUSTER" && filters.clusterId && filters.centerId) {
-            canView = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: filters.clusterId, centerId: filters.centerId }) || 
-                      await checkPermission(userId, "CENTER_ADMIN", { centerId: filters.centerId });
-        } else if (filters.level === "SMALL_GROUP" && filters.smallGroupId && filters.clusterId && filters.centerId) {
-            canView = await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: filters.smallGroupId, clusterId: filters.clusterId, centerId: filters.centerId }) || 
-                      await checkPermission(userId, "CLUSTER_LEADER", { clusterId: filters.clusterId, centerId: filters.centerId }) || 
-                      await checkPermission(userId, "CENTER_ADMIN", { centerId: filters.centerId });
-        } else if (filters.level === "INDIVIDUAL" && filters.memberId) {
-            const member = await Member.findById(filters.memberId).select("smallGroupId clusterId centerId").lean();
-            if(member){
-                canView = (session.user as any).memberId === filters.memberId || // Self view
-                          await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: member.smallGroupId, clusterId: member.clusterId, centerId: member.centerId }) || 
-                          await checkPermission(userId, "CLUSTER_LEADER", { clusterId: member.clusterId, centerId: member.centerId }) || 
-                          await checkPermission(userId, "CENTER_ADMIN", { centerId: member.centerId });
-            }
-        } else if (!filters.level && !filters.centerId && !filters.clusterId && !filters.smallGroupId && !filters.memberId) {
-            // No specific scope, non-HQ_ADMIN. Fetch goals based on their roles.
-            // This requires fetching all user's roles and constructing a complex $or query.
-            // For now, default to showing only HQ goals if no specific scope is requested by non-admin.
-            filters.level = "HQ";
-            canView = true;
-        } else {
-             return NextResponse.json({ message: "Forbidden: Insufficient permissions or ambiguous scope for your role." }, { status: 403 });
+    if (isHQAdmin) {
+        canView = true;
+    } else {
+        // Non-HQ Admins can only view goals based on their specific roles and the query filters
+        // This logic needs to be carefully constructed to prevent data leakage.
+        // For simplicity, if specific IDs are provided in filters, we check against those.
+        // If no specific IDs, we might restrict or show only goals directly assigned to them or their subordinates.
+        
+        // Example: If a centerId is provided, check if user is admin of that center.
+        if (filters.centerId) {
+            canView = userRoles.some(r => r.role === "CENTER_ADMIN" && r.scopeId === filters.centerId!.toString());
         }
+        // Add more granular checks for CLUSTER_LEADER, SMALL_GROUP_LEADER, and individual members viewing their own goals.
+        // This part can become very complex depending on how broadly users should see goals.
+        // A common pattern is to allow users to see goals at their level and below within their hierarchy.
+        // For now, this is a simplified check. A robust solution would involve constructing a query based on user's roles.
+        if (filters.memberId && filters.memberId.toString() === currentUserId.toString()) {
+             // A user can always see their own goals if they are also a member with goals
+             // This assumes the `currentUserId` (from User model) can be matched to a `memberId` (from Member model)
+             // This might need adjustment if `memberId` in goals refers to `Member._id` and `currentUserId` is `User._id`
+             // For now, let's assume if a memberId filter is present and matches the user's own ID (if they are a member), they can view.
+             // This requires linking User.id to a Member record to confirm they are the target member.
+            const dbUser = await UserModel.findById(currentUserId).lean<IUser>();
+            if (dbUser && dbUser.memberProfileId && dbUser.memberProfileId.toString() === filters.memberId.toString()) {
+                canView = true;
+            }
+        }
+
+        if (!filters.centerId && !filters.clusterId && !filters.smallGroupId && !filters.memberId) {
+            // If no specific scope, non-HQ users might only see goals directly created by them or for them (if memberId matches their profile)
+            filters.createdBy = currentUserId; // Default to goals created by the user
+            canView = true; // Allow viewing goals they created
+        }
+
+        // If after all checks, canView is still false, and it's not an HQ admin, deny.
+        // However, the service layer might also apply additional scoping.
     }
 
-    if (!canView) {
-      return NextResponse.json({ message: "Forbidden: Insufficient permissions to view goals for this scope" }, { status: 403 });
+    // The service layer (getAllDiscipleshipGoalsService) should also implement logic
+    // to further scope results based on the user's roles if no specific filters are passed
+    // or if the user is not an HQ admin.
+    // For now, if not HQ admin and no specific permissive filter matched, we might deny here or let service handle.
+    // If canView is still false after checks, it implies the specific query is not permitted for this user.
+    if (!isHQAdmin && !canView && (filters.centerId || filters.clusterId || filters.smallGroupId || filters.memberId)) {
+         return NextResponse.json({ message: "Forbidden: Insufficient permissions to view goals for the specified scope." }, { status: 403 });
     }
 
-    const result = await getAllDiscipleshipGoalsService(filters);
+    const finalFilters: IDiscipleshipGoalFilters = {
+        page: filters.page || 1,
+        limit: filters.limit || 10,
+        ...filters
+    };
+
+    const result = await getAllDiscipleshipGoalsService(finalFilters, userRoles, currentUserId);
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Failed to retrieve discipleship goals:", error);

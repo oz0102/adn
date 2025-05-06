@@ -1,46 +1,53 @@
 // services/memberService.ts
-import Member, { IMember } from "@/models/member";
-import Center from "@/models/center";
-import Cluster from "@/models/cluster";
-import SmallGroup from "@/models/smallGroup";
+import Member, { IMember, IAddress, IEducation, ISkill, ISpiritualGrowth, ITraining, ITeamMembership } from "@/models/member";
+import Center, { ICenter } from "@/models/center";
+import Cluster, { ICluster } from "@/models/cluster";
+import SmallGroup, { ISmallGroup } from "@/models/smallGroup";
 import { connectToDB } from "@/lib/mongodb";
-import mongoose from "mongoose";
+import mongoose, { Types, FilterQuery } from "mongoose";
 
-interface MemberCreationData extends Omit<Partial<IMember>, "centerId" | "clusterId" | "smallGroupId"> {
+interface MemberCreationData extends Omit<Partial<IMember>, "centerId" | "clusterId" | "smallGroupId" | "_id" | "createdAt" | "updatedAt" | "address" | "skills" | "spiritualGrowth" | "training" | "teams"> {
   centerId: string | mongoose.Types.ObjectId;
   clusterId?: string | mongoose.Types.ObjectId;
   smallGroupId?: string | mongoose.Types.ObjectId;
   memberId: string;
   email?: string;
   phoneNumber: string;
+  address: IAddress;
+  skills: ISkill[];
+  spiritualGrowth: ISpiritualGrowth;
+  training: ITraining[];
+  teams: ITeamMembership[];
 }
 
-/**
- * Creates a new Member.
- * Permission checks (e.g., only admins of the target center can create members in it) are handled in API routes.
- * @param data - Data for the new member. Must include centerId.
- * @returns The created member document.
- */
-export const createMemberService = async (data: MemberCreationData): Promise<IMember> => {
+export type PopulatedLeanMember = Omit<IMember, "centerId" | "clusterId" | "smallGroupId" | "teams" | "versions" | "$isDefault"> & {
+    _id: Types.ObjectId;
+    centerId: (Pick<ICenter, "_id" | "name"> & { _id: Types.ObjectId }) | null;
+    clusterId?: (Pick<ICluster, "_id" | "name"> & { _id: Types.ObjectId }) | null;
+    smallGroupId?: (Pick<ISmallGroup, "_id" | "name"> & { _id: Types.ObjectId }) | null;
+    teams: (Omit<ITeamMembership, "teamId"> & { teamId: (Pick<any, "_id" | "name"> & { _id: Types.ObjectId }) | null })[]; // Assuming Team model has _id and name
+};
+
+export const createMemberService = async (data: MemberCreationData): Promise<PopulatedLeanMember> => {
   await connectToDB();
 
   if (!data.centerId) {
     throw new Error("Center ID is required to create a member.");
   }
-  const centerExists = await Center.findById(data.centerId);
+  const centerExists = await Center.findById(data.centerId).lean<ICenter | null>();
   if (!centerExists) {
     throw new Error("Invalid Center ID: Center does not exist.");
   }
 
   if (data.clusterId) {
-    const clusterExists = await Cluster.findById(data.clusterId);
+    const clusterExists = await Cluster.findById(data.clusterId).lean<ICluster | null>();
     if (!clusterExists || clusterExists.centerId.toString() !== data.centerId.toString()) {
       throw new Error("Invalid Cluster ID or cluster does not belong to the specified center.");
     }
   }
 
   if (data.smallGroupId) {
-    const smallGroupExists = await SmallGroup.findById(data.smallGroupId);
+    const smallGroupExists = await SmallGroup.findById(data.smallGroupId).lean<ISmallGroup | null>();
     if (!smallGroupExists || 
         (data.clusterId && smallGroupExists.clusterId.toString() !== data.clusterId.toString()) || 
         smallGroupExists.centerId.toString() !== data.centerId.toString()) {
@@ -48,29 +55,35 @@ export const createMemberService = async (data: MemberCreationData): Promise<IMe
     }
   }
   
-  // Check for uniqueness of memberId, email, phoneNumber within the center
-  const existingById = await Member.findOne({ memberId: data.memberId, centerId: data.centerId });
+  const existingById = await Member.findOne({ memberId: data.memberId, centerId: data.centerId }).lean<IMember | null>();
   if (existingById) {
     throw new Error(`Member with ID ${data.memberId} already exists in this center.`);
   }
   if (data.email) {
-    const existingByEmail = await Member.findOne({ email: data.email, centerId: data.centerId });
+    const existingByEmail = await Member.findOne({ email: data.email, centerId: data.centerId }).lean<IMember | null>();
     if (existingByEmail) {
       throw new Error(`Member with email ${data.email} already exists in this center.`);
     }
   }
-  const existingByPhone = await Member.findOne({ phoneNumber: data.phoneNumber, centerId: data.centerId });
+  const existingByPhone = await Member.findOne({ phoneNumber: data.phoneNumber, centerId: data.centerId }).lean<IMember | null>();
   if (existingByPhone) {
     throw new Error(`Member with phone number ${data.phoneNumber} already exists in this center.`);
   }
 
-  const newMember = new Member(data);
-  await newMember.save();
-  return newMember.populate([
-      { path: "centerId", select: "name" },
-      { path: "clusterId", select: "name" },
-      { path: "smallGroupId", select: "name" },
-  ]);
+  const newMemberDoc = new Member(data);
+  await newMemberDoc.save();
+  
+  const populatedMember = await Member.findById(newMemberDoc._id)
+    .populate<{ centerId: PopulatedLeanMember["centerId"] }>({ path: "centerId", select: "name" })
+    .populate<{ clusterId?: PopulatedLeanMember["clusterId"] }>({ path: "clusterId", select: "name" })
+    .populate<{ smallGroupId?: PopulatedLeanMember["smallGroupId"] }>({ path: "smallGroupId", select: "name" })
+    .populate<{ teams: PopulatedLeanMember["teams"] }>( { path: "teams.teamId", select: "name" })
+    .lean<PopulatedLeanMember | null>();
+
+  if (!populatedMember) {
+      throw new Error("Failed to populate created member.");
+  }
+  return populatedMember;
 };
 
 interface MemberQueryFilters {
@@ -78,22 +91,16 @@ interface MemberQueryFilters {
   clusterId?: string | mongoose.Types.ObjectId;
   smallGroupId?: string | mongoose.Types.ObjectId;
   teamId?: string | mongoose.Types.ObjectId;
-  spiritualGrowthStage?: string; // e.g., "newConvert", "waterBaptism"
-  search?: string; // For name, email, phone
+  spiritualGrowthStage?: string; 
+  search?: string; 
   page?: number;
   limit?: number;
 }
 
-/**
- * Retrieves Members based on filters.
- * Access control handled in API routes.
- * @param filters - Filtering options.
- * @returns A list of member documents and pagination info.
- */
-export const getAllMembersService = async (filters: MemberQueryFilters): Promise<{ members: IMember[], total: number, page: number, limit: number }> => {
+export const getAllMembersService = async (filters: MemberQueryFilters): Promise<{ members: PopulatedLeanMember[], total: number, page: number, limit: number }> => {
   await connectToDB();
   const { centerId, clusterId, smallGroupId, teamId, spiritualGrowthStage, search, page = 1, limit = 20 } = filters;
-  const query: any = {};
+  const query: FilterQuery<IMember> = {};
 
   if (centerId) query.centerId = new mongoose.Types.ObjectId(centerId.toString());
   if (clusterId) query.clusterId = new mongoose.Types.ObjectId(clusterId.toString());
@@ -114,119 +121,100 @@ export const getAllMembersService = async (filters: MemberQueryFilters): Promise
 
   const total = await Member.countDocuments(query);
   const members = await Member.find(query)
-    .populate([
-        { path: "centerId", select: "name" },
-        { path: "clusterId", select: "name" },
-        { path: "smallGroupId", select: "name" },
-        { path: "teams.teamId", select: "name" }
-    ])
+    .populate<{ centerId: PopulatedLeanMember["centerId"] }>({ path: "centerId", select: "name" })
+    .populate<{ clusterId?: PopulatedLeanMember["clusterId"] }>({ path: "clusterId", select: "name" })
+    .populate<{ smallGroupId?: PopulatedLeanMember["smallGroupId"] }>({ path: "smallGroupId", select: "name" })
+    .populate<{ teams: PopulatedLeanMember["teams"] }>( { path: "teams.teamId", select: "name" })
     .sort({ lastName: 1, firstName: 1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .lean();
+    .lean<PopulatedLeanMember[]>();
 
   return { members, total, page, limit };
 };
 
-/**
- * Retrieves a specific Member by their ID.
- * Permission checks handled in API route.
- * @param id - The ID of the member.
- * @returns The member document or null if not found.
- */
-export const getMemberByIdService = async (id: string): Promise<IMember | null> => {
+export const getMemberByIdService = async (id: string): Promise<PopulatedLeanMember | null> => {
   await connectToDB();
-  return Member.findById(id).populate([
-      { path: "centerId", select: "name" },
-      { path: "clusterId", select: "name" },
-      { path: "smallGroupId", select: "name" },
-      { path: "teams.teamId", select: "name" }
-  ]).lean();
+  if (!Types.ObjectId.isValid(id)) return null;
+  return Member.findById(id)
+    .populate<{ centerId: PopulatedLeanMember["centerId"] }>({ path: "centerId", select: "name" })
+    .populate<{ clusterId?: PopulatedLeanMember["clusterId"] }>({ path: "clusterId", select: "name" })
+    .populate<{ smallGroupId?: PopulatedLeanMember["smallGroupId"] }>({ path: "smallGroupId", select: "name" })
+    .populate<{ teams: PopulatedLeanMember["teams"] }>( { path: "teams.teamId", select: "name" })
+    .lean<PopulatedLeanMember | null>();
 };
 
-/**
- * Updates an existing Member.
- * Permission checks handled in API route.
- * @param id - The ID of the member to update.
- * @param data - The data to update the member with.
- * @returns The updated member document or null if not found.
- */
-export const updateMemberService = async (id: string, data: Partial<IMember>): Promise<IMember | null> => {
+export const updateMemberService = async (id: string, data: Partial<Omit<IMember, "_id" | "createdAt" | "updatedAt">>): Promise<PopulatedLeanMember | null> => {
   await connectToDB();
+  if (!Types.ObjectId.isValid(id)) return null;
+
   const member = await Member.findById(id);
   if (!member) return null;
 
-  // If centerId is being changed, this is a complex operation (transfer) and needs careful handling.
-  // For now, assume centerId is not changed via this generic update. If it is, new uniqueness checks are needed.
   if (data.centerId && data.centerId.toString() !== member.centerId.toString()) {
-    throw new Error("Changing a member\'s centerId directly is not supported via this update. Use a dedicated transfer function.");
+    throw new Error("Changing a member\"s centerId directly is not supported via this update. Use a dedicated transfer function.");
   }
 
-  // Uniqueness checks if memberId, email, or phoneNumber are changing within the same center
   const centerIdForUniqueness = member.centerId;
   if (data.memberId && data.memberId !== member.memberId) {
-    const existing = await Member.findOne({ memberId: data.memberId, centerId: centerIdForUniqueness, _id: { $ne: id } });
+    const existing = await Member.findOne({ memberId: data.memberId, centerId: centerIdForUniqueness, _id: { $ne: id } }).lean<IMember | null>();
     if (existing) throw new Error(`Member with ID ${data.memberId} already exists in this center.`);
   }
   if (data.email && data.email !== member.email) {
-    const existing = await Member.findOne({ email: data.email, centerId: centerIdForUniqueness, _id: { $ne: id } });
+    const existing = await Member.findOne({ email: data.email, centerId: centerIdForUniqueness, _id: { $ne: id } }).lean<IMember | null>();
     if (existing) throw new Error(`Member with email ${data.email} already exists in this center.`);
   }
   if (data.phoneNumber && data.phoneNumber !== member.phoneNumber) {
-    const existing = await Member.findOne({ phoneNumber: data.phoneNumber, centerId: centerIdForUniqueness, _id: { $ne: id } });
+    const existing = await Member.findOne({ phoneNumber: data.phoneNumber, centerId: centerIdForUniqueness, _id: { $ne: id } }).lean<IMember | null>();
     if (existing) throw new Error(`Member with phone ${data.phoneNumber} already exists in this center.`);
   }
   
-  // Validate clusterId and smallGroupId if provided
   if (data.clusterId) {
-    const clusterExists = await Cluster.findById(data.clusterId);
+    const clusterExists = await Cluster.findById(data.clusterId).lean<ICluster | null>();
     if (!clusterExists || clusterExists.centerId.toString() !== centerIdForUniqueness.toString()) {
-      throw new Error("Invalid Cluster ID or cluster does not belong to the member\'s center.");
+      throw new Error("Invalid Cluster ID or cluster does not belong to the member\"s center.");
     }
   } else if (data.hasOwnProperty("clusterId") && data.clusterId === null) {
-    // Explicitly setting clusterId to null (removing from cluster)
     member.clusterId = undefined;
   }
 
   if (data.smallGroupId) {
-    const smallGroupExists = await SmallGroup.findById(data.smallGroupId);
+    const smallGroupExists = await SmallGroup.findById(data.smallGroupId).lean<ISmallGroup | null>();
     const targetClusterId = data.clusterId || member.clusterId;
     if (!smallGroupExists || 
         (targetClusterId && smallGroupExists.clusterId.toString() !== targetClusterId.toString()) || 
         smallGroupExists.centerId.toString() !== centerIdForUniqueness.toString()) {
-      throw new Error("Invalid Small Group ID or small group does not belong to the member\'s cluster/center.");
+      throw new Error("Invalid Small Group ID or small group does not belong to the member\"s cluster/center.");
     }
   } else if (data.hasOwnProperty("smallGroupId") && data.smallGroupId === null) {
     member.smallGroupId = undefined;
   }
 
-  // Update the member fields
   Object.assign(member, data);
   await member.save();
   
-  return member.populate([
-      { path: "centerId", select: "name" },
-      { path: "clusterId", select: "name" },
-      { path: "smallGroupId", select: "name" },
-      { path: "teams.teamId", select: "name" }
-  ]);
+  const updatedAndPopulatedMember = await Member.findById(member._id)
+    .populate<{ centerId: PopulatedLeanMember["centerId"] }>({ path: "centerId", select: "name" })
+    .populate<{ clusterId?: PopulatedLeanMember["clusterId"] }>({ path: "clusterId", select: "name" })
+    .populate<{ smallGroupId?: PopulatedLeanMember["smallGroupId"] }>({ path: "smallGroupId", select: "name" })
+    .populate<{ teams: PopulatedLeanMember["teams"] }>( { path: "teams.teamId", select: "name" })
+    .lean<PopulatedLeanMember | null>();
+
+  return updatedAndPopulatedMember;
 };
 
-/**
- * Deletes a Member.
- * Permission checks handled in API route.
- * @param id - The ID of the member to delete.
- * @returns The deleted member document or null if not found.
- */
-export const deleteMemberService = async (id: string): Promise<IMember | null> => {
+export const deleteMemberService = async (id: string): Promise<PopulatedLeanMember | null> => {
   await connectToDB();
-  // Consider implications: e.g., if member is a leader of a group/cluster.
-  // For now, direct delete. Add pre-delete hooks or checks if needed.
-  const deletedMember = await Member.findByIdAndDelete(id).lean();
+  if (!Types.ObjectId.isValid(id)) return null;
+  const deletedMember = await Member.findByIdAndDelete(id)
+    .populate<{ centerId: PopulatedLeanMember["centerId"] }>({ path: "centerId", select: "name" })
+    .populate<{ clusterId?: PopulatedLeanMember["clusterId"] }>({ path: "clusterId", select: "name" })
+    .populate<{ smallGroupId?: PopulatedLeanMember["smallGroupId"] }>({ path: "smallGroupId", select: "name" })
+    .populate<{ teams: PopulatedLeanMember["teams"] }>( { path: "teams.teamId", select: "name" })
+    .lean<PopulatedLeanMember | null>();
   if (!deletedMember) {
     return null;
   }
-  // TODO: Clean up references, e.g., remove from teams, update leader roles if applicable.
   return deletedMember;
 };
 

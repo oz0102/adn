@@ -21,10 +21,10 @@ import {
   Plus, 
   ChevronRight, 
   X, 
-  Users,
+  Users as UsersIcon, // Renamed to avoid conflict
   MapPin,
   Calendar,
-  Layers, // Changed from LucideLayoutGrid
+  Layers, // Icon for Clusters
   AlertTriangle // For permission errors
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -82,35 +82,23 @@ export default function ClustersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCenterId, setFilterCenterId] = useState<string | null>(searchParams.get("centerId"))
+  const [parentCenterName, setParentCenterName] = useState<string | null>(searchParams.get("centerName"))
 
-  // Permissions: HQ can see all, Center Admin can see their center's clusters, Cluster Leader can see their own.
-  // Create permission depends on context (e.g. creating for a specific center)
   const canViewAnyCluster = user ? checkPermission(user, ["HQ_ADMIN"]) : false;
   const canCreateCluster = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], filterCenterId || undefined) : false;
 
   const fetchClusters = useCallback(async (page: number, search: string, centerIdForFilter?: string | null) => {
     if (!user) return;
-    // Determine if user has permission to view clusters at all or for a specific center
-    // HQ_ADMIN can view all. CENTER_ADMIN can view for their center. CLUSTER_LEADER can view their own (handled on detail page).
+
     let hasPermissionToFetch = canViewAnyCluster;
     if (centerIdForFilter && user.assignedRoles?.some(r => r.role === "CENTER_ADMIN" && r.scopeId === centerIdForFilter)) {
         hasPermissionToFetch = true;
     }
-    if (!centerIdForFilter && user.assignedRoles?.some(r => r.role === "CENTER_ADMIN")) {
-        // If a center admin is viewing generic /clusters, they should only see their center's clusters.
-        // For simplicity, we might require a centerId to be passed for Center Admins.
-        // Or, fetch all clusters they have access to (could be multiple centers if role allows, though current model is 1 center per Center Admin).
-        // For now, let's assume if no centerIdForFilter, HQ_ADMIN sees all, others see none unless centerId is specified.
-        if(!canViewAnyCluster) {
-            toast({ title: "Permission Denied", description: "Please select a center to view its clusters or contact an administrator.", variant: "destructive" });
-            setClusters([]);
-            setPagination({ page:1, limit:10, total:0, pages:0 });
-            setIsLoading(false);
-            return;
-        }
+    if (!centerIdForFilter && user.assignedRoles?.some(r => r.role === "CENTER_ADMIN") && !canViewAnyCluster) {
+        hasPermissionToFetch = true; 
     }
-    if (!hasPermissionToFetch && !canViewAnyCluster) {
-        toast({ title: "Permission Denied", description: "You do not have permission to view these clusters.", variant: "destructive" });
+    if (!hasPermissionToFetch && !canViewAnyCluster && !user.assignedRoles?.some(r => r.role === "CLUSTER_LEADER")) {
+        toast({ title: "Permission Denied", description: "You may not have permission to view all clusters. Try navigating from a center.", variant: "destructive" });
         setClusters([]);
         setPagination({ page:1, limit:10, total:0, pages:0 });
         setIsLoading(false);
@@ -125,42 +113,24 @@ export default function ClustersPage() {
       if (search) queryParams.append("search", search)
       if (centerIdForFilter) queryParams.append("centerId", centerIdForFilter)
       
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/clusters?${queryParams.toString()}`)
-      // if (!response.ok) {
-      //   if(response.status === 403) throw new Error("Permission denied to fetch clusters.")
-      //   throw new Error("Failed to fetch clusters")
-      // }
-      // const data = await response.json()
-      // setClusters(data.clusters || [])
-      // setPagination(data.paginationInfo || { page, limit: 10, total: 0, pages: 0 })
+      const response = await fetch(`/api/clusters?${queryParams.toString()}`)
+      if (!response.ok) {
+        if(response.status === 403) {
+            toast({ title: "Permission Denied", description: "You do not have permission to fetch these clusters.", variant: "destructive" });
+            setClusters([]);
+            setPagination({ page, limit: pagination.limit, total: 0, pages: 0 });
+            setIsLoading(false);
+            return;
+        }
+        throw new Error(`Failed to fetch clusters. Status: ${response.status}`)
+      }
+      const data = await response.json()
+      setClusters(data.clusters || [])
+      setPagination(data.paginationInfo || { page, limit: pagination.limit, total: 0, pages: 0 })
+      if (data.clusters && data.clusters.length > 0 && centerIdForFilter && !parentCenterName) {
+        setParentCenterName(data.clusters[0].centerId?.name || null);
+      }
 
-      // Mock data for now, simulating filtering by centerId if provided
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const allMockClusters: Cluster[] = Array.from({ length: 5 }).map((_, i) => ({
-        _id: `cluster${i + 1}`,
-        clusterId: `CL${1000 + i}`,
-        name: `${i % 2 === 0 ? "North" : "South"} Region Cluster ${i+1}`,
-        centerId: { _id: `center${ (i % 2) + 1 }`, name: `City Center ${ (i % 2) + 1 }` },
-        location: `${i % 2 === 0 ? "North" : "South"} Region`,
-        leaderId: { _id: `member${i+10}`, firstName: `Pastor${i+1}`, lastName: "Johnson" },
-        description: `A cluster of small groups in the ${i % 2 === 0 ? "North" : "South"} region.`,
-        meetingSchedule: { day: "Wednesday", time: "19:00", frequency: "Weekly" },
-        memberCount: 50 + (i * 20),
-        smallGroupCount: 5 + i
-      }));
-      
-      const filteredMockClusters = centerIdForFilter 
-        ? allMockClusters.filter(c => c.centerId?._id === centerIdForFilter) 
-        : allMockClusters;
-
-      setClusters(filteredMockClusters)
-      setPagination({
-        page,
-        limit: 10,
-        total: filteredMockClusters.length, 
-        pages: Math.ceil(filteredMockClusters.length / 10),
-      })
     } catch (error: any) {
       console.error("Error fetching clusters:", error)
       toast({
@@ -168,18 +138,22 @@ export default function ClustersPage() {
         description: error.message || "Failed to load clusters data. Please try again.",
         variant: "destructive",
       })
+      setClusters([]);
+      setPagination({ page, limit: pagination.limit, total: 0, pages: 0 });
     } finally {
       setIsLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.limit, toast, user, canViewAnyCluster])
+  }, [pagination.limit, toast, user, canViewAnyCluster, parentCenterName])
 
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1")
     const search = searchParams.get("search") || ""
     const centerIdFromQuery = searchParams.get("centerId")
+    const centerNameFromQuery = searchParams.get("centerName")
+
     setSearchTerm(search)
     setFilterCenterId(centerIdFromQuery)
+    if (centerNameFromQuery) setParentCenterName(centerNameFromQuery);
 
     if (user) {
         fetchClusters(page, search, centerIdFromQuery)
@@ -194,14 +168,16 @@ export default function ClustersPage() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    // Keep centerId filter if it was set by navigation
-    router.push(filterCenterId ? `/dashboard/clusters?centerId=${filterCenterId}` : "/dashboard/clusters")
+    const paramsToKeep: Record<string, string | number | null> = {};
+    if (filterCenterId) paramsToKeep.centerId = filterCenterId;
+    if (parentCenterName) paramsToKeep.centerName = parentCenterName;
+    router.push(`/dashboard/clusters${Object.keys(paramsToKeep).length > 0 ? `?${new URLSearchParams(paramsToKeep as Record<string,string>).toString()}` : ""}`);
   }
 
   const updateUrlParams = (params: Record<string, string | number | null>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
+      if (value !== null && value !== undefined && value !== "") {
         newParams.set(key, value.toString())
       } else {
         newParams.delete(key)
@@ -214,18 +190,18 @@ export default function ClustersPage() {
     updateUrlParams({ page })
   }
 
-  if (!user) {
+  if (!user && !isLoading) {
     return <p>Loading user data or user not authenticated...</p>;
   }
 
-  // General permission to view the page at all. More specific filtering happens in fetchClusters.
   const canViewPage = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"]) : false;
-  if (!canViewPage) {
+  if (user && !canViewPage) {
       return (
           <div className="text-center py-10">
               <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
               <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
               <p className="text-gray-500 mb-4">You do not have permission to view this page.</p>
+              <Button onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
           </div>
       );
   }
@@ -233,10 +209,10 @@ export default function ClustersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Clusters {filterCenterId && clusters[0]?.centerId?.name ? `(in ${clusters[0].centerId.name})` : ""}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Clusters {parentCenterName ? `(in ${parentCenterName})` : ""}</h1>
         {canCreateCluster && (
           <Button asChild>
-            <Link href={`/dashboard/clusters/new${filterCenterId ? `?centerId=${filterCenterId}` : ""}`}>
+            <Link href={`/dashboard/clusters/new${filterCenterId ? `?centerId=${filterCenterId}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`}>
               <Plus className="mr-2 h-4 w-4" /> Create Cluster
             </Link>
           </Button>
@@ -294,7 +270,7 @@ export default function ClustersPage() {
             <p className="text-gray-500 mb-4">
               There are no clusters matching your search criteria or available for the selected center.
             </p>
-            {canCreateCluster && <Button onClick={() => router.push(`/dashboard/clusters/new${filterCenterId ? `?centerId=${filterCenterId}` : ""}`)}>Create Cluster</Button>}
+            {canCreateCluster && <Button onClick={() => router.push(`/dashboard/clusters/new${filterCenterId ? `?centerId=${filterCenterId}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`)}>Create Cluster</Button>}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -325,11 +301,11 @@ export default function ClustersPage() {
                         </div>
                     )}
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
+                      <UsersIcon className="h-4 w-4 text-gray-500" />
                       <span className="text-sm">{cluster.smallGroupCount || 0} small groups</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" /> {/* Consider a different icon for members vs SGs */} 
+                      <UsersIcon className="h-4 w-4 text-gray-500" /> 
                       <span className="text-sm">{cluster.memberCount || 0} members</span>
                     </div>
                     {cluster.leaderId && (
@@ -349,7 +325,7 @@ export default function ClustersPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(cluster.centerId?.name || "")}`}>
+                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(cluster.centerId?.name || parentCenterName || "")}`}>
                       <span>View Cluster</span>
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>

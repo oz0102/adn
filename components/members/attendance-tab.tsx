@@ -5,12 +5,12 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
-interface MemberAttendanceTabProps {
-  // This prop is defined for future implementation but not currently used
-  memberId: string
-}
+// interface MemberAttendanceTabProps {
+//   // This prop is defined for future implementation but not currently used
+//   memberId: string
+// }
 
-export function MemberAttendanceTab({ memberId }: MemberAttendanceTabProps) {
+export function MemberAttendanceTab(/*{ memberId }: MemberAttendanceTabProps*/) {
   // Using array destructuring to only get the first element (the state value)
   // and not the setter which is unused
   const [attendance] = useState([])
@@ -45,3 +45,4 @@ export function MemberAttendanceTab({ memberId }: MemberAttendanceTabProps) {
     </Card>
   )
 }
+

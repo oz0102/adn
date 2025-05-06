@@ -21,10 +21,10 @@ import {
   Plus, 
   ChevronRight, 
   X, 
-  Users as UsersIcon, // Renamed to avoid conflict with Users type
+  Users as UsersIcon, 
   MapPin,
   Calendar,
-  AlertTriangle // For permission errors
+  AlertTriangle 
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -32,15 +32,14 @@ import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
 
-// Frontend SmallGroup interface - adjust based on actual backend model
 interface SmallGroup {
   _id: string
   groupId: string
   name: string
-  clusterId?: { // Link to parent Cluster
+  clusterId?: { 
     _id: string
     name: string
-    centerId?: { // Grandparent Center
+    centerId?: { 
         _id: string
         name: string
     }
@@ -84,28 +83,30 @@ export default function SmallGroupsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterClusterId, setFilterClusterId] = useState<string | null>(searchParams.get("clusterId"))
   const [parentClusterName, setParentClusterName] = useState<string | null>(searchParams.get("clusterName"))
+  const [parentCenterName, setParentCenterName] = useState<string | null>(searchParams.get("centerName")) // For breadcrumbs/links
 
-  // Permissions
   const canViewAnySmallGroup = user ? checkPermission(user, ["HQ_ADMIN"]) : false;
-  // Create permission depends on context (e.g. creating for a specific cluster)
   const canCreateSmallGroup = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], undefined, filterClusterId || undefined) : false;
 
   const fetchSmallGroups = useCallback(async (page: number, search: string, clusterIdForFilter?: string | null) => {
     if (!user) return;
 
     let hasPermissionToFetch = canViewAnySmallGroup;
-    if (clusterIdForFilter && user.assignedRoles?.some(r => (r.role === "CENTER_ADMIN" || r.role === "CLUSTER_LEADER") && r.scopeId === clusterIdForFilter)) {
-        // This logic is a bit simplified. A Center Admin might have access to multiple clusters in their center.
-        // A Cluster Leader has access to SGs in their cluster.
-        // For now, if clusterIdForFilter is present, we assume the backend will handle fine-grained RBAC for that scope.
+    if (clusterIdForFilter && user.assignedRoles?.some(r => 
+        (r.role === "CLUSTER_LEADER" && r.scopeId === clusterIdForFilter) || 
+        (r.role === "CENTER_ADMIN" && r.scopeId === smallGroups[0]?.clusterId?.centerId?._id) // Needs better check if SG data not yet loaded
+    )) {
         hasPermissionToFetch = true;
     }
-    // If a user is a Center Admin but no clusterId is specified, they might see all SGs in their center(s).
-    // If a user is a Cluster Leader but no clusterId is specified, they might see all SGs in their cluster(s).
-    // This requires more complex API logic or frontend filtering if the API returns more than needed.
-    // For now, if no clusterIdForFilter, HQ_ADMIN sees all. Others need a specific scope or won't see much.
-    if (!clusterIdForFilter && !canViewAnySmallGroup && !user.assignedRoles?.some(r => r.role === "CENTER_ADMIN" || r.role === "CLUSTER_LEADER")) {
-        toast({ title: "Permission Denied", description: "Please select a cluster to view its small groups or contact an administrator.", variant: "destructive" });
+    if (!clusterIdForFilter && user.assignedRoles?.some(r => r.role === "CENTER_ADMIN" || r.role === "CLUSTER_LEADER") && !canViewAnySmallGroup) {
+        toast({ title: "Filter Required", description: "Please select a cluster to view its small groups.", variant: "default" });
+        setSmallGroups([]);
+        setPagination({ page:1, limit:10, total:0, pages:0 });
+        setIsLoading(false);
+        return;
+    }
+    if (!hasPermissionToFetch && !canViewAnySmallGroup) {
+        toast({ title: "Permission Denied", description: "You may not have permission to view all small groups. Try navigating from a cluster.", variant: "destructive" });
         setSmallGroups([]);
         setPagination({ page:1, limit:10, total:0, pages:0 });
         setIsLoading(false);
@@ -120,45 +121,27 @@ export default function SmallGroupsPage() {
       if (search) queryParams.append("search", search)
       if (clusterIdForFilter) queryParams.append("clusterId", clusterIdForFilter)
       
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/small-groups?${queryParams.toString()}`)
-      // if (!response.ok) {
-      //   if(response.status === 403) throw new Error("Permission denied to fetch small groups.")
-      //   throw new Error("Failed to fetch small groups")
-      // }
-      // const data = await response.json()
-      // setSmallGroups(data.smallGroups || [])
-      // setPagination(data.paginationInfo || { page, limit: 10, total: 0, pages: 0 })
-
-      // Mock data for now
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const allMockSmallGroups: SmallGroup[] = Array.from({ length: 15 }).map((_, i) => ({
-        _id: `sg${i + 1}`,
-        groupId: `SG${2000 + i}`,
-        name: `Faith Group ${i + 1}`,
-        clusterId: { 
-            _id: `cluster${ (i % 3) + 1 }`, 
-            name: `Omega Cluster ${ (i % 3) + 1 }`,
-            centerId: { _id: `center${ (i % 2) + 1}`, name: `City Center ${ (i % 2) + 1 }`}
-        },
-        location: `Community Room ${i+1}`,
-        leaderId: { _id: `member_sg_lead${i+20}`, firstName: `SGLead${i+1}`, lastName: "Parker" },
-        description: `A welcoming small group for fellowship and study, meeting weekly.`,
-        meetingSchedule: { day: "Tuesday", time: "19:00", frequency: "Weekly" },
-        memberCount: 8 + i,
-      }));
+      const response = await fetch(`/api/small-groups?${queryParams.toString()}`)
+      if (!response.ok) {
+        if(response.status === 403) {
+            toast({ title: "Permission Denied", description: "You do not have permission to fetch these small groups.", variant: "destructive" });
+            setSmallGroups([]);
+            setPagination({ page, limit: pagination.limit, total: 0, pages: 0 });
+            setIsLoading(false);
+            return;
+        }
+        throw new Error(`Failed to fetch small groups. Status: ${response.status}`)
+      }
+      const data = await response.json()
+      setSmallGroups(data.smallGroups || [])
+      setPagination(data.paginationInfo || { page, limit: pagination.limit, total: 0, pages: 0 })
       
-      const filteredMockSmallGroups = clusterIdForFilter 
-        ? allMockSmallGroups.filter(sg => sg.clusterId?._id === clusterIdForFilter) 
-        : allMockSmallGroups;
+      // If clusterId is used for filtering and parent names are not already set, try to get them from the first result
+      if (data.smallGroups && data.smallGroups.length > 0 && clusterIdForFilter) {
+        if (!parentClusterName) setParentClusterName(data.smallGroups[0].clusterId?.name || null);
+        if (!parentCenterName) setParentCenterName(data.smallGroups[0].clusterId?.centerId?.name || null);
+      }
 
-      setSmallGroups(filteredMockSmallGroups)
-      setPagination({
-        page,
-        limit: 10,
-        total: filteredMockSmallGroups.length, 
-        pages: Math.ceil(filteredMockSmallGroups.length / 10),
-      })
     } catch (error: any) {
       console.error("Error fetching small groups:", error)
       toast({
@@ -166,21 +149,24 @@ export default function SmallGroupsPage() {
         description: error.message || "Failed to load small groups data. Please try again.",
         variant: "destructive",
       })
+      setSmallGroups([]);
+      setPagination({ page, limit: pagination.limit, total: 0, pages: 0 });
     } finally {
       setIsLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.limit, toast, user, canViewAnySmallGroup])
+  }, [pagination.limit, toast, user, canViewAnySmallGroup, parentClusterName, parentCenterName])
 
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1")
     const search = searchParams.get("search") || ""
     const clusterIdFromQuery = searchParams.get("clusterId")
-    const clusterName = searchParams.get("clusterName")
+    const clusterNameFromQuery = searchParams.get("clusterName")
+    const centerNameFromQuery = searchParams.get("centerName")
 
     setSearchTerm(search)
     setFilterClusterId(clusterIdFromQuery)
-    setParentClusterName(clusterName)
+    if (clusterNameFromQuery) setParentClusterName(clusterNameFromQuery);
+    if (centerNameFromQuery) setParentCenterName(centerNameFromQuery);
 
     if (user) {
         fetchSmallGroups(page, search, clusterIdFromQuery)
@@ -195,13 +181,17 @@ export default function SmallGroupsPage() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    router.push(filterClusterId ? `/dashboard/small-groups?clusterId=${filterClusterId}${parentClusterName ? `&clusterName=${encodeURIComponent(parentClusterName)}` : ""}` : "/dashboard/small-groups")
+    const paramsToKeep: Record<string, string | number | null> = {};
+    if (filterClusterId) paramsToKeep.clusterId = filterClusterId;
+    if (parentClusterName) paramsToKeep.clusterName = parentClusterName;
+    if (parentCenterName) paramsToKeep.centerName = parentCenterName;
+    router.push(`/dashboard/small-groups${Object.keys(paramsToKeep).length > 0 ? `?${new URLSearchParams(paramsToKeep as Record<string,string>).toString()}` : ""}`);
   }
 
   const updateUrlParams = (params: Record<string, string | number | null>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
+      if (value !== null && value !== undefined && value !== "") {
         newParams.set(key, value.toString())
       } else {
         newParams.delete(key)
@@ -214,17 +204,18 @@ export default function SmallGroupsPage() {
     updateUrlParams({ page })
   }
 
-  if (!user) {
+  if (!user && !isLoading) {
     return <p>Loading user data or user not authenticated...</p>;
   }
 
   const canViewPage = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]) : false;
-  if (!canViewPage) {
+  if (user && !canViewPage) {
       return (
           <div className="text-center py-10">
               <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
               <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
               <p className="text-gray-500 mb-4">You do not have permission to view this page.</p>
+              <Button onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
           </div>
       );
   }
@@ -235,7 +226,7 @@ export default function SmallGroupsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Small Groups {parentClusterName ? `(in ${parentClusterName})` : ""}</h1>
         {canCreateSmallGroup && (
           <Button asChild>
-            <Link href={`/dashboard/small-groups/new${filterClusterId ? `?clusterId=${filterClusterId}${parentClusterName ? `&clusterName=${encodeURIComponent(parentClusterName)}` : ""}` : ""}`}>
+            <Link href={`/dashboard/small-groups/new${filterClusterId ? `?clusterId=${filterClusterId}${parentClusterName ? `&clusterName=${encodeURIComponent(parentClusterName)}` : ""}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`}>
               <Plus className="mr-2 h-4 w-4" /> Create Small Group
             </Link>
           </Button>
@@ -293,7 +284,7 @@ export default function SmallGroupsPage() {
             <p className="text-gray-500 mb-4">
               There are no small groups matching your search criteria or available for the selected cluster.
             </p>
-            {canCreateSmallGroup && <Button onClick={() => router.push(`/dashboard/small-groups/new${filterClusterId ? `?clusterId=${filterClusterId}${parentClusterName ? `&clusterName=${encodeURIComponent(parentClusterName)}` : ""}` : ""}`)}>Create Small Group</Button>}
+            {canCreateSmallGroup && <Button onClick={() => router.push(`/dashboard/small-groups/new${filterClusterId ? `?clusterId=${filterClusterId}${parentClusterName ? `&clusterName=${encodeURIComponent(parentClusterName)}` : ""}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`)}>Create Small Group</Button>}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -344,7 +335,7 @@ export default function SmallGroupsPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/dashboard/small-groups/${group._id}?clusterName=${encodeURIComponent(group.clusterId?.name || "")}`}>
+                    <Link href={`/dashboard/small-groups/${group._id}?clusterName=${encodeURIComponent(group.clusterId?.name || parentClusterName || "")}&centerName=${encodeURIComponent(group.clusterId?.centerId?.name || parentCenterName || "")}`}>
                       <span>View Group</span>
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>

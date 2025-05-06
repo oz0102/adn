@@ -1,5 +1,5 @@
 // API route handler for updating all social media accounts' follower counts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import SocialMediaAccount from '@/models/socialMediaAccount';
 import { errorHandler } from '@/lib/error-handler';
@@ -44,3 +44,4 @@ export async function POST() {
     return errorHandler(error);
   }
 }
+

@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { 
   Layers, // Icon for Cluster
   MapPin, 
-  Users, 
+  Users as UsersIcon, // Renamed to avoid conflict with Members component if any
   UserCheck, // Icon for Small Groups count
   Mail, 
   Phone, 
@@ -32,12 +32,12 @@ import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
 
-// Frontend Cluster interface - adjust based on actual backend model
+// Frontend Cluster interface
 interface Cluster {
   _id: string
-  clusterId: string // Or a unique identifier
+  clusterId: string 
   name: string
-  centerId?: { // Link to parent Center
+  centerId?: { 
     _id: string
     name: string
   }
@@ -48,7 +48,7 @@ interface Cluster {
     lastName: string
     email?: string
   }
-  assistantLeaderId?: { // Optional assistant leader
+  assistantLeaderId?: { 
     _id: string
     firstName: string
     lastName: string
@@ -65,19 +65,24 @@ interface Cluster {
   smallGroupCount?: number
 }
 
-// Mock interface for Small Groups for now
+// Frontend SmallGroup interface
 interface SmallGroup {
   _id: string;
+  groupId: string;
   name: string;
-  leaderName: string;
-  memberCount: number;
+  leaderId?: {
+    firstName: string;
+    lastName: string;
+  };
+  memberCount?: number;
 }
 
+// Frontend Member interface (for members directly in cluster, if applicable)
 interface Member {
     _id: string;
     firstName: string;
     lastName: string;
-    roleInCluster?: string; // e.g. Member, Assistant Leader
+    roleInCluster?: string; 
 }
 
 export default function ClusterDetailPage() {
@@ -86,101 +91,64 @@ export default function ClusterDetailPage() {
   const queryParams = useSearchParams();
   const { toast } = useToast()
   const { user } = useAuthStore()
-  const clusterId = params.id as string
+  const clusterIdFromParams = params.id as string
   const centerNameFromQuery = queryParams.get("centerName");
 
   const [cluster, setCluster] = useState<Cluster | null>(null)
-  const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) // For displaying SGs in this cluster
-  const [members, setMembers] = useState<Member[]>([]) // For displaying members in this cluster
+  const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) 
+  const [members, setMembers] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
-  // Permissions will depend on the cluster's centerId if available
   const canEditCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
   const canCreateSmallGroup = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  const canAddMemberToCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
 
   const fetchClusterDetails = useCallback(async () => {
-    if (!user || !clusterId) return;
+    if (!user || !clusterIdFromParams) return;
     try {
       setIsLoading(true)
-      // TODO: Replace with actual API call to fetch cluster details
-      // const response = await fetch(`/api/clusters/${clusterId}`)
-      // if (!response.ok) throw new Error("Failed to fetch cluster details")
-      // const data = await response.json()
-      // setCluster(data.cluster)
-
-      // TODO: Fetch small groups for this cluster
-      // const sgResponse = await fetch(`/api/small-groups?clusterId=${clusterId}`)
-      // const sgData = await sgResponse.json()
-      // setSmallGroups(sgData.smallGroups || [])
-
-      // TODO: Fetch members for this cluster
-      // const membersResponse = await fetch(`/api/members?clusterId=${clusterId}`)
-      // const membersData = await membersResponse.json()
-      // setMembers(membersData.members || [])
-
-      // Mock data for now
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const mockCluster: Cluster = {
-        _id: clusterId,
-        clusterId: `CL${1000 + parseInt(clusterId.replace("cluster", ""))}`,
-        name: `Omega Cluster ${clusterId.replace("cluster", "")}`,
-        centerId: {
-            _id: "center1", // Assuming a parent center
-            name: centerNameFromQuery || "Demo Center"
-        },
-        location: `North Suburb, Park Avenue ${clusterId.replace("cluster", "")}`,
-        leaderId: {
-          _id: `leader${clusterId.replace("cluster", "")}`,
-          firstName: `ClusterLead${clusterId.replace("cluster", "")}`,
-          lastName: "Abrams",
-          email: `clusterlead${clusterId.replace("cluster", "")}@example.com`
-        },
-        assistantLeaderId: {
-            _id: `assist${clusterId.replace("cluster", "")}`,
-            firstName: `Assistant${clusterId.replace("cluster", "")}`,
-            lastName: "Bellwether"
-        },
-        contactEmail: `contact@omegacluster${clusterId.replace("cluster", "")}.org`,
-        contactPhone: `+1-555-020${clusterId.replace("cluster", "")}`,
-        description: `Omega Cluster ${clusterId.replace("cluster", "")} focuses on community outreach and discipleship. We host regular events and activities.`,
-        meetingSchedule: {
-            day: "Wednesday",
-            time: "19:00",
-            frequency: "Weekly"
-        },
-        memberCount: 40 + parseInt(clusterId.replace("cluster", "")) * 10,
-        smallGroupCount: 3 + parseInt(clusterId.replace("cluster", "")),
+      
+      // Fetch cluster details
+      const clusterResponse = await fetch(`/api/clusters/${clusterIdFromParams}`)
+      if (!clusterResponse.ok) {
+        if (clusterResponse.status === 403) throw new Error("Permission denied to view this cluster.")
+        if (clusterResponse.status === 404) throw new Error("Cluster not found.")
+        throw new Error(`Failed to fetch cluster details. Status: ${clusterResponse.status}`)
       }
-      setCluster(mockCluster)
+      const clusterData = await clusterResponse.json()
+      setCluster(clusterData.cluster)
 
-      const mockSmallGroupsData: SmallGroup[] = Array.from({ length: mockCluster.smallGroupCount || 0 }).map((_, i) => ({
-        _id: `sg_in_cluster_${clusterId}_${i+1}`,
-        name: `Hope Small Group ${i+1}`,
-        leaderName: `SG Lead ${i+1}`,
-        memberCount: 7 + i
-      }));
-      setSmallGroups(mockSmallGroupsData);
+      // Fetch small groups for this cluster
+      const sgResponse = await fetch(`/api/small-groups?clusterId=${clusterIdFromParams}&limit=100`)
+      if (!sgResponse.ok) {
+         console.warn(`Failed to fetch small groups for cluster ${clusterIdFromParams}. Status: ${sgResponse.status}`);
+      } else {
+        const sgData = await sgResponse.json()
+        setSmallGroups(sgData.smallGroups || [])
+      }
 
-      const mockMembersData: Member[] = Array.from({ length: mockCluster.memberCount || 0 }).map((_, i) => ({
-        _id: `member_in_cluster_${clusterId}_${i+1}`,
-        firstName: `MemberFName${i+1}`,
-        lastName: `MemberLName${i+1}`,
-        roleInCluster: i % 5 === 0 ? "Assistant" : "Member"
-      }));
-      setMembers(mockMembersData);
+      // Fetch members for this cluster (if your API supports direct members of a cluster)
+      // If members are only in small groups, this might not be needed or should sum up SG members.
+      // const membersResponse = await fetch(`/api/members?clusterId=${clusterIdFromParams}&limit=100`)
+      // if (!membersResponse.ok) {
+      //    console.warn(`Failed to fetch members for cluster ${clusterIdFromParams}. Status: ${membersResponse.status}`);
+      // } else {
+      //   const membersData = await membersResponse.json()
+      //   setMembers(membersData.members || [])
+      // }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching cluster details:", error)
       toast({
         title: "Error",
-        description: "Failed to load cluster details. Please try again.",
+        description: error.message || "Failed to load cluster details. Please try again.",
         variant: "destructive",
       })
       setCluster(null)
     } finally {
       setIsLoading(false)
     }
-  }, [clusterId, toast, user, centerNameFromQuery])
+  }, [clusterIdFromParams, toast, user])
 
   useEffect(() => {
     if(user) {
@@ -207,15 +175,21 @@ export default function ClusterDetailPage() {
     );
   }
   
-  // Permission check for viewing this specific cluster
-  if (!checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
-      return <p>You do not have permission to view this cluster.</p>;
+  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
+      return (
+        <div className="text-center py-10">
+            <Layers className="mx-auto h-12 w-12 text-red-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
+            <p className="text-gray-500 mb-4">You do not have permission to view this cluster.</p>
+            <Button onClick={() => router.push(cluster.centerId?._id ? `/dashboard/centers/${cluster.centerId._id}` : "/dashboard/clusters")}>Back</Button>
+        </div>
+      );
   }
 
   return (
     <div className="space-y-6">
-        <Button variant="outline" onClick={() => router.push(cluster.centerId?._id ? `/dashboard/centers/${cluster.centerId._id}` : "/dashboard/clusters")} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to {cluster.centerId?.name || "Clusters"}
+        <Button variant="outline" onClick={() => router.push(cluster.centerId?._id ? `/dashboard/centers/${cluster.centerId._id}` : `/dashboard/clusters?centerId=${cluster.centerId?._id || ""}&centerName=${encodeURIComponent(cluster.centerId?.name || centerNameFromQuery || "")}`)} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to {cluster.centerId?.name || centerNameFromQuery || "Clusters"}
         </Button>
 
       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
@@ -229,7 +203,6 @@ export default function ClusterDetailPage() {
         </div>
         {canEditCluster && (
           <Button asChild>
-            {/* TODO: Create an edit page for clusters */}
             <Link href={`/dashboard/clusters/${cluster._id}/edit`}> 
               <Edit className="mr-2 h-4 w-4" /> Edit Cluster
             </Link>
@@ -296,24 +269,23 @@ export default function ClusterDetailPage() {
             )}
             <div className="flex items-center gap-2">
               <UserCheck className="h-5 w-5 text-gray-500" />
-              <span>{cluster.smallGroupCount || 0} Small Groups</span>
+              <span>{smallGroups.length > 0 ? smallGroups.length : (cluster.smallGroupCount || 0)} Small Groups</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-gray-500" />
-              <span>{cluster.memberCount || 0} Members</span>
+              <UsersIcon className="h-5 w-5 text-gray-500" />
+              {/* If members are fetched directly for cluster, use members.length. Otherwise, use cluster.memberCount or sum from SGs */}
+              <span>{members.length > 0 ? members.length : (cluster.memberCount || 0)} Members (Overall in Cluster)</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section for Small Groups within this Cluster */} 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Small Groups in {cluster.name}</CardTitle>
           {canCreateSmallGroup && (
             <Button asChild size="sm">
-                {/* TODO: Ensure new small group page can take clusterId and clusterName */}
-                <Link href={`/dashboard/small-groups/new?clusterId=${cluster._id}&clusterName=${encodeURIComponent(cluster.name)}`}>
+                <Link href={`/dashboard/small-groups/new?clusterId=${cluster._id}&clusterName=${encodeURIComponent(cluster.name)}&centerId=${cluster.centerId?._id || ""}&centerName=${encodeURIComponent(cluster.centerId?.name || centerNameFromQuery || "")}`}>
                     <Plus className="mr-2 h-4 w-4" /> Add Small Group
                 </Link>
             </Button>
@@ -324,10 +296,12 @@ export default function ClusterDetailPage() {
             <ul className="space-y-2">
               {smallGroups.map(sg => (
                 <li key={sg._id} className="flex justify-between items-center p-2 border rounded-md">
-                  <span>{sg.name} (Leader: {sg.leaderName}) - {sg.memberCount} members</span>
-                  {/* TODO: Link to actual small group detail page */}
+                  <div>
+                    <Link href={`/dashboard/small-groups/${sg._id}?clusterName=${encodeURIComponent(cluster.name)}&centerName=${encodeURIComponent(cluster.centerId?.name || centerNameFromQuery || "")}`} className="font-medium hover:underline">{sg.name}</Link>
+                    {sg.leaderId && <span className="text-sm text-gray-500 block">Leader: {sg.leaderId.firstName} {sg.leaderId.lastName}</span>}
+                  </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/small-groups/${sg._id}?clusterName=${encodeURIComponent(cluster.name)}`}>View</Link>
+                    <Link href={`/dashboard/small-groups/${sg._id}?clusterName=${encodeURIComponent(cluster.name)}&centerName=${encodeURIComponent(cluster.centerId?.name || centerNameFromQuery || "")}`}>View</Link>
                   </Button>
                 </li>
               ))}
@@ -338,16 +312,17 @@ export default function ClusterDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Section for Members within this Cluster */} 
-      <Card>
+      {/* Optional: Section for Members directly in this Cluster (if applicable) */}
+      {/* <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Members in {cluster.name}</CardTitle>
-           {/* TODO: Add member button if permissions allow */}
-           {/* <Button asChild size="sm">
-                <Link href={`/dashboard/members/new?clusterId=${cluster._id}`}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Member
+          <CardTitle>Direct Members in {cluster.name}</CardTitle>
+           {canAddMemberToCluster && (
+            <Button asChild size="sm">
+                <Link href={`/dashboard/members/new?clusterId=${cluster._id}&clusterName=${encodeURIComponent(cluster.name)}`}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Member to Cluster
                 </Link>
-            </Button> */}
+            </Button>
+           )}
         </CardHeader>
         <CardContent>
           {members.length > 0 ? (
@@ -355,7 +330,6 @@ export default function ClusterDetailPage() {
               {members.map(member => (
                 <li key={member._id} className="flex justify-between items-center p-2 border rounded-md">
                   <span>{member.firstName} {member.lastName} {member.roleInCluster && `(${member.roleInCluster})`}</span>
-                  {/* TODO: Link to actual member detail page */}
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/dashboard/members/${member._id}`}>View</Link>
                   </Button>
@@ -363,10 +337,10 @@ export default function ClusterDetailPage() {
               ))}
             </ul>
           ) : (
-            <p>No members found in this cluster yet.</p>
+            <p>No direct members found in this cluster yet.</p>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
 
     </div>
   )

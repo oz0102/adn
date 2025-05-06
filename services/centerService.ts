@@ -1,93 +1,85 @@
 // services/centerService.ts
-import Center, { ICenter } from "@/models/center";
-import User, { IUser } from "@/models/user"; // For validating centerAdmins and user type
-import { connectToDB } from "@/lib/mongodb"; // Adjusted path based on project structure (lib/mongodb.ts likely)
+import CenterModel, { ICenter } from "@/models/center";
+import UserModel, { IUser } from "@/models/user"; 
+import connectToDB from "@/lib/mongodb"; 
+import mongoose, { Types, LeanDocument, FilterQuery } from "mongoose";
 
-// Authorization checks will primarily be handled by middleware or in API route handlers
-// using session data and the updated User model with assignedRoles.
+export interface ICenterCreatePayload extends Omit<Partial<ICenter>, "_id" | "centerAdmins"> {
+  name: string;
+  centerAdmins?: (Types.ObjectId | string)[]; // Array of User IDs
+  // Add other required fields for creation if any
+}
 
-/**
- * Creates a new Center.
- * Requires HQ_ADMIN privileges (checked in API route).
- * @param data - Data for the new center.
- * @returns The created center document.
- */
-export const createCenterService = async (data: Partial<ICenter>): Promise<ICenter> => {
+export interface ICenterUpdatePayload extends Partial<ICenterCreatePayload> {}
+
+// Type for populated lean center document
+export type PopulatedLeanCenter = Omit<LeanDocument<ICenter>, "centerAdmins"> & {
+  _id: Types.ObjectId;
+  centerAdmins?: (Pick<LeanDocument<IUser>, "_id" | "email" | "name"> & { _id: Types.ObjectId })[];
+};
+
+export const createCenterService = async (data: ICenterCreatePayload): Promise<ICenter> => {
   await connectToDB();
-  // Validate if centerAdmins exist if provided
   if (data.centerAdmins && data.centerAdmins.length > 0) {
-    const admins = await User.find({ 
+    const admins = await UserModel.find({ 
       _id: { $in: data.centerAdmins },
-      // Optionally, check if these users can be center admins
-      // "assignedRoles.role": "CENTER_ADMIN" 
-    });
+    }).lean<IUser[]>();
     if (admins.length !== data.centerAdmins.length) {
-      throw new Error("One or more assigned center admins are invalid.");
+      const foundAdminIds = admins.map(admin => admin._id.toString());
+      const notFoundAdmins = data.centerAdmins.filter(adminId => !foundAdminIds.includes(adminId.toString()));
+      throw new Error(`One or more assigned center admins are invalid: ${notFoundAdmins.join(", ")}.`);
     }
   }
-  const newCenter = new Center(data);
+  const newCenter = new CenterModel(data);
   await newCenter.save();
-  return newCenter;
+  return newCenter; // Returning Mongoose document
 };
 
-/**
- * Retrieves all Centers.
- * Requires HQ_ADMIN privileges for a full list.
- * CENTER_ADMIN might see their assigned centers (logic to be built in API route based on user role).
- * @returns A list of center documents.
- */
-export const getAllCentersService = async (): Promise<ICenter[]> => {
+export const getAllCentersService = async (filters?: FilterQuery<ICenter>): Promise<PopulatedLeanCenter[]> => {
   await connectToDB();
-  return Center.find({}).populate("centerAdmins", "email name").lean();
+  return CenterModel.find(filters || {}).populate<{ centerAdmins: PopulatedLeanCenter["centerAdmins"] }>("centerAdmins", "email name").lean<PopulatedLeanCenter[]>();
 };
 
-/**
- * Retrieves a specific Center by its ID.
- * Authorization (HQ_ADMIN or assigned CENTER_ADMIN) checked in API route.
- * @param id - The ID of the center.
- * @returns The center document or null if not found.
- */
-export const getCenterByIdService = async (id: string): Promise<ICenter | null> => {
+export const getCenterByIdService = async (id: string): Promise<PopulatedLeanCenter | null> => {
   await connectToDB();
-  return Center.findById(id).populate("centerAdmins", "email name").lean();
+  if (!Types.ObjectId.isValid(id)) return null;
+  return CenterModel.findById(id).populate<{ centerAdmins: PopulatedLeanCenter["centerAdmins"] }>("centerAdmins", "email name").lean<PopulatedLeanCenter>();
 };
 
-/**
- * Updates an existing Center.
- * Authorization (HQ_ADMIN or assigned CENTER_ADMIN) checked in API route.
- * @param id - The ID of the center to update.
- * @param data - The data to update the center with.
- * @returns The updated center document or null if not found.
- */
-export const updateCenterService = async (id: string, data: Partial<ICenter>): Promise<ICenter | null> => {
+export const updateCenterService = async (id: string, data: ICenterUpdatePayload): Promise<PopulatedLeanCenter | null> => {
   await connectToDB();
-    // Validate if centerAdmins exist if provided
+  if (!Types.ObjectId.isValid(id)) return null;
+
   if (data.centerAdmins && data.centerAdmins.length > 0) {
-    const admins = await User.find({ _id: { $in: data.centerAdmins } });
+    const admins = await UserModel.find({ _id: { $in: data.centerAdmins } }).lean<IUser[]>();
     if (admins.length !== data.centerAdmins.length) {
-      throw new Error("One or more assigned center admins are invalid during update.");
+      const foundAdminIds = admins.map(admin => admin._id.toString());
+      const notFoundAdmins = data.centerAdmins.filter(adminId => !foundAdminIds.includes(adminId.toString()));
+      throw new Error(`One or more assigned center admins are invalid during update: ${notFoundAdmins.join(", ")}.`);
     }
   }
-  return Center.findByIdAndUpdate(id, data, { new: true }).populate("centerAdmins", "email name").lean();
+  return CenterModel.findByIdAndUpdate(id, data, { new: true })
+                    .populate<{ centerAdmins: PopulatedLeanCenter["centerAdmins"] }>("centerAdmins", "email name")
+                    .lean<PopulatedLeanCenter>();
 };
 
-/**
- * Deletes a Center.
- * Requires HQ_ADMIN privileges (checked in API route).
- * @param id - The ID of the center to delete.
- * @returns The deleted center document or null if not found.
- */
-export const deleteCenterService = async (id: string): Promise<ICenter | null> => {
+export const deleteCenterService = async (id: string): Promise<PopulatedLeanCenter | null> => {
   await connectToDB();
-  // Add logic here to handle disassociation or deletion of related entities (Clusters, SmallGroups, Members)
-  // This can be complex and might involve transactions or specific cleanup routines.
-  // For now, it's a direct deletion.
-  const deletedCenter = await Center.findByIdAndDelete(id).lean();
+  if (!Types.ObjectId.isValid(id)) return null;
+  
+  // TODO: Implement cascading deletes or disassociations for Clusters, SmallGroups, Members, Events, etc.,
+  // that were associated with this centerId. This is a critical step for data integrity.
+  // For example, before deleting a center, you might want to:
+  // 1. Delete all SmallGroups belonging to Clusters within this Center.
+  // 2. Delete all Clusters belonging to this Center.
+  // 3. Disassociate or delete Members belonging to this Center.
+  // 4. Handle Events, etc.
+  // This often requires transactions if your DB supports them, or careful sequencing of operations.
+
+  const deletedCenter = await CenterModel.findByIdAndDelete(id).lean<PopulatedLeanCenter>();
   if (!deletedCenter) {
     return null;
   }
-  // TODO: Implement cascading deletes or disassociations for Clusters, SmallGroups, Members, Events, etc.,
-  // that were associated with this centerId.
   return deletedCenter;
 };
 

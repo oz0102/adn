@@ -1,210 +1,199 @@
 // services/notificationService.ts
-import Notification, { INotification } from "@/models/notification";
-import Member from "@/models/member"; // To validate recipient memberId or targetId if it's a member
-import Center from "@/models/center"; // To validate originatorCenterId or targetId if it's a center
-import { connectToDB } from "@/lib/mongodb";
-import mongoose from "mongoose";
+import Notification, { INotification, NotificationType, NotificationLevel, NotificationStatus } from "@/models/notification";
+import MemberModel, { IMember } from "@/models/member";
+import CenterModel, { ICenter } from "@/models/center";
+import connectToDB from "@/lib/mongodb"; 
+import mongoose, { Types, FilterQuery } from "mongoose";
 
-interface CreateNotificationData extends Omit<Partial<INotification>, "status" | "sentAt" | "createdBy"> {
-  type: "Email" | "SMS" | "WhatsApp";
-  subject: string;
+// Interface for the data needed to create a notification
+export interface INotificationCreationPayload {
+  type: NotificationType;
+  subject?: string; 
   content: string;
-  targetLevel: "HQ" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "MEMBER";
-  // recipient is optional if targetLevel is not MEMBER and targetId is specified for a group
+  targetLevel: NotificationLevel;
   recipient?: {
-    memberId?: string | mongoose.Types.ObjectId;
+    memberId?: Types.ObjectId | string;
     email?: string;
     phoneNumber?: string;
     whatsappNumber?: string;
   };
-  targetId?: string | mongoose.Types.ObjectId; // ID of Center, Cluster, SmallGroup, or Member
-  originatorCenterId?: string | mongoose.Types.ObjectId; // Center from which notification originates, if applicable
+  targetId?: Types.ObjectId | string; 
+  originatorCenterId?: Types.ObjectId | string;
   relatedTo?: {
     type: string;
-    id: mongoose.Types.ObjectId;
+    id: Types.ObjectId | string;
   };
-  // createdBy will be added by the system/API route
+  createdBy: Types.ObjectId | string;
 }
 
-/**
- * Creates a new Notification.
- * Permission checks handled in API routes.
- * @param data - Data for the new notification.
- * @returns The created notification document.
- */
-export const createNotificationService = async (data: CreateNotificationData & { createdBy: mongoose.Types.ObjectId }): Promise<INotification> => {
+export interface INotificationFilters {
+  userIdForScope?: Types.ObjectId | string;
+  memberIdForScope?: Types.ObjectId | string;
+  status?: NotificationStatus;
+  isRead?: boolean; 
+  page?: number;
+  limit?: number;
+}
+
+export interface IUserRolesAndScopesForNotifications {
+  isHQAdmin: boolean;
+  adminCenterIds: Types.ObjectId[];
+  leaderClusterIds: Types.ObjectId[];
+  leaderSmallGroupIds: Types.ObjectId[];
+  memberOfCenterId?: Types.ObjectId;
+  memberOfClusterId?: Types.ObjectId;
+  memberOfSmallGroupId?: Types.ObjectId;
+}
+
+export type PopulatedLeanNotification = Omit<INotification, "recipient.memberId" | "originatorCenterId" | "createdBy" | "targetId" | "versions" | "$isDefault"> & {
+  _id: Types.ObjectId;
+  recipient?: {
+    memberId?: (Pick<IMember, "_id" | "firstName" | "lastName" | "email"> & { _id: Types.ObjectId }) | null;
+    email?: string;
+    phoneNumber?: string;
+    whatsappNumber?: string;
+  };
+  originatorCenterId?: (Pick<ICenter, "_id" | "name"> & { _id: Types.ObjectId }) | null;
+  createdBy?: ({ _id: Types.ObjectId; email?: string; }) | null; 
+  targetId?: Types.ObjectId | string; 
+};
+
+export const createNotificationService = async (data: INotificationCreationPayload): Promise<INotification> => {
   await connectToDB();
 
-  // Validation based on targetLevel
-  if (data.targetLevel === "MEMBER" && !data.targetId && (!data.recipient || !data.recipient.memberId)) {
+  if (data.targetLevel === NotificationLevel.MEMBER && !data.targetId && (!data.recipient || !data.recipient.memberId)) {
     throw new Error("For MEMBER level notifications, targetId (member's ID) or recipient.memberId is required.");
   }
-  if (data.targetLevel !== "HQ" && data.targetLevel !== "MEMBER" && !data.targetId) {
+  if (data.targetLevel !== NotificationLevel.HQ && data.targetLevel !== NotificationLevel.MEMBER && !data.targetId) {
     throw new Error(`Target ID is required for ${data.targetLevel} level notifications.`);
   }
-  if (data.targetLevel === "CENTER" && data.targetId) {
-    const centerExists = await Center.findById(data.targetId);
+
+  if (data.targetLevel === NotificationLevel.CENTER && data.targetId) {
+    const centerExists = await CenterModel.findById(data.targetId).lean<ICenter | null>();
     if (!centerExists) throw new Error("Target Center not found.");
   }
-  // Add similar checks for CLUSTER, SMALL_GROUP targetIds if necessary
-  if (data.recipient && data.recipient.memberId) {
-    const memberExists = await Member.findById(data.recipient.memberId);
+
+  if (data.recipient?.memberId) {
+    const memberExists = await MemberModel.findById(data.recipient.memberId).lean<IMember | null>();
     if (!memberExists) throw new Error("Recipient Member not found.");
   }
-  if (data.targetLevel === "MEMBER" && data.targetId) {
-    const memberExists = await Member.findById(data.targetId);
+
+  if (data.targetLevel === NotificationLevel.MEMBER && data.targetId) {
+    const memberExists = await MemberModel.findById(data.targetId).lean<IMember | null>();
     if (!memberExists) throw new Error("Target Member not found.");
-    // Populate recipient details from member if not provided
+    
+    let memberIdForRecipient: Types.ObjectId | string | undefined = undefined;
+    if (memberExists) {
+        memberIdForRecipient = memberExists._id as Types.ObjectId | string; // Cast _id after confirming memberExists
+    }
+
     if (!data.recipient || (!data.recipient.email && !data.recipient.phoneNumber && !data.recipient.whatsappNumber)) {
-        data.recipient = {
-            memberId: memberExists._id,
-            email: memberExists.email,
-            phoneNumber: memberExists.phoneNumber,
-            whatsappNumber: memberExists.whatsappNumber
-        };
+      data.recipient = {
+        ...data.recipient,
+        memberId: memberIdForRecipient, 
+        email: memberExists.email,
+        phoneNumber: memberExists.phoneNumber,
+        // whatsappNumber: memberExists.whatsappNumber // Assuming IMember has whatsappNumber
+      };
     }
   }
+
   if (data.originatorCenterId) {
-    const centerExists = await Center.findById(data.originatorCenterId);
+    const centerExists = await CenterModel.findById(data.originatorCenterId).lean<ICenter | null>();
     if (!centerExists) throw new Error("Originator Center not found.");
   }
 
   const newNotification = new Notification(data);
   await newNotification.save();
-  return newNotification.populate([
-      { path: "recipient.memberId", select: "firstName lastName email" },
-      // Populate targetId based on targetLevel might require dynamic refPath or separate queries
-      { path: "originatorCenterId", select: "name" },
-      { path: "createdBy", select: "email" }
-  ]);
+  return newNotification; 
 };
 
-interface GetNotificationsFilters {
-  userIdForScope?: string | mongoose.Types.ObjectId; // User whose notifications are being fetched
-  memberIdForScope?: string | mongoose.Types.ObjectId; // Member profile ID for the user
-  status?: "Pending" | "Sent" | "Failed";
-  page?: number;
-  limit?: number;
-}
-
-/**
- * Retrieves Notifications based on filters, scoped to the user.
- * This is a complex query. A user should see:
- * 1. Notifications directly targeting their memberId.
- * 2. Notifications targeting HQ.
- * 3. Notifications targeting a Center they belong to / administer.
- * 4. Notifications targeting a Cluster they belong to / lead.
- * 5. Notifications targeting a Small Group they belong to / lead.
- * Access control handled in API routes by ensuring userIdForScope is the logged-in user.
- * @param filters - Filtering options including the user/member ID for scoping.
- * @returns A list of notification documents and pagination info.
- */
 export const getAllNotificationsForUserService = async (
-    filters: GetNotificationsFilters,
-    userRolesAndScopes?: { // This would come from resolving the user's session and roles
-        isHQAdmin: boolean;
-        adminCenterIds: mongoose.Types.ObjectId[];
-        leaderClusterIds: mongoose.Types.ObjectId[];
-        leaderSmallGroupIds: mongoose.Types.ObjectId[];
-        memberOfCenterId?: mongoose.Types.ObjectId;
-        memberOfClusterId?: mongoose.Types.ObjectId;
-        memberOfSmallGroupId?: mongoose.Types.ObjectId;
-    }
-): Promise<{ notifications: INotification[], total: number, page: number, limit: number }> => {
+    filters: INotificationFilters,
+    userRolesAndScopes: IUserRolesAndScopesForNotifications
+): Promise<{ notifications: PopulatedLeanNotification[], total: number, page: number, limit: number }> => {
   await connectToDB();
-  const { userIdForScope, memberIdForScope, status, page = 1, limit = 20 } = filters;
-  const queryConditions: any[] = [];
+  const { userIdForScope, memberIdForScope, status, page = 1, limit = 20, isRead } = filters;
+  const queryOrConditions: FilterQuery<INotification>[] = [];
 
-  // Direct notifications to the member
   if (memberIdForScope) {
-    queryConditions.push({ "recipient.memberId": new mongoose.Types.ObjectId(memberIdForScope.toString()) });
-    queryConditions.push({ targetLevel: "MEMBER", targetId: new mongoose.Types.ObjectId(memberIdForScope.toString()) });
+    const memberObjId = new Types.ObjectId(memberIdForScope.toString());
+    queryOrConditions.push({ "recipient.memberId": memberObjId });
+    queryOrConditions.push({ targetLevel: NotificationLevel.MEMBER, targetId: memberObjId });
   }
 
-  // HQ level notifications (visible to all or based on role)
-  queryConditions.push({ targetLevel: "HQ" });
+  queryOrConditions.push({ targetLevel: NotificationLevel.HQ });
 
-  if (userRolesAndScopes) {
-    if (userRolesAndScopes.isHQAdmin) {
-        // HQ Admin can see all notifications if needed, or this service is always scoped to a user context
-        // For a user-centric view, even HQ admin sees what's relevant to them as a user + HQ wide.
-    }
-    // Center level (member of, or admin of)
-    if (userRolesAndScopes.memberOfCenterId) {
-        queryConditions.push({ targetLevel: "CENTER", targetId: userRolesAndScopes.memberOfCenterId });
-    }
-    userRolesAndScopes.adminCenterIds.forEach(id => {
-        queryConditions.push({ targetLevel: "CENTER", targetId: id });
-    });
+  if (userRolesAndScopes.memberOfCenterId) {
+    queryOrConditions.push({ targetLevel: NotificationLevel.CENTER, targetId: userRolesAndScopes.memberOfCenterId });
+  }
+  userRolesAndScopes.adminCenterIds.forEach(id => {
+    queryOrConditions.push({ targetLevel: NotificationLevel.CENTER, targetId: id });
+  });
 
-    // Cluster level (member of, or leader of)
-    if (userRolesAndScopes.memberOfClusterId) {
-        queryConditions.push({ targetLevel: "CLUSTER", targetId: userRolesAndScopes.memberOfClusterId });
-    }
-    userRolesAndScopes.leaderClusterIds.forEach(id => {
-        queryConditions.push({ targetLevel: "CLUSTER", targetId: id });
-    });
+  if (userRolesAndScopes.memberOfClusterId) {
+    queryOrConditions.push({ targetLevel: NotificationLevel.CLUSTER, targetId: userRolesAndScopes.memberOfClusterId });
+  }
+  userRolesAndScopes.leaderClusterIds.forEach(id => {
+    queryOrConditions.push({ targetLevel: NotificationLevel.CLUSTER, targetId: id });
+  });
     
-    // Small Group level (member of, or leader of)
-    if (userRolesAndScopes.memberOfSmallGroupId) {
-        queryConditions.push({ targetLevel: "SMALL_GROUP", targetId: userRolesAndScopes.memberOfSmallGroupId });
-    }
-    userRolesAndScopes.leaderSmallGroupIds.forEach(id => {
-        queryConditions.push({ targetLevel: "SMALL_GROUP", targetId: id });
-    });
+  if (userRolesAndScopes.memberOfSmallGroupId) {
+    queryOrConditions.push({ targetLevel: NotificationLevel.SMALL_GROUP, targetId: userRolesAndScopes.memberOfSmallGroupId });
   }
+  userRolesAndScopes.leaderSmallGroupIds.forEach(id => {
+    queryOrConditions.push({ targetLevel: NotificationLevel.SMALL_GROUP, targetId: id });
+  });
   
-  const finalQuery: any = { $or: queryConditions };
+  const finalQuery: FilterQuery<INotification> = { $or: queryOrConditions };
   if (status) finalQuery.status = status;
+  if (typeof isRead === "boolean") finalQuery.isRead = isRead;
 
   const total = await Notification.countDocuments(finalQuery);
   const notifications = await Notification.find(finalQuery)
     .populate([
         { path: "recipient.memberId", select: "firstName lastName email" },
         { path: "originatorCenterId", select: "name" },
-        { path: "createdBy", select: "email" }
+        { path: "createdBy", select: "email" } 
     ])
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .lean();
+    .lean<PopulatedLeanNotification[]>();
 
   return { notifications, total, page, limit };
 };
 
-/**
- * Retrieves a specific Notification by its ID.
- * Permission checks (user must be recipient or admin of scope) handled in API route.
- * @param id - The ID of the notification.
- * @returns The notification document or null if not found.
- */
-export const getNotificationByIdService = async (id: string): Promise<INotification | null> => {
+export const getNotificationByIdService = async (id: string): Promise<PopulatedLeanNotification | null> => {
   await connectToDB();
+  if (!Types.ObjectId.isValid(id)) return null;
   return Notification.findById(id).populate([
     { path: "recipient.memberId", select: "firstName lastName email" },
     { path: "originatorCenterId", select: "name" },
     { path: "createdBy", select: "email" }
-  ]).lean();
+  ]).lean<PopulatedLeanNotification | null>();
 };
 
-/**
- * Updates the status of a Notification (e.g., to Sent, Failed, Read).
- * @param id - The ID of the notification to update.
- * @param statusUpdate - Object containing new status and optionally sentAt.
- * @returns The updated notification document or null if not found.
- */
-export const updateNotificationStatusService = async (id: string, statusUpdate: { status: string, sentAt?: Date, readAt?: Date }): Promise<INotification | null> => {
+export const updateNotificationStatusService = async (
+    id: string, 
+    statusUpdate: { status: NotificationStatus, sentAt?: Date, readAt?: Date, failedReason?: string }
+): Promise<PopulatedLeanNotification | null> => {
   await connectToDB();
-  return Notification.findByIdAndUpdate(id, { $set: statusUpdate }, { new: true }).lean();
+  if (!Types.ObjectId.isValid(id)) return null;
+  return Notification.findByIdAndUpdate(id, { $set: statusUpdate }, { new: true })
+                    .lean<PopulatedLeanNotification | null>();
 };
 
-/**
- * Deletes a Notification (typically an admin action).
- * @param id - The ID of the notification to delete.
- * @returns The deleted notification document or null if not found.
- */
-export const deleteNotificationService = async (id: string): Promise<INotification | null> => {
+export const markNotificationAsReadService = async (id: string, userId: string): Promise<PopulatedLeanNotification | null> => {
+    await connectToDB();
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) return null;
+    return Notification.findByIdAndUpdate(id, { $set: { isRead: true, readAt: new Date() } }, { new: true })
+                      .lean<PopulatedLeanNotification | null>();
+};
+
+export const deleteNotificationService = async (id: string): Promise<PopulatedLeanNotification | null> => {
   await connectToDB();
-  return Notification.findByIdAndDelete(id).lean();
+  if (!Types.ObjectId.isValid(id)) return null;
+  return Notification.findByIdAndDelete(id).lean<PopulatedLeanNotification | null>();
 };
 

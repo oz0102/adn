@@ -1,24 +1,51 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+// Define and export Enums for NotificationType, NotificationLevel, NotificationStatus
+export enum NotificationType {
+  EMAIL = 'Email',
+  SMS = 'SMS',
+  WHATSAPP = 'WhatsApp',
+  IN_APP = 'IN_APP' // Added IN_APP type
+}
+
+export enum NotificationLevel {
+  HQ = 'HQ',
+  CENTER = 'CENTER',
+  CLUSTER = 'CLUSTER',
+  SMALL_GROUP = 'SMALL_GROUP',
+  MEMBER = 'MEMBER'
+}
+
+export enum NotificationStatus {
+  PENDING = 'Pending',
+  SENT = 'Sent',
+  FAILED = 'Failed',
+  READ = 'Read' // Added READ status for IN_APP
+}
+
 export interface INotification extends Document {
-  type: 'Email' | 'SMS' | 'WhatsApp';
+  type: NotificationType;
   recipient: {
-    memberId?: mongoose.Types.ObjectId; // Optional if targetLevel is not MEMBER
+    memberId?: mongoose.Types.ObjectId; 
     email?: string;
     phoneNumber?: string;
     whatsappNumber?: string;
   };
-  subject: string;
+  subject?: string; // Made optional as IN_APP might not need it
   content: string;
   relatedTo?: {
     type: string;
     id: mongoose.Types.ObjectId;
   };
-  status: 'Pending' | 'Sent' | 'Failed';
+  status: NotificationStatus;
   sentAt?: Date;
-  targetLevel: 'HQ' | 'CENTER' | 'CLUSTER' | 'SMALL_GROUP' | 'MEMBER'; // Added field
-  targetId?: mongoose.Types.ObjectId; // Added field (references Center, Cluster, SmallGroup, or Member)
-  originatorCenterId?: mongoose.Types.ObjectId; // Added field, Ref to Center
+  readAt?: Date; // Added for IN_APP notifications
+  isRead?: boolean; // Added for IN_APP notifications, default false
+  failedReason?: string; // Added to store reason for failure
+  targetLevel: NotificationLevel; 
+  targetId?: mongoose.Types.ObjectId; 
+  originatorCenterId?: mongoose.Types.ObjectId; 
+  createdBy?: mongoose.Types.ObjectId; // Added createdBy
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,7 +54,6 @@ const RecipientSchema = new Schema({
   memberId: { 
     type: Schema.Types.ObjectId, 
     ref: 'Member'
-    // Not strictly required here, as targetId might point to a member directly or a group
   },
   email: { 
     type: String,
@@ -53,7 +79,6 @@ const RelatedToSchema = new Schema({
   id: { 
     type: Schema.Types.ObjectId, 
     required: true
-    // Consider adding a 'refPath' if 'id' can refer to different collections based on 'type'
   }
 }, { _id: false });
 
@@ -62,17 +87,14 @@ const NotificationSchema: Schema = new Schema(
     type: { 
       type: String, 
       required: true,
-      enum: ['Email', 'SMS', 'WhatsApp']
+      enum: Object.values(NotificationType) // Use enum values
     },
     recipient: { 
       type: RecipientSchema,
-      // Recipient details might be derived based on targetLevel and targetId, 
-      // or explicitly provided for direct member notifications.
-      // Making it not strictly required at schema root if targetLevel is not MEMBER.
     },
     subject: { 
       type: String, 
-      required: true,
+      // required: true, // Made optional
       trim: true
     },
     content: { 
@@ -85,57 +107,68 @@ const NotificationSchema: Schema = new Schema(
     status: { 
       type: String, 
       required: true,
-      enum: ['Pending', 'Sent', 'Failed'],
-      default: 'Pending'
+      enum: Object.values(NotificationStatus),
+      default: NotificationStatus.PENDING
     },
     sentAt: { 
       type: Date
     },
+    readAt: { // Added
+      type: Date
+    },
+    isRead: { // Added
+      type: Boolean,
+      default: false
+    },
+    failedReason: { // Added
+      type: String
+    },
     targetLevel: {
       type: String,
-      enum: ['HQ', 'CENTER', 'CLUSTER', 'SMALL_GROUP', 'MEMBER'],
+      enum: Object.values(NotificationLevel),
       required: true
-    }, // Added field
+    }, 
     targetId: {
       type: Schema.Types.ObjectId,
-      // refPath: 'targetLevelRefPath' // If targetId can refer to different models based on targetLevel
-      // For simplicity, direct reference might require service-level logic to determine the correct model.
-      sparse: true // Can be null if targetLevel is HQ (all users)
-    }, // Added field
+      sparse: true 
+    }, 
     originatorCenterId: {
       type: Schema.Types.ObjectId,
       ref: 'Center',
       sparse: true
-    } // Added field
+    }, 
+    createdBy: { // Added
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }
   },
   { 
     timestamps: true 
   }
 );
 
-// Create indexes
 NotificationSchema.index({ 'recipient.memberId': 1 });
 NotificationSchema.index({ status: 1 });
 NotificationSchema.index({ sentAt: 1 });
 NotificationSchema.index({ targetLevel: 1 });
 NotificationSchema.index({ targetId: 1 });
 NotificationSchema.index({ originatorCenterId: 1 });
+NotificationSchema.index({ createdBy: 1 }); // Added index
+NotificationSchema.index({ isRead: 1 }); // Added index
 
-// Validator to ensure recipient or targetId is present based on targetLevel
-NotificationSchema.path('recipient').validate(function (value) {
-  if (this.targetLevel === 'MEMBER' && !this.targetId && (!value || !value.memberId && !value.email && !value.phoneNumber)) {
-    return false; // If MEMBER target, need recipient details or targetId pointing to member
+NotificationSchema.path('recipient').validate(function (this: INotification, value: any) {
+  if (this.targetLevel === NotificationLevel.MEMBER && !this.targetId && (!value || !value.memberId && !value.email && !value.phoneNumber)) {
+    return false; 
   }
   return true;
 }, 'Recipient details or targetId are required for MEMBER level notifications.');
 
-NotificationSchema.path('targetId').validate(function (value) {
-  if (this.targetLevel !== 'HQ' && !value) {
-    return false; // targetId is required if not an HQ-wide notification
+NotificationSchema.path('targetId').validate(function (this: INotification, value: any) {
+  if (this.targetLevel !== NotificationLevel.HQ && !value) {
+    return false; 
   }
   return true;
 }, 'Target ID is required for CENTER, CLUSTER, SMALL_GROUP, or MEMBER level notifications.');
 
 
 export default mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);
-

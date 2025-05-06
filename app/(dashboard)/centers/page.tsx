@@ -85,39 +85,33 @@ export default function CentersPage() {
       queryParams.append("limit", pagination.limit.toString())
       if (search) queryParams.append("search", search)
 
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/centers?${queryParams.toString()}`)
-      // if (!response.ok) throw new Error("Failed to fetch centers")
-      // const data = await response.json()
-      // setCenters(data.centers || [])
-      // setPagination(data.paginationInfo || { page, limit: 10, total: 0, pages: 0 })
+      const response = await fetch(`/api/centers?${queryParams.toString()}`)
+      if (!response.ok) {
+        if (response.status === 403) {
+            toast({
+                title: "Permission Denied",
+                description: "You do not have permission to view centers.",
+                variant: "destructive",
+            });
+            setCenters([]);
+            setPagination({ page, limit: pagination.limit, total: 0, pages: 0 });
+            return; 
+        }
+        throw new Error(`Failed to fetch centers. Status: ${response.status}`);
+      }
+      const data = await response.json()
+      setCenters(data.centers || [])
+      setPagination(data.paginationInfo || { page, limit: pagination.limit, total: 0, pages: 0 })
 
-      // Mock data for now
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const mockCenters: Center[] = Array.from({ length: 3 }).map((_, i) => ({
-        _id: `center${i + 1}`,
-        centerId: `C${100 + i}`,
-        name: `City Center ${i + 1}`,
-        location: `Location ${i + 1}`,
-        leadPastor: {
-          _id: `pastor${i+1}`,
-          firstName: `LeadPastor${i+1}`,
-          lastName: "Doe"
-        },
-        clusterCount: 5 + i,
-        memberCount: 200 + i * 50,
-        description: `This is a vibrant center for community and worship, known as City Center ${i+1}.`
-      }))
-      setCenters(mockCenters)
-      setPagination({ page, limit: 10, total: mockCenters.length, pages: Math.ceil(mockCenters.length / 10) })
-
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching centers:", error)
       toast({
         title: "Error",
-        description: "Failed to load centers data. Please try again.",
+        description: error.message || "Failed to load centers data. Please try again.",
         variant: "destructive",
       })
+      setCenters([]) // Clear centers on error
+      setPagination({ page, limit: pagination.limit, total: 0, pages: 0 }) // Reset pagination
     } finally {
       setIsLoading(false)
     }
@@ -131,7 +125,7 @@ export default function CentersPage() {
         fetchCenters(page, search)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, user, fetchCenters]) // Added fetchCenters to dependency array
+  }, [searchParams, user, fetchCenters]) 
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -140,32 +134,38 @@ export default function CentersPage() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    router.push("/dashboard/centers") // Adjusted route
+    router.push("/dashboard/centers") 
   }
 
-  const updateUrlParams = (params: Record<string, string | number>) => {
+  const updateUrlParams = (params: Record<string, string | number | null>) => {
     const newParams = new URLSearchParams(searchParams.toString())
     Object.entries(params).forEach(([key, value]) => {
-      if (value) {
+      if (value !== null && value !== undefined) {
         newParams.set(key, value.toString())
       } else {
         newParams.delete(key)
       }
     })
-    router.push(`/dashboard/centers?${newParams.toString()}`) // Adjusted route
+    router.push(`/dashboard/centers?${newParams.toString()}`)
   }
 
   const handlePageChange = (page: number) => {
     updateUrlParams({ page })
   }
 
-  if (!user) {
-    return <p>Loading user data or user not authenticated...</p>; // Or a redirect
+  if (!user && !isLoading) { // Only show if not loading and no user
+    return <p>Loading user data or user not authenticated...</p>; 
   }
   
-  // Basic permission check for viewing the page, more granular checks for actions
-  if (!checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"])) {
-      return <p>You do not have permission to view this page.</p>;
+  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"])) {
+      return (
+        <div className="text-center py-10">
+            <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
+            <p className="text-gray-500 mb-4">You do not have permission to view this page.</p>
+            <Button onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
+        </div>
+      );
   }
 
   return (

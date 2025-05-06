@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
-  Users, // Icon for Small Group
+  Users, 
   MapPin, 
   Mail, 
   Phone, 
@@ -22,7 +22,8 @@ import {
   Edit, 
   ArrowLeft,
   Calendar,
-  Users2 // Icon for members
+  Users2, // Icon for members
+  Plus
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -30,15 +31,14 @@ import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
 
-// Frontend SmallGroup interface - adjust based on actual backend model
 interface SmallGroup {
   _id: string
-  groupId: string // Or a unique identifier
+  groupId: string 
   name: string
-  clusterId?: { // Link to parent Cluster
+  clusterId?: { 
     _id: string
     name: string
-    centerId?: { // Grandparent Center
+    centerId?: { 
         _id: string
         name: string
     }
@@ -50,7 +50,7 @@ interface SmallGroup {
     lastName: string
     email?: string
   }
-  assistantLeaderId?: { // Optional assistant leader
+  assistantLeaderId?: { 
     _id: string
     firstName: string
     lastName: string
@@ -63,14 +63,19 @@ interface SmallGroup {
     time: string
     frequency: string
   }
-  memberCount?: number
+  memberCount?: number // This might be derived from actual members list
 }
 
 interface Member {
     _id: string;
-    firstName: string;
-    lastName: string;
-    roleInGroup?: string; // e.g. Member, Assistant Leader
+    userId: {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email?: string;
+    };
+    roleInGroup?: string; // e.g. Member, Assistant Leader, Co-leader
+    // Add other relevant member fields from your Member model
 }
 
 export default function SmallGroupDetailPage() {
@@ -79,90 +84,53 @@ export default function SmallGroupDetailPage() {
   const queryParams = useSearchParams();
   const { toast } = useToast()
   const { user } = useAuthStore()
-  const smallGroupId = params.id as string
+  const smallGroupIdFromParams = params.id as string
   const clusterNameFromQuery = queryParams.get("clusterName");
+  const centerNameFromQuery = queryParams.get("centerName");
 
   const [smallGroup, setSmallGroup] = useState<SmallGroup | null>(null)
-  const [members, setMembers] = useState<Member[]>([]) // For displaying members in this small group
+  const [members, setMembers] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
-  // Permissions will depend on the small group's clusterId and its centerId
   const canEditSmallGroup = user && smallGroup ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id) : false;
   const canAddMember = user && smallGroup ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id) : false;
 
   const fetchSmallGroupDetails = useCallback(async () => {
-    if (!user || !smallGroupId) return;
+    if (!user || !smallGroupIdFromParams) return;
     try {
       setIsLoading(true)
-      // TODO: Replace with actual API call to fetch small group details
-      // const response = await fetch(`/api/small-groups/${smallGroupId}`)
-      // if (!response.ok) throw new Error("Failed to fetch small group details")
-      // const data = await response.json()
-      // setSmallGroup(data.smallGroup)
-
-      // TODO: Fetch members for this small group
-      // const membersResponse = await fetch(`/api/members?smallGroupId=${smallGroupId}`)
-      // const membersData = await membersResponse.json()
-      // setMembers(membersData.members || [])
-
-      // Mock data for now
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const mockSmallGroup: SmallGroup = {
-        _id: smallGroupId,
-        groupId: `SG${2000 + parseInt(smallGroupId.replace("sg", ""))}`,
-        name: `Grace Small Group ${smallGroupId.replace("sg", "")}`,
-        clusterId: {
-            _id: "cluster1", // Assuming a parent cluster
-            name: clusterNameFromQuery || "Demo Cluster",
-            centerId: {
-                _id: "center1",
-                name: "Demo Center"
-            }
-        },
-        location: `Community Hall B, Room ${smallGroupId.replace("sg", "")}`,
-        leaderId: {
-          _id: `sgleader${smallGroupId.replace("sg", "")}`,
-          firstName: `SGLead${smallGroupId.replace("sg", "")}`,
-          lastName: `Parker`,
-          email: `sglead${smallGroupId.replace("sg", "")}@example.com`
-        },
-        assistantLeaderId: {
-            _id: `sgassist${smallGroupId.replace("sg", "")}`,
-            firstName: `SGAssist${smallGroupId.replace("sg", "")}`,
-            lastName: `Jones`
-        },
-        contactEmail: `contact@gracesg${smallGroupId.replace("sg", "")}.org`,
-        contactPhone: `+1-555-030${smallGroupId.replace("sg", "")}`,
-        description: `Grace Small Group ${smallGroupId.replace("sg", "")} is a close-knit community focused on bible study and fellowship.`,
-        meetingSchedule: {
-            day: "Tuesday",
-            time: "18:30",
-            frequency: "Weekly"
-        },
-        memberCount: 10 + parseInt(smallGroupId.replace("sg", "")),
+      
+      // Fetch small group details
+      const sgResponse = await fetch(`/api/small-groups/${smallGroupIdFromParams}`)
+      if (!sgResponse.ok) {
+        if (sgResponse.status === 403) throw new Error("Permission denied to view this small group.")
+        if (sgResponse.status === 404) throw new Error("Small group not found.")
+        throw new Error(`Failed to fetch small group details. Status: ${sgResponse.status}`)
       }
-      setSmallGroup(mockSmallGroup)
+      const sgData = await sgResponse.json()
+      setSmallGroup(sgData.smallGroup)
 
-      const mockMembersData: Member[] = Array.from({ length: mockSmallGroup.memberCount || 0 }).map((_, i) => ({
-        _id: `member_in_sg_${smallGroupId}_${i+1}`,
-        firstName: `SGMemberFName${i+1}`,
-        lastName: `SGMemberLName${i+1}`,
-        roleInGroup: i % 4 === 0 ? "Co-leader" : "Member"
-      }));
-      setMembers(mockMembersData);
+      // Fetch members for this small group
+      const membersResponse = await fetch(`/api/members?smallGroupId=${smallGroupIdFromParams}&limit=100`)
+      if (!membersResponse.ok) {
+        console.warn(`Failed to fetch members for small group ${smallGroupIdFromParams}. Status: ${membersResponse.status}`);
+      } else {
+        const membersData = await membersResponse.json()
+        setMembers(membersData.members || [])
+      }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching small group details:", error)
       toast({
         title: "Error",
-        description: "Failed to load small group details. Please try again.",
+        description: error.message || "Failed to load small group details. Please try again.",
         variant: "destructive",
       })
       setSmallGroup(null)
     } finally {
       setIsLoading(false)
     }
-  }, [smallGroupId, toast, user, clusterNameFromQuery])
+  }, [smallGroupIdFromParams, toast, user])
 
   useEffect(() => {
     if(user) {
@@ -182,22 +150,28 @@ export default function SmallGroupDetailPage() {
             <p className="text-gray-500 mb-4">
             The small group you are looking for does not exist or you may not have permission to view it.
             </p>
-            <Button onClick={() => router.push(smallGroup?.clusterId?._id ? `/dashboard/clusters/${smallGroup.clusterId._id}` : "/dashboard/small-groups")}>
+            <Button onClick={() => router.push(smallGroup?.clusterId?._id ? `/dashboard/clusters/${smallGroup.clusterId._id}?centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || centerNameFromQuery || "")}` : "/dashboard/small-groups")}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
         </div>
     );
   }
   
-  // Permission check for viewing this specific small group
-  if (!checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id)) {
-      return <p>You do not have permission to view this small group.</p>;
+  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id)) {
+      return (
+        <div className="text-center py-10">
+            <Users className="mx-auto h-12 w-12 text-red-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
+            <p className="text-gray-500 mb-4">You do not have permission to view this small group.</p>
+            <Button onClick={() => router.push(smallGroup.clusterId?._id ? `/dashboard/clusters/${smallGroup.clusterId._id}?centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || centerNameFromQuery || "")}` : "/dashboard/small-groups")}>Back</Button>
+        </div>
+      );
   }
 
   return (
     <div className="space-y-6">
-        <Button variant="outline" onClick={() => router.push(smallGroup.clusterId?._id ? `/dashboard/clusters/${smallGroup.clusterId._id}?centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || "")}` : "/dashboard/small-groups")} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to {smallGroup.clusterId?.name || "Small Groups"}
+        <Button variant="outline" onClick={() => router.push(smallGroup.clusterId?._id ? `/dashboard/clusters/${smallGroup.clusterId._id}?centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || centerNameFromQuery || "")}&clusterName=${encodeURIComponent(smallGroup.clusterId.name || clusterNameFromQuery || "")}` : "/dashboard/small-groups")} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to {smallGroup.clusterId?.name || clusterNameFromQuery || "Small Groups"}
         </Button>
 
       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
@@ -206,13 +180,12 @@ export default function SmallGroupDetailPage() {
             <div>
                 <Badge variant="secondary" className="mb-1">{smallGroup.groupId}</Badge>
                 <h1 className="text-3xl font-bold tracking-tight">{smallGroup.name}</h1>
-                {smallGroup.clusterId && <Link href={`/dashboard/clusters/${smallGroup.clusterId._id}?centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || "")}`} className="text-sm text-blue-500 hover:underline">Part of {smallGroup.clusterId.name}</Link>}
+                {smallGroup.clusterId && <Link href={`/dashboard/clusters/${smallGroup.clusterId._id}?centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || centerNameFromQuery || "")}`} className="text-sm text-blue-500 hover:underline">Part of {smallGroup.clusterId.name}</Link>}
             </div>
         </div>
         {canEditSmallGroup && (
           <Button asChild>
-            {/* TODO: Create an edit page for small groups */}
-            <Link href={`/dashboard/small-groups/${smallGroup._id}/edit`}> 
+            <Link href={`/dashboard/small-groups/${smallGroup._id}/edit?clusterId=${smallGroup.clusterId?._id || ""}&clusterName=${encodeURIComponent(smallGroup.clusterId?.name || clusterNameFromQuery || "")}&centerId=${smallGroup.clusterId?.centerId?._id || ""}&centerName=${encodeURIComponent(smallGroup.clusterId?.centerId?.name || centerNameFromQuery || "")}`}>
               <Edit className="mr-2 h-4 w-4" /> Edit Small Group
             </Link>
           </Button>
@@ -278,20 +251,18 @@ export default function SmallGroupDetailPage() {
             )}
             <div className="flex items-center gap-2">
               <Users2 className="h-5 w-5 text-gray-500" />
-              <span>{smallGroup.memberCount || 0} Members</span>
+              <span>{members.length > 0 ? members.length : (smallGroup.memberCount || 0)} Members</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section for Members within this Small Group */} 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Members in {smallGroup.name}</CardTitle>
            {canAddMember && (
             <Button asChild size="sm">
-                {/* TODO: Ensure new member page can take smallGroupId and smallGroupName */}
-                <Link href={`/dashboard/members/new?smallGroupId=${smallGroup._id}&smallGroupName=${encodeURIComponent(smallGroup.name)}`}>
+                <Link href={`/dashboard/members/new?smallGroupId=${smallGroup._id}&smallGroupName=${encodeURIComponent(smallGroup.name)}&clusterId=${smallGroup.clusterId?._id || ""}&clusterName=${encodeURIComponent(smallGroup.clusterId?.name || clusterNameFromQuery || "")}`}>
                     <Plus className="mr-2 h-4 w-4" /> Add Member
                 </Link>
             </Button>
@@ -302,10 +273,14 @@ export default function SmallGroupDetailPage() {
             <ul className="space-y-2">
               {members.map(member => (
                 <li key={member._id} className="flex justify-between items-center p-2 border rounded-md">
-                  <span>{member.firstName} {member.lastName} {member.roleInGroup && `(${member.roleInGroup})`}</span>
-                  {/* TODO: Link to actual member detail page */}
+                  <div>
+                    <span className="font-medium">{member.userId.firstName} {member.userId.lastName}</span>
+                    {member.roleInGroup && <span className="text-sm text-gray-500 ml-2">({member.roleInGroup})</span>}
+                  </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/members/${member._id}`}>View</Link>
+                    <Link href={`/dashboard/members/${member._id}?smallGroupName=${encodeURIComponent(smallGroup.name)}&clusterName=${encodeURIComponent(smallGroup.clusterId?.name || clusterNameFromQuery || "")}`}>
+                        View
+                    </Link>
                   </Button>
                 </li>
               ))}
