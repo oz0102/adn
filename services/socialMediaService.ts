@@ -1,3 +1,5 @@
+//services\socialMediaService.ts
+
 // API service for social media account management and tracking
 import axios from 'axios';
 import { SocialMediaPlatform } from '@/models/socialMediaAccount';

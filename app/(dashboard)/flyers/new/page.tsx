@@ -1,3 +1,4 @@
+//app\(dashboard)\flyers\new\page.tsx
 "use client"
 
 import { useState } from "react"

@@ -1,3 +1,5 @@
+//lib\social-media\facebook-api.ts
+
 // Facebook API implementation for follower count tracking
 import axios from 'axios';
 
@@ -10,7 +12,7 @@ export class FacebookApiClient {
   private accessToken: string;
   private appId: string;
   private appSecret: string;
-  private apiBaseUrl = 'https://graph.facebook.com/v18.0';
+  private apiBaseUrl = 'https://graph.facebook.com/v22.0';
   private userAgent = 'Social-Media-Tracker/1.0';
 
   /**

@@ -15,7 +15,7 @@ export async function POST() {
     // For each account, trigger the update endpoint
     const updatePromises = accounts.map(async (account) => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/social-media/accounts/${account._id}/update-followers`, {
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/social-media/accounts/${account._id}/update-followers`, {
           method: 'POST',
         });
         

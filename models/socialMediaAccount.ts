@@ -1,3 +1,4 @@
+//adn\models\socialMediaAccount.ts
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 // Define the supported social media platforms
@@ -16,6 +17,12 @@ export interface FollowerRecord {
   date: Date;
 }
 
+// Interface for growth metrics
+export interface GrowthResult {
+  count: number;
+  percentage: number;
+}
+
 // Interface for the social media account document
 export interface ISocialMediaAccount extends Document {
   platform: SocialMediaPlatform;
@@ -26,6 +33,9 @@ export interface ISocialMediaAccount extends Document {
   lastUpdated: Date;
   createdAt: Date;
   updatedAt: Date;
+  // Add method signatures to interface
+  getWeeklyGrowth(): GrowthResult;
+  getMonthlyGrowth(): GrowthResult;
 }
 
 // Schema for follower history records
@@ -77,7 +87,7 @@ const SocialMediaAccountSchema = new Schema<ISocialMediaAccount>(
 SocialMediaAccountSchema.index({ platform: 1, username: 1 }, { unique: true });
 
 // Helper methods to calculate growth
-SocialMediaAccountSchema.methods.getWeeklyGrowth = function(): { count: number; percentage: number } {
+SocialMediaAccountSchema.methods.getWeeklyGrowth = function(this: ISocialMediaAccount): GrowthResult {
   const history = this.followerHistory;
   if (history.length < 2) return { count: 0, percentage: 0 };
   
@@ -87,8 +97,8 @@ SocialMediaAccountSchema.methods.getWeeklyGrowth = function(): { count: number; 
   
   // Find the closest record to 7 days ago
   const weekAgoRecord = history
-    .filter(record => record.date <= weekAgo)
-    .sort((a, b) => b.date.getTime() - a.date.getTime())[0];
+    .filter((record: FollowerRecord) => record.date <= weekAgo)
+    .sort((a: FollowerRecord, b: FollowerRecord) => b.date.getTime() - a.date.getTime())[0];
   
   if (!weekAgoRecord) return { count: 0, percentage: 0 };
   
@@ -100,7 +110,7 @@ SocialMediaAccountSchema.methods.getWeeklyGrowth = function(): { count: number; 
   return { count: growth, percentage };
 };
 
-SocialMediaAccountSchema.methods.getMonthlyGrowth = function(): { count: number; percentage: number } {
+SocialMediaAccountSchema.methods.getMonthlyGrowth = function(this: ISocialMediaAccount): GrowthResult {
   const history = this.followerHistory;
   if (history.length < 2) return { count: 0, percentage: 0 };
   
@@ -110,8 +120,8 @@ SocialMediaAccountSchema.methods.getMonthlyGrowth = function(): { count: number;
   
   // Find the closest record to 30 days ago
   const monthAgoRecord = history
-    .filter(record => record.date <= monthAgo)
-    .sort((a, b) => b.date.getTime() - a.date.getTime())[0];
+    .filter((record: FollowerRecord) => record.date <= monthAgo)
+    .sort((a: FollowerRecord, b: FollowerRecord) => b.date.getTime() - a.date.getTime())[0];
   
   if (!monthAgoRecord) return { count: 0, percentage: 0 };
   

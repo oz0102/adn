@@ -85,7 +85,7 @@ export default function FlyersPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1");
@@ -93,7 +93,7 @@ export default function FlyersPage() {
     const status = searchParams.get("status") || "";
     
     setSearchTerm(search);
-    setStatusFilter(status);
+    setStatusFilter(status || "all");
     
     const fetchFlyersData = async () => {
       try {
@@ -175,11 +175,11 @@ export default function FlyersPage() {
 
   const handleStatusChange = (status: string) => {
     setStatusFilter(status);
-    updateUrlParams({ status, page: 1 });
+    updateUrlParams({ status: status === "all" ? "" : status, page: 1 });
   };
 
   const clearFilters = () => {
-    setStatusFilter("");
+    setStatusFilter("all");
     setSearchTerm("");
     router.push("/dashboard/flyers");
   };
@@ -251,7 +251,7 @@ export default function FlyersPage() {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Draft">Draft</SelectItem>
                 <SelectItem value="Published">Published</SelectItem>
                 <SelectItem value="Archived">Archived</SelectItem>
@@ -269,7 +269,7 @@ export default function FlyersPage() {
           </div>
         </div>
         
-        {(searchTerm || statusFilter) && (
+        {(searchTerm || (statusFilter && statusFilter !== "all")) && (
           <div className="flex flex-wrap gap-2">
             {searchTerm && (
               <Badge variant="secondary" className="flex items-center gap-1">
@@ -288,14 +288,14 @@ export default function FlyersPage() {
               </Badge>
             )}
             
-            {statusFilter && (
+            {statusFilter && statusFilter !== "all" && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 Status: {statusFilter}
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-4 w-4 p-0 ml-1"
-                  onClick={() => handleStatusChange("")}
+                  onClick={() => handleStatusChange("all")}
                 >
                   <X className="h-3 w-3" />
                 </Button>

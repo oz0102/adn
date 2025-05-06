@@ -1,39 +1,17 @@
-// API route handler for updating follower counts
+// app/api/social-media/accounts/[id]/update-followers/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
-import SocialMediaAccount, { SocialMediaPlatform } from '@/models/socialMediaAccount';
+import SocialMediaAccount, { SocialMediaPlatform, ISocialMediaAccount, GrowthResult } from '@/models/socialMediaAccount';
+import { getTelegramFollowers as fetchTelegramFollowers } from '@/lib/social-media/telegram-scraper';
 import { errorHandler } from '@/lib/error-handler';
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-
-// Helper function to fetch follower count from Telegram
-async function getTelegramFollowers(username: string): Promise<number> {
-  try {
-    const response = await axios.get(`https://t.me/${username}`);
-    const $ = cheerio.load(response.data);
-    const membersText = $('.tgme_page_extra').text();
-    const membersMatch = membersText.match(/(\d+(?:\s\d+)*)\s+members?/i);
-    
-    if (membersMatch && membersMatch[1]) {
-      // Remove spaces and parse as integer
-      const count = parseInt(membersMatch[1].replace(/\s/g, ''), 10);
-      return isNaN(count) ? 0 : count;
-    }
-    
-    return 0;
-  } catch (error) {
-    console.error(`Error fetching Telegram followers for ${username}:`, error);
-    return 0;
-  }
-}
 
 // Helper function to fetch follower count based on platform
-async function getFollowerCount(account: any): Promise<number> {
-  const { platform, username, url } = account;
+async function getFollowerCount(account: ISocialMediaAccount): Promise<number> {
+  const { platform, username } = account;
   
   switch (platform) {
     case SocialMediaPlatform.TELEGRAM:
-      return await getTelegramFollowers(username);
+      return await fetchTelegramFollowers(username);
     
     // For other platforms, we would implement API calls here
     // These would be implemented with proper API keys and rate limiting
@@ -68,8 +46,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Fix for async/await issue - ensure params is properly awaited
-    const id = await Promise.resolve(params.id);
+    const { id } = params;
     
     await connectToDatabase();
     
@@ -102,10 +79,14 @@ export async function POST(
     
     await account.save();
     
+    // Calculate growth metrics
+    const weeklyGrowth: GrowthResult = account.getWeeklyGrowth();
+    const monthlyGrowth: GrowthResult = account.getMonthlyGrowth();
+    
     return NextResponse.json({
       account,
-      weeklyGrowth: account.getWeeklyGrowth(),
-      monthlyGrowth: account.getMonthlyGrowth()
+      weeklyGrowth,
+      monthlyGrowth
     });
   } catch (error) {
     return errorHandler(error);
