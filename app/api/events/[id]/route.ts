@@ -1,184 +1,148 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import Event from '@/models/event';
-import connectToDatabase from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
+import {
+  getEventByIdService,
+  updateEventService,
+  deleteEventService
+} from "@/services/eventService";
+import { connectToDB } from "@/lib/mongodb";
+import { checkPermission } from "@/lib/permissions";
+import mongoose from "mongoose";
+import Event from "@/models/event"; // For fetching event details for permission checks
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+interface Params {
+  params: { id: string };
+}
+
+/**
+ * Handles GET requests to retrieve a specific Event by ID.
+ */
+export async function GET(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    // Public events might be viewable without login.
+    // For now, let's assume login is required to see event details.
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Get event by ID
-    const event = await Event.findById(id)
-      .populate('organizer', 'firstName lastName email')
-      .populate('attendees', 'firstName lastName email')
-      .lean();
-    
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const eventId = params.id;
+
+    await connectToDB();
+    const event = await getEventByIdService(eventId);
+
     if (!event) {
-      return NextResponse.json(
-        { success: false, message: 'Event not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    let canView = await checkPermission(userId, "HQ_ADMIN");
+    if (!canView && event.scope === "CENTER" && event.centerId) {
+      canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: event.centerId });
+      // Add logic here if members of the center can view the event details
+    } else if (!canView && event.scope === "HQ") {
+      canView = true; // All logged-in users can view details of HQ events
+    }
+
+    if (!canView) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions to view this event" }, { status: 403 });
     }
     
-    return NextResponse.json({
-      success: true,
-      data: event
-    });
-  } catch (error) {
-    console.error('Get event error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error fetching event' },
-      { status: 500 }
-    );
+    return NextResponse.json(event, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to retrieve event ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to retrieve event", error: error.message }, { status: 500 });
   }
 }
 
-// PUT update event
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Handles PUT requests to update a specific Event by ID.
+ */
+export async function PUT(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const updateData = await req.json();
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Check if event exists
-    const existingEvent = await Event.findById(id);
-    
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const eventId = params.id;
+
+    await connectToDB();
+    const existingEvent = await Event.findById(eventId).select("scope centerId createdBy").lean();
     if (!existingEvent) {
-      return NextResponse.json(
-        { success: false, message: 'Event not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
-    
-    // Check if user is authorized to update this event
-    if (
-      token.role !== 'Admin' && 
-      token.role !== 'Pastor' && 
-      existingEvent.organizer.toString() !== token.id
-    ) {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to update this event' },
-        { status: 403 }
-      );
+
+    let canUpdate = await checkPermission(userId, "HQ_ADMIN");
+    if (!canUpdate && existingEvent.scope === "CENTER" && existingEvent.centerId) {
+      canUpdate = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId });
     }
-    
-    // Update event
-    const updatedEvent = await Event.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    )
-      .populate('organizer', 'firstName lastName email')
-      .populate('attendees', 'firstName lastName email');
-    
-    return NextResponse.json({
-      success: true,
-      data: updatedEvent
-    });
-  } catch (error) {
-    console.error('Update event error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error updating event' },
-      { status: 500 }
-    );
+    // Add more granular checks, e.g., if the user is the original creator (existingEvent.createdBy)
+    // or has a specific event_manager role for that scope.
+
+    if (!canUpdate) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions to update this event" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    // Prevent changing scope, centerId, or createdBy via this update
+    delete body.scope;
+    delete body.centerId;
+    delete body.createdBy;
+
+    const updatedEvent = await updateEventService(eventId, body);
+
+    if (!updatedEvent) {
+      return NextResponse.json({ message: "Event not found or update failed" }, { status: 404 });
+    }
+    return NextResponse.json(updatedEvent, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to update event ${params.id}:`, error);
+    if (error.name === "ValidationError") {
+        return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
+    }
+    return NextResponse.json({ message: "Failed to update event", error: error.message }, { status: 500 });
   }
 }
 
-// DELETE event
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Handles DELETE requests to delete a specific Event by ID.
+ */
+export async function DELETE(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Check if event exists
-    const existingEvent = await Event.findById(id);
-    
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const eventId = params.id;
+
+    await connectToDB();
+    const existingEvent = await Event.findById(eventId).select("scope centerId").lean();
     if (!existingEvent) {
-      return NextResponse.json(
-        { success: false, message: 'Event not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
-    
-    // Check if user is authorized to delete this event
-    if (
-      token.role !== 'Admin' && 
-      token.role !== 'Pastor' && 
-      existingEvent.organizer.toString() !== token.id
-    ) {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to delete this event' },
-        { status: 403 }
-      );
+
+    let canDelete = await checkPermission(userId, "HQ_ADMIN");
+    if (!canDelete && existingEvent.scope === "CENTER" && existingEvent.centerId) {
+      canDelete = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId });
     }
-    
-    // Delete event
-    await Event.findByIdAndDelete(id);
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Event deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete event error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error deleting event' },
-      { status: 500 }
-    );
+
+    if (!canDelete) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions to delete this event" }, { status: 403 });
+    }
+
+    const deletedEvent = await deleteEventService(eventId);
+    if (!deletedEvent) {
+      return NextResponse.json({ message: "Event not found or delete failed" }, { status: 404 });
+    }
+    return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to delete event ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to delete event", error: error.message }, { status: 500 });
   }
 }
+

@@ -1,12 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { IAddress } from './member';
+import { IAddress } from './member'; // Assuming IAddress is in member.ts or a shared types file
 
 export interface ICluster extends Document {
   clusterId: string;
   name: string;
   location: string;
   address: IAddress;
-  leaderId: mongoose.Types.ObjectId;
+  leaderId: mongoose.Types.ObjectId; // Ref to Member
   contactPhone: string;
   contactEmail: string;
   photo?: string;
@@ -16,6 +16,7 @@ export interface ICluster extends Document {
     time: string;
     frequency: string;
   };
+  centerId: mongoose.Types.ObjectId; // Added: Ref to Center
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,7 +94,12 @@ const ClusterSchema: Schema = new Schema(
     meetingSchedule: { 
       type: MeetingScheduleSchema,
       required: true
-    }
+    },
+    centerId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Center',
+      required: true
+    } // Added field
   },
   { 
     timestamps: true 
@@ -103,5 +109,7 @@ const ClusterSchema: Schema = new Schema(
 // Create indexes
 ClusterSchema.index({ clusterId: 1 }, { unique: true });
 ClusterSchema.index({ leaderId: 1 });
+ClusterSchema.index({ centerId: 1 }); // Added index
 
 export default mongoose.models.Cluster || mongoose.model<ICluster>('Cluster', ClusterSchema);
+

@@ -1,12 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { IAddress } from './member';
+import { IAddress } from './member'; // Assuming IAddress is in member.ts or a shared types file
 
 export interface ISmallGroup extends Document {
   groupId: string;
   name: string;
   location: string;
   address: IAddress;
-  leaderId: mongoose.Types.ObjectId;
+  leaderId: mongoose.Types.ObjectId; // Ref to Member
   contactPhone: string;
   contactEmail: string;
   photo?: string;
@@ -16,6 +16,8 @@ export interface ISmallGroup extends Document {
     time: string;
     frequency: string;
   };
+  clusterId: mongoose.Types.ObjectId; // Added: Ref to Cluster
+  centerId: mongoose.Types.ObjectId; // Added: Ref to Center
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,7 +95,17 @@ const SmallGroupSchema: Schema = new Schema(
     meetingSchedule: { 
       type: MeetingScheduleSchema,
       required: true
-    }
+    },
+    clusterId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Cluster',
+      required: true 
+    }, // Added field
+    centerId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Center',
+      required: true 
+    } // Added field
   },
   { 
     timestamps: true 
@@ -103,5 +115,8 @@ const SmallGroupSchema: Schema = new Schema(
 // Create indexes
 SmallGroupSchema.index({ groupId: 1 }, { unique: true });
 SmallGroupSchema.index({ leaderId: 1 });
+SmallGroupSchema.index({ clusterId: 1 }); // Added index
+SmallGroupSchema.index({ centerId: 1 }); // Added index
 
 export default mongoose.models.SmallGroup || mongoose.model<ISmallGroup>('SmallGroup', SmallGroupSchema);
+

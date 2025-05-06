@@ -1,197 +1,179 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import Member from '@/models/member';
-import connectToDatabase from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
+import {
+  getMemberByIdService,
+  updateMemberService,
+  deleteMemberService
+} from "@/services/memberService";
+import { connectToDB } from "@/lib/mongodb";
+import { checkPermission } from "@/lib/permissions";
+import mongoose from "mongoose";
+import Member from "@/models/member"; // To fetch member details for permission scoping
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+interface Params {
+  params: { id: string };
+}
+
+/**
+ * Handles GET requests to retrieve a specific Member by ID.
+ */
+export async function GET(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Get member by ID
-    const member = await Member.findById(id)
-      .populate('clusterId', 'name')
-      .populate('smallGroupId', 'name')
-      .populate('teams', 'name')
-      .lean();
-    
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const memberIdToFetch = params.id;
+
+    await connectToDB();
+    const member = await getMemberByIdService(memberIdToFetch);
+
     if (!member) {
-      return NextResponse.json(
-        { success: false, message: 'Member not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Member not found" }, { status: 404 });
+    }
+
+    // Permission checks: HQ_ADMIN, or admin of the member's scope, or the member themselves.
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    let canAccessMemberData = hasHQAdminPermission;
+
+    if (!canAccessMemberData) {
+        const memberScope = {
+            centerId: member.centerId,
+            clusterId: member.clusterId,
+            smallGroupId: member.smallGroupId
+        };
+        const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: member.centerId });
+        const isClusterLeader = member.clusterId ? await checkPermission(userId, "CLUSTER_LEADER", { clusterId: member.clusterId, centerId: member.centerId }) : false;
+        const isSmallGroupLeader = member.smallGroupId ? await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: member.smallGroupId, clusterId: member.clusterId, centerId: member.centerId }) : false;
+        const isMemberAdmin = await checkPermission(userId, "MEMBER_ADMIN", memberScope); // Check MEMBER_ADMIN for the member's specific scope
+        
+        // Check if the requesting user is the member themselves
+        // This requires fetching the User document linked to the session user ID and comparing its linked memberId (if any)
+        // For now, assuming only admins/leaders can fetch other members. Self-fetch needs more logic if User model links to Member.
+        // If session.user.memberId (hypothetical field) === memberIdToFetch, then allow.
+
+        canAccessMemberData = isCenterAdmin || isClusterLeader || isSmallGroupLeader || isMemberAdmin;
     }
     
-    return NextResponse.json({
-      success: true,
-      data: member
-    });
-  } catch (error) {
-    console.error('Get member error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error fetching member' },
-      { status: 500 }
-    );
+    if (!canAccessMemberData && session.user.id !== memberIdToFetch) { // Basic self-check if IDs were the same (not robust)
+         // More robust self-check: Does the logged-in user correspond to this member profile?
+         // This usually involves a link from the User model to the Member model.
+         // For this iteration, we'll assume only hierarchical superiors or specific admins can view.
+        return NextResponse.json({ message: "Forbidden: Insufficient permissions to view this member" }, { status: 403 });
+    }
+    
+    return NextResponse.json(member, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to retrieve member ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to retrieve member", error: error.message }, { status: 500 });
   }
 }
 
-// PUT update member
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Handles PUT requests to update a specific Member by ID.
+ */
+export async function PUT(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const updateData = await req.json();
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Check if member exists
-    const existingMember = await Member.findById(id);
-    
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const memberIdToUpdate = params.id;
+
+    await connectToDB();
+    const existingMember = await Member.findById(memberIdToUpdate).select("centerId clusterId smallGroupId").lean();
     if (!existingMember) {
-      return NextResponse.json(
-        { success: false, message: 'Member not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
-    
-    // Check if email is being updated and is already in use
-    if (updateData.email && updateData.email !== existingMember.email) {
-      const emailExists = await Member.findOne({ 
-        email: updateData.email,
-        _id: { $ne: id }
-      });
-      
-      if (emailExists) {
-        return NextResponse.json(
-          { success: false, message: 'Email is already in use by another member' },
-          { status: 400 }
-        );
-      }
+
+    // Permission checks for update
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    let canUpdateMemberData = hasHQAdminPermission;
+
+    if(!canUpdateMemberData){
+        const memberScope = {
+            centerId: existingMember.centerId,
+            clusterId: existingMember.clusterId,
+            smallGroupId: existingMember.smallGroupId
+        };
+        const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMember.centerId });
+        const isMemberAdminInScope = await checkPermission(userId, "MEMBER_ADMIN", memberScope);
+        // Typically, only admins (HQ, Center, or specific Member Admins for the scope) can update.
+        // Leaders (Cluster/SG) might have more restricted update rights (e.g., notes, not core profile) - not handled here.
+        canUpdateMemberData = isCenterAdmin || isMemberAdminInScope;
     }
-    
-    // Check if phone is being updated and is already in use
-    if (updateData.phone && updateData.phone !== existingMember.phone) {
-      const phoneExists = await Member.findOne({ 
-        phone: updateData.phone,
-        _id: { $ne: id }
-      });
-      
-      if (phoneExists) {
-        return NextResponse.json(
-          { success: false, message: 'Phone number is already in use by another member' },
-          { status: 400 }
-        );
-      }
+
+    if (!canUpdateMemberData) {
+      // Add self-update permission if applicable, e.g. if session.user.id corresponds to memberIdToUpdate
+      // For now, restricting to admins.
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions to update this member" }, { status: 403 });
     }
-    
-    // Update member
-    const updatedMember = await Member.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    )
-      .populate('clusterId', 'name')
-      .populate('smallGroupId', 'name')
-      .populate('teams', 'name');
-    
-    return NextResponse.json({
-      success: true,
-      data: updatedMember
-    });
-  } catch (error) {
-    console.error('Update member error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error updating member' },
-      { status: 500 }
-    );
+
+    const body = await request.json();
+    const updatedMember = await updateMemberService(memberIdToUpdate, body);
+
+    if (!updatedMember) {
+      return NextResponse.json({ message: "Member not found or update failed" }, { status: 404 });
+    }
+    return NextResponse.json(updatedMember, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to update member ${params.id}:`, error);
+    if (error.message.includes("already exists")) {
+        return NextResponse.json({ message: error.message }, { status: 409 });
+    }
+    return NextResponse.json({ message: "Failed to update member", error: error.message }, { status: 500 });
   }
 }
 
-// DELETE member
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Handles DELETE requests to delete a specific Member by ID.
+ */
+export async function DELETE(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user has admin role
-    if (token.role !== 'Admin' && token.role !== 'Pastor') {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to delete members' },
-        { status: 403 }
-      );
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const memberIdToDelete = params.id;
+
+    await connectToDB();
+    const existingMember = await Member.findById(memberIdToDelete).select("centerId clusterId smallGroupId").lean();
+    if (!existingMember) {
+      return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
 
-    const { id } = params;
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Delete member
-    const deletedMember = await Member.findByIdAndDelete(id);
-    
+    // Permission checks for delete
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    let canDeleteMember = hasHQAdminPermission;
+
+    if(!canDeleteMember){
+        const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMember.centerId });
+        // Generally, only HQ or Center admins can delete members.
+        // MEMBER_ADMIN might also be given this right depending on policy.
+        const isMemberAdminForCenter = await checkPermission(userId, "MEMBER_ADMIN", { centerId: existingMember.centerId });
+        canDeleteMember = isCenterAdmin || isMemberAdminForCenter;
+    }
+
+    if (!canDeleteMember) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions to delete this member" }, { status: 403 });
+    }
+
+    const deletedMember = await deleteMemberService(memberIdToDelete);
+
     if (!deletedMember) {
-      return NextResponse.json(
-        { success: false, message: 'Member not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Member not found or delete failed" }, { status: 404 });
     }
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Member deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete member error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error deleting member' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Member deleted successfully" }, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to delete member ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to delete member", error: error.message }, { status: 500 });
   }
 }
+

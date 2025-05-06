@@ -1,228 +1,133 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import Cluster from '@/models/cluster';
-import Member from '@/models/member';
-import SmallGroup from '@/models/smallGroup';
-import connectToDatabase from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
+import {
+  getClusterByIdService,
+  updateClusterService,
+  deleteClusterService
+} from "@/services/clusterService";
+import { connectToDB } from "@/lib/mongodb";
+import { checkPermission } from "@/lib/permissions";
+import mongoose from "mongoose";
+import Cluster from "@/models/cluster"; // Import Cluster model to fetch centerId for permission checks
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+interface Params {
+  params: { id: string };
+}
+
+/**
+ * Handles GET requests to retrieve a specific Cluster by ID.
+ */
+export async function GET(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Get cluster by ID
-    const cluster = await Cluster.findById(id)
-      .populate('leader', 'firstName lastName email phone profileImage')
-      .lean();
-    
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const clusterId = params.id;
+
+    await connectToDB();
+    const cluster = await getClusterByIdService(clusterId);
+
     if (!cluster) {
-      return NextResponse.json(
-        { success: false, message: 'Cluster not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
+    }
+
+    // Permission checks: HQ_ADMIN, or CENTER_ADMIN of the cluster's center, or CLUSTER_LEADER of this cluster.
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const isCenterAdminForCluster = await checkPermission(userId, "CENTER_ADMIN", { centerId: cluster.centerId });
+    const isClusterLeaderForThisCluster = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: cluster._id, centerId: cluster.centerId });
+
+    if (!hasHQAdminPermission && !isCenterAdminForCluster && !isClusterLeaderForThisCluster) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     
-    // Get small groups in this cluster
-    const smallGroups = await SmallGroup.find({ clusterId: id })
-      .populate('leader', 'firstName lastName email')
-      .lean();
-    
-    // Get members in this cluster
-    const members = await Member.find({ clusterId: id })
-      .select('firstName lastName email phone status profileImage')
-      .lean();
-    
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...cluster,
-        smallGroups,
-        members,
-        stats: {
-          smallGroupsCount: smallGroups.length,
-          membersCount: members.length
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Get cluster error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error fetching cluster' },
-      { status: 500 }
-    );
+    return NextResponse.json(cluster, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to retrieve cluster ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to retrieve cluster", error: error.message }, { status: 500 });
   }
 }
 
-// PUT update cluster
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Handles PUT requests to update a specific Cluster by ID.
+ */
+export async function PUT(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user has admin or pastor role
-    if (token.role !== 'Admin' && token.role !== 'Pastor' && token.role !== 'ClusterLead') {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to update clusters' },
-        { status: 403 }
-      );
-    }
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const clusterId = params.id;
 
-    const { id } = params;
-    const updateData = await req.json();
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Check if cluster exists
-    const existingCluster = await Cluster.findById(id);
-    
+    await connectToDB();
+    const existingCluster = await Cluster.findById(clusterId).select("centerId").lean();
     if (!existingCluster) {
-      return NextResponse.json(
-        { success: false, message: 'Cluster not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
-    
-    // If user is ClusterLead, check if they are the leader of this cluster
-    if (token.role === 'ClusterLead' && existingCluster.leader.toString() !== token.id) {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to update this cluster' },
-        { status: 403 }
-      );
+
+    // Permission checks: HQ_ADMIN, or CENTER_ADMIN of the cluster's center.
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const isCenterAdminForCluster = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId });
+    // CLUSTER_LEADER might have limited update rights, e.g., description, not centerId. For now, restricting to admins.
+
+    if (!hasHQAdminPermission && !isCenterAdminForCluster) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions for update" }, { status: 403 });
     }
-    
-    // Check if name is being updated and is already in use
-    if (updateData.name && updateData.name !== existingCluster.name) {
-      const nameExists = await Cluster.findOne({ 
-        name: updateData.name,
-        _id: { $ne: id }
-      });
-      
-      if (nameExists) {
-        return NextResponse.json(
-          { success: false, message: 'Cluster name is already in use' },
-          { status: 400 }
-        );
-      }
+
+    const body = await request.json();
+    const updatedCluster = await updateClusterService(clusterId, body);
+
+    if (!updatedCluster) {
+      return NextResponse.json({ message: "Cluster not found or update failed" }, { status: 404 });
     }
-    
-    // Update cluster
-    const updatedCluster = await Cluster.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).populate('leader', 'firstName lastName email phone profileImage');
-    
-    return NextResponse.json({
-      success: true,
-      data: updatedCluster
-    });
-  } catch (error) {
-    console.error('Update cluster error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error updating cluster' },
-      { status: 500 }
-    );
+    return NextResponse.json(updatedCluster, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to update cluster ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to update cluster", error: error.message }, { status: 500 });
   }
 }
 
-// DELETE cluster
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Handles DELETE requests to delete a specific Cluster by ID.
+ */
+export async function DELETE(request: Request, { params }: Params) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user has admin or pastor role
-    if (token.role !== 'Admin' && token.role !== 'Pastor') {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to delete clusters' },
-        { status: 403 }
-      );
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const clusterId = params.id;
+
+    await connectToDB();
+    const existingCluster = await Cluster.findById(clusterId).select("centerId").lean();
+    if (!existingCluster) {
+      return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    const { id } = params;
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Check if cluster has members or small groups
-    const membersCount = await Member.countDocuments({ clusterId: id });
-    const smallGroupsCount = await SmallGroup.countDocuments({ clusterId: id });
-    
-    if (membersCount > 0 || smallGroupsCount > 0) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Cannot delete cluster with associated members or small groups',
-          data: { membersCount, smallGroupsCount }
-        },
-        { status: 400 }
-      );
+    // Permission checks: HQ_ADMIN, or CENTER_ADMIN of the cluster's center.
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const isCenterAdminForCluster = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId });
+
+    if (!hasHQAdminPermission && !isCenterAdminForCluster) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions for delete" }, { status: 403 });
     }
-    
-    // Delete cluster
-    const deletedCluster = await Cluster.findByIdAndDelete(id);
-    
+
+    const deletedCluster = await deleteClusterService(clusterId);
+
     if (!deletedCluster) {
-      return NextResponse.json(
-        { success: false, message: 'Cluster not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Cluster not found or delete failed" }, { status: 404 });
     }
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Cluster deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete cluster error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error deleting cluster' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Cluster deleted successfully" }, { status: 200 });
+  } catch (error: any) {
+    console.error(`Failed to delete cluster ${params.id}:`, error);
+    return NextResponse.json({ message: "Failed to delete cluster", error: error.message }, { status: 500 });
   }
 }
+

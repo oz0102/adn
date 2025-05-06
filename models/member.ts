@@ -51,7 +51,7 @@ export interface IMember extends Document {
   lastName: string;
   gender: string;
   dateOfBirth: Date;
-  email: string;
+  email?: string; // Made optional as per schema, will be unique with centerId if present
   phoneNumber: string;
   whatsappNumber?: string;
   address: IAddress;
@@ -64,13 +64,14 @@ export interface IMember extends Document {
   skills: ISkill[];
   spiritualGrowth: ISpiritualGrowth;
   training: ITraining[];
+  centerId: mongoose.Types.ObjectId; // Added: Ref to Center
   clusterId?: mongoose.Types.ObjectId;
   smallGroupId?: mongoose.Types.ObjectId;
   teams: ITeamMembership[];
   createdAt: Date;
   updatedAt: Date;
-  createdBy: mongoose.Types.ObjectId;
-  lastUpdatedBy: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
+  lastUpdatedBy?: mongoose.Types.ObjectId;
 }
 
 const SkillSchema = new Schema({
@@ -155,9 +156,9 @@ const MemberSchema: Schema = new Schema(
   {
     memberId: { 
       type: String, 
-      required: true, 
-      index: false, // Remove the index here since we define it explicitly below
+      required: true,
       trim: true
+      // Unique constraint handled by compound index below
     },
     firstName: { 
       type: String, 
@@ -186,11 +187,13 @@ const MemberSchema: Schema = new Schema(
       type: String,
       trim: true,
       lowercase: true
+      // Unique constraint handled by compound index below, if email is present
     },
     phoneNumber: { 
       type: String,
       required: true,
       trim: true
+      // Unique constraint handled by compound index below
     },
     whatsappNumber: { 
       type: String,
@@ -233,6 +236,11 @@ const MemberSchema: Schema = new Schema(
     training: [{ 
       type: TrainingSchema
     }],
+    centerId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Center',
+      required: true 
+    }, // Added field
     clusterId: { 
       type: Schema.Types.ObjectId, 
       ref: 'Cluster'
@@ -259,12 +267,20 @@ const MemberSchema: Schema = new Schema(
 );
 
 // Create indexes
-MemberSchema.index({ memberId: 1 }, { unique: true });
-MemberSchema.index({ email: 1 });
-MemberSchema.index({ phoneNumber: 1 });
+MemberSchema.index({ centerId: 1, memberId: 1 }, { unique: true }); // Compound unique index
+MemberSchema.index({ centerId: 1, email: 1 }, { unique: true, sparse: true }); // Compound unique index for email if present
+MemberSchema.index({ centerId: 1, phoneNumber: 1 }, { unique: true }); // Compound unique index
+
+MemberSchema.index({ centerId: 1 }); // Index for centerId itself
 MemberSchema.index({ clusterId: 1 });
 MemberSchema.index({ smallGroupId: 1 });
 MemberSchema.index({ 'teams.teamId': 1 });
 MemberSchema.index({ dateOfBirth: 1 });
 
+// Remove old individual unique indexes if they were explicitly defined outside the schema definition
+// MemberSchema.index({ memberId: 1 }, { unique: true }); // REMOVE/REPLACED
+// MemberSchema.index({ email: 1 }, { unique: true }); // REMOVE/REPLACED - Note: current code has no unique constraint on email
+// MemberSchema.index({ phoneNumber: 1 }); // REMOVE/REPLACED - Note: current code has no unique constraint on phoneNumber
+
 export default mongoose.models.Member || mongoose.model<IMember>('Member', MemberSchema);
+

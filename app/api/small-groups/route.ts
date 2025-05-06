@@ -1,163 +1,112 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import SmallGroup from '@/models/smallGroup';
-// Member model not used in this file
-// import Member from '@/models/member';
-import connectToDatabase from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
+import {
+  createSmallGroupService,
+  getAllSmallGroupsService
+} from "@/services/smallGroupService";
+import { connectToDB } from "@/lib/mongodb";
+import { checkPermission } from "@/lib/permissions";
+import mongoose from "mongoose";
+import Cluster from "@/models/cluster"; // To verify cluster's center for CLUSTER_LEADER
 
-// GET all small groups with pagination and filtering
-export async function GET(req: NextRequest) {
+/**
+ * Handles POST requests to create a new Small Group.
+ * Requires HQ_ADMIN, or CENTER_ADMIN of the target center, or CLUSTER_LEADER of the target cluster.
+ */
+export async function POST(request: Request) {
   try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Parse query parameters
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const search = searchParams.get('search') || '';
-    const clusterId = searchParams.get('clusterId') || '';
-    const sortBy = searchParams.get('sortBy') || 'name';
-    const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const body = await request.json();
+    const { clusterId, centerId } = body; // Extract clusterId and centerId from the body
 
-    // Build query
-    interface SmallGroupQueryType {
-      $or?: Array<{[key: string]: {$regex: string, $options: string}}>;
-      clusterId?: string;
-    }
-    
-    const query: SmallGroupQueryType = {};
-    
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { meetingLocation: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    if (clusterId) {
-      query.clusterId = clusterId;
+    if (!clusterId || !centerId) {
+      return NextResponse.json({ message: "Cluster ID and Center ID are required" }, { status: 400 });
     }
 
-    // Connect to database
-    await connectToDatabase();
-    
-    // Get total count
-    const total = await SmallGroup.countDocuments(query);
-    
-    // Get paginated results
-    interface SortType {
-      [key: string]: number;
+    await connectToDB();
+    const parentCluster = await Cluster.findById(clusterId).select("centerId").lean();
+    if (!parentCluster) {
+        return NextResponse.json({ message: "Parent cluster not found" }, { status: 404 });
     }
-    const sort: SortType = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-    
-    const skip = (page - 1) * limit;
-    
-    const smallGroups = await SmallGroup.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .populate('leader', 'firstName lastName email')
-      .populate('clusterId', 'name')
-      .lean();
-    
-    return NextResponse.json({
-      success: true,
-      data: {
-        smallGroups,
-        pagination: {
-          total,
-          page,
-          limit,
-          pages: Math.ceil(total / limit)
+    if (parentCluster.centerId.toString() !== centerId) {
+        return NextResponse.json({ message: "Cluster does not belong to the specified center" }, { status: 400 });
+    }
+
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId });
+    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId, centerId });
+
+    if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader) {
+      return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
+    }
+
+    const newSmallGroup = await createSmallGroupService(body);
+    return NextResponse.json(newSmallGroup, { status: 201 });
+  } catch (error: any) {
+    console.error("Failed to create small group:", error);
+    return NextResponse.json({ message: "Failed to create small group", error: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * Handles GET requests to retrieve all Small Groups, optionally filtered by clusterId or centerId.
+ */
+export async function GET(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = new mongoose.Types.ObjectId(session.user.id);
+    const { searchParams } = new URL(request.url);
+    const clusterIdQuery = searchParams.get("clusterId");
+    const centerIdQuery = searchParams.get("centerId");
+
+    await connectToDB();
+    let smallGroups;
+
+    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+
+    if (hasHQAdminPermission) {
+      smallGroups = await getAllSmallGroupsService(clusterIdQuery || undefined, centerIdQuery || undefined);
+    } else {
+      // User needs to be at least a CLUSTER_LEADER for the queried cluster, or CENTER_ADMIN for the queried center.
+      if (clusterIdQuery) {
+        const parentCluster = await Cluster.findById(clusterIdQuery).select("centerId").lean();
+        if (!parentCluster) return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
+        
+        const canAccessCluster = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: clusterIdQuery, centerId: parentCluster.centerId }) || 
+                                 await checkPermission(userId, "CENTER_ADMIN", { centerId: parentCluster.centerId });
+        if (canAccessCluster) {
+          smallGroups = await getAllSmallGroupsService(clusterIdQuery);
+        } else {
+          return NextResponse.json({ message: "Forbidden: Insufficient permissions for this cluster" }, { status: 403 });
         }
+      } else if (centerIdQuery) {
+        const canAccessCenter = await checkPermission(userId, "CENTER_ADMIN", { centerId: centerIdQuery });
+        if (canAccessCenter) {
+          smallGroups = await getAllSmallGroupsService(undefined, centerIdQuery);
+        } else {
+          return NextResponse.json({ message: "Forbidden: Insufficient permissions for this center" }, { status: 403 });
+        }
+      } else {
+        // Non-HQ_ADMIN must specify a scope (clusterId or centerId)
+        // Or, implement logic to fetch all small groups from all clusters/centers they have access to.
+        return NextResponse.json({ message: "Forbidden: Please specify a clusterId or centerId, or have HQ Admin role" }, { status: 403 });
       }
-    });
-  } catch (error) {
-    console.error('Get small groups error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error fetching small groups' },
-      { status: 500 }
-    );
+    }
+    
+    return NextResponse.json(smallGroups, { status: 200 });
+  } catch (error: any) {
+    console.error("Failed to retrieve small groups:", error);
+    return NextResponse.json({ message: "Failed to retrieve small groups", error: error.message }, { status: 500 });
   }
 }
 
-// POST create new small group
-export async function POST(req: NextRequest) {
-  try {
-    // Verify authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has appropriate role
-    if (token.role !== 'Admin' && token.role !== 'Pastor' && token.role !== 'ClusterLead') {
-      return NextResponse.json(
-        { success: false, message: 'Not authorized to create small groups' },
-        { status: 403 }
-      );
-    }
-
-    // Parse request body
-    const smallGroupData = await req.json();
-    
-    // Connect to database
-    await connectToDatabase();
-    
-    // Validate small group data
-    if (!smallGroupData.name || !smallGroupData.clusterId) {
-      return NextResponse.json(
-        { success: false, message: 'Small group name and cluster ID are required' },
-        { status: 400 }
-      );
-    }
-    
-    // Check if small group with same name already exists
-    const existingSmallGroup = await SmallGroup.findOne({ name: smallGroupData.name });
-    if (existingSmallGroup) {
-      return NextResponse.json(
-        { success: false, message: 'Small group with this name already exists' },
-        { status: 400 }
-      );
-    }
-    
-    // Create new small group
-    const newSmallGroup = new SmallGroup(smallGroupData);
-    await newSmallGroup.save();
-    
-    // Populate leader and cluster details
-    await newSmallGroup.populate('leader', 'firstName lastName email');
-    await newSmallGroup.populate('clusterId', 'name');
-    
-    return NextResponse.json({
-      success: true,
-      data: newSmallGroup
-    });
-  } catch (error) {
-    console.error('Create small group error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Error creating small group' },
-      { status: 500 }
-    );
-  }
-}
