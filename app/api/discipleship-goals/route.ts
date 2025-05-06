@@ -1,14 +1,8 @@
 // app/api/discipleship-goals/route.ts
 import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
-import {
-  createDiscipleshipGoalService,
-  getAllDiscipleshipGoalsService,
-  IDiscipleshipGoalCreationPayload,
-  IDiscipleshipGoalFilters
-} from "@/services/discipleshipGoalService";
-import connectToDB from "@/lib/mongodb";
+import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
+import { discipleshipGoalService } from "@/services/discipleshipGoalService"; // Corrected: Assuming service object export
+import { connectToDB } from "@/lib/mongodb"; 
 import { checkPermission } from "@/lib/permissions";
 import mongoose, { Types } from "mongoose";
 import CenterModel, { ICenter } from "@/models/center";
@@ -17,6 +11,7 @@ import SmallGroupModel, { ISmallGroup } from "@/models/smallGroup";
 import MemberModel, { IMember } from "@/models/member";
 import UserModel, { IUser, IAssignedRole } from "@/models/user";
 import { Session } from "next-auth";
+import type { IDiscipleshipGoalCreationPayload, IDiscipleshipGoalFilters } from "@/services/discipleshipGoalService";
 
 interface CustomSession extends Session {
   user?: {
@@ -30,13 +25,13 @@ interface CustomSession extends Session {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions) as CustomSession | null;
+    const session = await auth() as CustomSession | null; // Corrected: Use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const currentUserId = new Types.ObjectId(session.user.id);
-    const body = await request.json() as Partial<IDiscipleshipGoalCreationPayload>; // Use partial as some fields are auto-filled
+    const body = await request.json() as Partial<IDiscipleshipGoalCreationPayload>; 
     const { level, centerId, clusterId, smallGroupId, memberId, title, description, category, startDate, targetDate, status } = body;
 
     if (!level || !title || !category) {
@@ -117,10 +112,9 @@ export async function POST(request: NextRequest) {
         memberId: effectiveMemberId,
         startDate: startDate ? new Date(startDate) : undefined,
         targetDate: targetDate ? new Date(targetDate) : undefined,
-        // tasks, progress, and metrics will be handled by updates or sub-documents if needed
     };
 
-    const newGoal = await createDiscipleshipGoalService(goalPayload);
+    const newGoal = await discipleshipGoalService.createDiscipleshipGoal(goalPayload); // Corrected: Use service object
     return NextResponse.json(newGoal, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create discipleship goal:", error);
@@ -133,7 +127,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions) as CustomSession | null;
+    const session = await auth() as CustomSession | null; // Corrected: Use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -161,46 +155,21 @@ export async function GET(request: NextRequest) {
     if (isHQAdmin) {
         canView = true;
     } else {
-        // Non-HQ Admins can only view goals based on their specific roles and the query filters
-        // This logic needs to be carefully constructed to prevent data leakage.
-        // For simplicity, if specific IDs are provided in filters, we check against those.
-        // If no specific IDs, we might restrict or show only goals directly assigned to them or their subordinates.
-        
-        // Example: If a centerId is provided, check if user is admin of that center.
         if (filters.centerId) {
             canView = userRoles.some(r => r.role === "CENTER_ADMIN" && r.scopeId === filters.centerId!.toString());
         }
-        // Add more granular checks for CLUSTER_LEADER, SMALL_GROUP_LEADER, and individual members viewing their own goals.
-        // This part can become very complex depending on how broadly users should see goals.
-        // A common pattern is to allow users to see goals at their level and below within their hierarchy.
-        // For now, this is a simplified check. A robust solution would involve constructing a query based on user's roles.
         if (filters.memberId && filters.memberId.toString() === currentUserId.toString()) {
-             // A user can always see their own goals if they are also a member with goals
-             // This assumes the `currentUserId` (from User model) can be matched to a `memberId` (from Member model)
-             // This might need adjustment if `memberId` in goals refers to `Member._id` and `currentUserId` is `User._id`
-             // For now, let's assume if a memberId filter is present and matches the user's own ID (if they are a member), they can view.
-             // This requires linking User.id to a Member record to confirm they are the target member.
             const dbUser = await UserModel.findById(currentUserId).lean<IUser>();
             if (dbUser && dbUser.memberProfileId && dbUser.memberProfileId.toString() === filters.memberId.toString()) {
                 canView = true;
             }
         }
-
         if (!filters.centerId && !filters.clusterId && !filters.smallGroupId && !filters.memberId) {
-            // If no specific scope, non-HQ users might only see goals directly created by them or for them (if memberId matches their profile)
-            filters.createdBy = currentUserId; // Default to goals created by the user
-            canView = true; // Allow viewing goals they created
+            filters.createdBy = currentUserId; 
+            canView = true; 
         }
-
-        // If after all checks, canView is still false, and it's not an HQ admin, deny.
-        // However, the service layer might also apply additional scoping.
     }
 
-    // The service layer (getAllDiscipleshipGoalsService) should also implement logic
-    // to further scope results based on the user's roles if no specific filters are passed
-    // or if the user is not an HQ admin.
-    // For now, if not HQ admin and no specific permissive filter matched, we might deny here or let service handle.
-    // If canView is still false after checks, it implies the specific query is not permitted for this user.
     if (!isHQAdmin && !canView && (filters.centerId || filters.clusterId || filters.smallGroupId || filters.memberId)) {
          return NextResponse.json({ message: "Forbidden: Insufficient permissions to view goals for the specified scope." }, { status: 403 });
     }
@@ -211,7 +180,7 @@ export async function GET(request: NextRequest) {
         ...filters
     };
 
-    const result = await getAllDiscipleshipGoalsService(finalFilters, userRoles, currentUserId);
+    const result = await discipleshipGoalService.getAllDiscipleshipGoals(finalFilters, userRoles, currentUserId); // Corrected: Use service object
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Failed to retrieve discipleship goals:", error);

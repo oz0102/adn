@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { authConfig } from "./auth-config"; // Ensure this path is correct
 import UserModel, { IUser, IAssignedRole } from "@/models/user"; // Renamed User to UserModel to avoid conflict with NextAuthUser
-import connectToDB from "@/lib/mongodb"; // Ensure this path is correct. Changed to default import.
+import { connectToDB } from "@/lib/mongodb"; // Corrected: Changed to named import.
 
 // Create the credentials provider configuration
 const credentialsProvider = CredentialsProvider({
@@ -25,7 +25,6 @@ const credentialsProvider = CredentialsProvider({
     try {
       await connectToDB();
       
-      // Explicitly type the result of lean query
       const dbUser = await UserModel.findOne({ email: email.toLowerCase() }).lean<IUser>();
       
       if (!dbUser) {
@@ -45,18 +44,12 @@ const credentialsProvider = CredentialsProvider({
       
       console.log("Authentication successful for:", email);
       
-      // The object returned here is passed to the jwt callback's `user` parameter.
-      // It should conform to what NextAuth expects or what your jwt callback processes.
-      // The base NextAuthUser requires 'id'. Other properties are optional or can be added.
       return {
-        id: dbUser._id.toString(), // _id should be defined on IUser and be stringifiable
+        id: dbUser._id.toString(), 
         email: dbUser.email,
-        name: `${dbUser.firstName} ${dbUser.lastName}`, // Optional: construct name if needed by NextAuthUser
-        assignedRoles: dbUser.assignedRoles, // Custom property
-        // If 'role' and 'permissions' are strictly required by an augmented NextAuthUser type for authorize:
-        // role: "user", // Placeholder or derive if necessary
-        // permissions: [], // Placeholder or derive if necessary
-      } as NextAuthUser & { assignedRoles: IAssignedRole[]; email: string; name: string | null }; // Cast to satisfy NextAuthUser and include custom props
+        name: `${dbUser.firstName} ${dbUser.lastName}`,
+        assignedRoles: dbUser.assignedRoles, 
+      } as NextAuthUser & { assignedRoles: IAssignedRole[]; email: string; name: string | null }; 
 
     } catch (error) {
       console.error("Authentication error:", error);

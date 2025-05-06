@@ -2,7 +2,7 @@
 import Notification, { INotification, NotificationType, NotificationLevel, NotificationStatus } from "@/models/notification";
 import MemberModel, { IMember } from "@/models/member";
 import CenterModel, { ICenter } from "@/models/center";
-import connectToDB from "@/lib/mongodb"; 
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import mongoose, { Types, FilterQuery } from "mongoose";
 
 // Interface for the data needed to create a notification
@@ -58,7 +58,7 @@ export type PopulatedLeanNotification = Omit<INotification, "recipient.memberId"
   targetId?: Types.ObjectId | string; 
 };
 
-export const createNotificationService = async (data: INotificationCreationPayload): Promise<INotification> => {
+const addNotification = async (data: INotificationCreationPayload): Promise<INotification> => {
   await connectToDB();
 
   if (data.targetLevel === NotificationLevel.MEMBER && !data.targetId && (!data.recipient || !data.recipient.memberId)) {
@@ -84,7 +84,7 @@ export const createNotificationService = async (data: INotificationCreationPaylo
     
     let memberIdForRecipient: Types.ObjectId | string | undefined = undefined;
     if (memberExists) {
-        memberIdForRecipient = memberExists._id as Types.ObjectId | string; // Cast _id after confirming memberExists
+        memberIdForRecipient = memberExists._id as Types.ObjectId | string; 
     }
 
     if (!data.recipient || (!data.recipient.email && !data.recipient.phoneNumber && !data.recipient.whatsappNumber)) {
@@ -93,7 +93,6 @@ export const createNotificationService = async (data: INotificationCreationPaylo
         memberId: memberIdForRecipient, 
         email: memberExists.email,
         phoneNumber: memberExists.phoneNumber,
-        // whatsappNumber: memberExists.whatsappNumber // Assuming IMember has whatsappNumber
       };
     }
   }
@@ -108,7 +107,7 @@ export const createNotificationService = async (data: INotificationCreationPaylo
   return newNotification; 
 };
 
-export const getAllNotificationsForUserService = async (
+const getAllNotificationsForUser = async (
     filters: INotificationFilters,
     userRolesAndScopes: IUserRolesAndScopesForNotifications
 ): Promise<{ notifications: PopulatedLeanNotification[], total: number, page: number, limit: number }> => {
@@ -164,7 +163,7 @@ export const getAllNotificationsForUserService = async (
   return { notifications, total, page, limit };
 };
 
-export const getNotificationByIdService = async (id: string): Promise<PopulatedLeanNotification | null> => {
+const getNotificationById = async (id: string): Promise<PopulatedLeanNotification | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
   return Notification.findById(id).populate([
@@ -174,7 +173,7 @@ export const getNotificationByIdService = async (id: string): Promise<PopulatedL
   ]).lean<PopulatedLeanNotification | null>();
 };
 
-export const updateNotificationStatusService = async (
+const updateNotificationStatus = async (
     id: string, 
     statusUpdate: { status: NotificationStatus, sentAt?: Date, readAt?: Date, failedReason?: string }
 ): Promise<PopulatedLeanNotification | null> => {
@@ -184,16 +183,24 @@ export const updateNotificationStatusService = async (
                     .lean<PopulatedLeanNotification | null>();
 };
 
-export const markNotificationAsReadService = async (id: string, userId: string): Promise<PopulatedLeanNotification | null> => {
+const markNotificationAsRead = async (id: string, userId: string): Promise<PopulatedLeanNotification | null> => {
     await connectToDB();
     if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) return null;
     return Notification.findByIdAndUpdate(id, { $set: { isRead: true, readAt: new Date() } }, { new: true })
                       .lean<PopulatedLeanNotification | null>();
 };
 
-export const deleteNotificationService = async (id: string): Promise<PopulatedLeanNotification | null> => {
+const deleteNotification = async (id: string): Promise<PopulatedLeanNotification | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
   return Notification.findByIdAndDelete(id).lean<PopulatedLeanNotification | null>();
 };
 
+export const notificationService = {
+    addNotification, // Renamed createNotificationService to addNotification
+    getAllNotificationsForUser,
+    getNotificationById,
+    updateNotificationStatus,
+    markNotificationAsRead,
+    deleteNotification
+};

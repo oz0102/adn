@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
-import {
-  getClusterByIdService,
-  updateClusterService,
-  deleteClusterService
-} from "@/services/clusterService";
-import { connectToDB } from "@/lib/mongodb";
+import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
+import { clusterService } from "@/services/clusterService"; // Assuming clusterService exports an object
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
-import Cluster from "@/models/cluster"; // Import Cluster model to fetch centerId for permission checks
+import ClusterModel from "@/models/cluster"; // Corrected: Use ClusterModel for consistency if it's the default export
 
 interface Params {
   params: { id: string };
@@ -20,7 +15,7 @@ interface Params {
  */
 export async function GET(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -29,16 +24,19 @@ export async function GET(request: Request, { params }: Params) {
     const clusterId = params.id;
 
     await connectToDB();
-    const cluster = await getClusterByIdService(clusterId);
+    const cluster = await clusterService.getClusterById(clusterId); // Corrected: Use service object
 
     if (!cluster) {
       return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    // Permission checks: HQ_ADMIN, or CENTER_ADMIN of the cluster's center, or CLUSTER_LEADER of this cluster.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdminForCluster = await checkPermission(userId, "CENTER_ADMIN", { centerId: cluster.centerId });
-    const isClusterLeaderForThisCluster = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: cluster._id, centerId: cluster.centerId });
+    // Ensure cluster.centerId is correctly typed if it's an ObjectId from the service
+    const centerIdString = cluster.centerId?.toString();
+    const clusterIdString = cluster._id?.toString();
+
+    const isCenterAdminForCluster = centerIdString ? await checkPermission(userId, "CENTER_ADMIN", { centerId: new mongoose.Types.ObjectId(centerIdString) }) : false;
+    const isClusterLeaderForThisCluster = (clusterIdString && centerIdString) ? await checkPermission(userId, "CLUSTER_LEADER", { clusterId: new mongoose.Types.ObjectId(clusterIdString), centerId: new mongoose.Types.ObjectId(centerIdString) }) : false;
 
     if (!hasHQAdminPermission && !isCenterAdminForCluster && !isClusterLeaderForThisCluster) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
@@ -56,7 +54,7 @@ export async function GET(request: Request, { params }: Params) {
  */
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -65,22 +63,20 @@ export async function PUT(request: Request, { params }: Params) {
     const clusterId = params.id;
 
     await connectToDB();
-    const existingCluster = await Cluster.findById(clusterId).select("centerId").lean();
+    const existingCluster = await ClusterModel.findById(clusterId).select("centerId").lean();
     if (!existingCluster) {
       return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    // Permission checks: HQ_ADMIN, or CENTER_ADMIN of the cluster's center.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdminForCluster = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId });
-    // CLUSTER_LEADER might have limited update rights, e.g., description, not centerId. For now, restricting to admins.
+    const isCenterAdminForCluster = existingCluster.centerId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId }) : false;
 
     if (!hasHQAdminPermission && !isCenterAdminForCluster) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for update" }, { status: 403 });
     }
 
     const body = await request.json();
-    const updatedCluster = await updateClusterService(clusterId, body);
+    const updatedCluster = await clusterService.updateCluster(clusterId, body); // Corrected: Use service object
 
     if (!updatedCluster) {
       return NextResponse.json({ message: "Cluster not found or update failed" }, { status: 404 });
@@ -97,7 +93,7 @@ export async function PUT(request: Request, { params }: Params) {
  */
 export async function DELETE(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -106,20 +102,19 @@ export async function DELETE(request: Request, { params }: Params) {
     const clusterId = params.id;
 
     await connectToDB();
-    const existingCluster = await Cluster.findById(clusterId).select("centerId").lean();
+    const existingCluster = await ClusterModel.findById(clusterId).select("centerId").lean();
     if (!existingCluster) {
       return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    // Permission checks: HQ_ADMIN, or CENTER_ADMIN of the cluster's center.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdminForCluster = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId });
+    const isCenterAdminForCluster = existingCluster.centerId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId }) : false;
 
     if (!hasHQAdminPermission && !isCenterAdminForCluster) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for delete" }, { status: 403 });
     }
 
-    const deletedCluster = await deleteClusterService(clusterId);
+    const deletedCluster = await clusterService.deleteCluster(clusterId); // Corrected: Use service object
 
     if (!deletedCluster) {
       return NextResponse.json({ message: "Cluster not found or delete failed" }, { status: 404 });

@@ -4,13 +4,15 @@ import Center from "@/models/center";
 import Cluster from "@/models/cluster";
 import SmallGroup from "@/models/smallGroup";
 import Member from "@/models/member";
-import { connectToDB } from "@/lib/mongodb";
-import mongoose from "mongoose";
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
+import mongoose, { Types } from "mongoose";
 
-interface CreateGoalData extends Omit<Partial<IDiscipleshipGoal>, "level" | "centerId" | "clusterId" | "smallGroupId" | "memberId" | "createdBy"> {
-  targetNumber: number;
-  startDate: Date;
-  endDate: Date;
+export interface IDiscipleshipGoalCreationPayload extends Omit<Partial<IDiscipleshipGoal>, "level" | "centerId" | "clusterId" | "smallGroupId" | "memberId" | "createdBy"> {
+  title: string;
+  category: string;
+  targetNumber?: number; // Made optional as not all goals might have a numeric target
+  startDate?: Date;
+  endDate?: Date;
   level: "HQ" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "INDIVIDUAL";
   centerId?: string | mongoose.Types.ObjectId;
   clusterId?: string | mongoose.Types.ObjectId;
@@ -19,20 +21,13 @@ interface CreateGoalData extends Omit<Partial<IDiscipleshipGoal>, "level" | "cen
   createdBy: string | mongoose.Types.ObjectId;
 }
 
-interface UpdateGoalData extends Omit<Partial<IDiscipleshipGoal>, "level" | "centerId" | "clusterId" | "smallGroupId" | "memberId" | "createdBy"> {
+export interface IDiscipleshipGoalUpdatePayload extends Omit<Partial<IDiscipleshipGoalCreationPayload>, "level" | "centerId" | "clusterId" | "smallGroupId" | "memberId" | "createdBy"> {
   // Level and scope IDs are generally not updatable. Status, targetNumber, dates, progress are.
 }
 
-/**
- * Creates a new Discipleship Goal.
- * Permission checks handled in API routes.
- * @param data - Data for the new goal.
- * @returns The created goal document.
- */
-export const createDiscipleshipGoalService = async (data: CreateGoalData): Promise<IDiscipleshipGoal> => {
+const createDiscipleshipGoal = async (data: IDiscipleshipGoalCreationPayload): Promise<IDiscipleshipGoal> => {
   await connectToDB();
 
-  // Validate hierarchical IDs based on level
   if (data.level === "CENTER" && !data.centerId) {
     throw new Error("Center ID is required for CENTER level goals.");
   }
@@ -42,11 +37,10 @@ export const createDiscipleshipGoalService = async (data: CreateGoalData): Promi
   if (data.level === "SMALL_GROUP" && (!data.centerId || !data.clusterId || !data.smallGroupId)) {
     throw new Error("Center, Cluster, and Small Group IDs are required for SMALL_GROUP level goals.");
   }
-  if (data.level === "INDIVIDUAL" && (!data.centerId || !data.memberId)) { // Assuming individual goals are also tied to a center context
+  if (data.level === "INDIVIDUAL" && (!data.centerId || !data.memberId)) { 
     throw new Error("Center ID and Member ID are required for INDIVIDUAL level goals.");
   }
 
-  // Verify existence of referenced entities
   if (data.centerId) {
     const centerExists = await Center.findById(data.centerId);
     if (!centerExists) throw new Error("Invalid Center ID.");
@@ -72,7 +66,6 @@ export const createDiscipleshipGoalService = async (data: CreateGoalData): Promi
     }
   }
   
-  // Clear irrelevant IDs based on level
   if (data.level === "HQ") {
       data.centerId = undefined;
       data.clusterId = undefined;
@@ -100,26 +93,22 @@ export const createDiscipleshipGoalService = async (data: CreateGoalData): Promi
   ]);
 };
 
-interface GetGoalsFilters {
+export interface IDiscipleshipGoalFilters {
   level?: "HQ" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "INDIVIDUAL";
   centerId?: string | mongoose.Types.ObjectId;
   clusterId?: string | mongoose.Types.ObjectId;
   smallGroupId?: string | mongoose.Types.ObjectId;
   memberId?: string | mongoose.Types.ObjectId;
   status?: string;
+  category?: string;
+  createdBy?: Types.ObjectId;
   page?: number;
   limit?: number;
 }
 
-/**
- * Retrieves Discipleship Goals based on filters.
- * Access control handled in API routes.
- * @param filters - Filtering options.
- * @returns A list of goal documents and pagination info.
- */
-export const getAllDiscipleshipGoalsService = async (filters: GetGoalsFilters): Promise<{ goals: IDiscipleshipGoal[], total: number, page: number, limit: number }> => {
+const getAllDiscipleshipGoals = async (filters: IDiscipleshipGoalFilters, userRoles: any[] = [], currentUserId?: Types.ObjectId): Promise<{ goals: IDiscipleshipGoal[], total: number, page: number, limit: number }> => {
   await connectToDB();
-  const { level, centerId, clusterId, smallGroupId, memberId, status, page = 1, limit = 20 } = filters;
+  const { level, centerId, clusterId, smallGroupId, memberId, status, category, createdBy, page = 1, limit = 20 } = filters;
   const query: any = {};
 
   if (level) query.level = level;
@@ -128,13 +117,27 @@ export const getAllDiscipleshipGoalsService = async (filters: GetGoalsFilters): 
   if (smallGroupId) query.smallGroupId = new mongoose.Types.ObjectId(smallGroupId.toString());
   if (memberId) query.memberId = new mongoose.Types.ObjectId(memberId.toString());
   if (status) query.status = status;
+  if (category) query.category = category;
+  if (createdBy) query.createdBy = createdBy;
   
-  // If level is HQ, ensure other IDs are not part of the query unless specifically intended for some complex filter
   if (level === "HQ") {
     query.centerId = { $exists: false };
     query.clusterId = { $exists: false };
     query.smallGroupId = { $exists: false };
     query.memberId = { $exists: false };
+  }
+
+  // Basic role-based scoping (can be expanded)
+  // This is a simplified version; actual scoping might be more complex and involve checking userRoles against query parameters.
+  const isHQAdmin = userRoles.some(role => role.role === "HQ_ADMIN");
+  if (!isHQAdmin) {
+    // Non-HQ admins might be restricted to their scope or entities they created.
+    // This part needs careful design based on exact requirements.
+    // Example: if not HQ admin and no specific scope filters, only show goals created by them.
+    if (!centerId && !clusterId && !smallGroupId && !memberId && currentUserId) {
+        query.createdBy = currentUserId;
+    }
+    // Further restrictions based on userRoles and filters.centerId, filters.clusterId etc. would go here.
   }
 
   const total = await DiscipleshipGoal.countDocuments(query);
@@ -154,13 +157,7 @@ export const getAllDiscipleshipGoalsService = async (filters: GetGoalsFilters): 
   return { goals, total, page, limit };
 };
 
-/**
- * Retrieves a specific Discipleship Goal by its ID.
- * Permission checks handled in API route.
- * @param id - The ID of the goal.
- * @returns The goal document or null if not found.
- */
-export const getDiscipleshipGoalByIdService = async (id: string): Promise<IDiscipleshipGoal | null> => {
+const getDiscipleshipGoalById = async (id: string): Promise<IDiscipleshipGoal | null> => {
   await connectToDB();
   return DiscipleshipGoal.findById(id).populate([
       { path: "centerId", select: "name" },
@@ -171,21 +168,9 @@ export const getDiscipleshipGoalByIdService = async (id: string): Promise<IDisci
   ]).lean();
 };
 
-/**
- * Updates an existing Discipleship Goal.
- * Level and scope IDs are not updatable. createdBy is not updatable.
- * Permission checks handled in API route.
- * @param id - The ID of the goal to update.
- * @param data - The data to update the goal with.
- * @returns The updated goal document or null if not found.
- */
-export const updateDiscipleshipGoalService = async (id: string, data: UpdateGoalData): Promise<IDiscipleshipGoal | null> => {
+const updateDiscipleshipGoal = async (id: string, data: IDiscipleshipGoalUpdatePayload): Promise<IDiscipleshipGoal | null> => {
   await connectToDB();
   const { ...updatePayload } = data;
-  // Add weekly progress update logic if currentCount changes
-  // This might be complex: if currentCount is directly updated, how is weeklyProgress affected?
-  // Usually, weeklyProgress would be an array of actual progress entries, and currentCount a sum or latest.
-  // For now, direct update of fields.
   return DiscipleshipGoal.findByIdAndUpdate(id, updatePayload, { new: true })
     .populate([
         { path: "centerId", select: "name" },
@@ -196,14 +181,15 @@ export const updateDiscipleshipGoalService = async (id: string, data: UpdateGoal
     ]).lean();
 };
 
-/**
- * Deletes a Discipleship Goal.
- * Permission checks handled in API route.
- * @param id - The ID of the goal to delete.
- * @returns The deleted goal document or null if not found.
- */
-export const deleteDiscipleshipGoalService = async (id: string): Promise<IDiscipleshipGoal | null> => {
+const deleteDiscipleshipGoal = async (id: string): Promise<IDiscipleshipGoal | null> => {
   await connectToDB();
   return DiscipleshipGoal.findByIdAndDelete(id).lean();
 };
 
+export const discipleshipGoalService = {
+    createDiscipleshipGoal,
+    getAllDiscipleshipGoals,
+    getDiscipleshipGoalById,
+    updateDiscipleshipGoal,
+    deleteDiscipleshipGoal
+};

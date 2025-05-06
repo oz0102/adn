@@ -28,7 +28,7 @@ export type PopulatedLeanMember = Omit<IMember, "centerId" | "clusterId" | "smal
     teams: (Omit<ITeamMembership, "teamId"> & { teamId: (Pick<any, "_id" | "name"> & { _id: Types.ObjectId }) | null })[]; // Assuming Team model has _id and name
 };
 
-export const createMemberService = async (data: MemberCreationData): Promise<PopulatedLeanMember> => {
+const createMember = async (data: MemberCreationData): Promise<PopulatedLeanMember> => {
   await connectToDB();
 
   if (!data.centerId) {
@@ -97,7 +97,7 @@ interface MemberQueryFilters {
   limit?: number;
 }
 
-export const getAllMembersService = async (filters: MemberQueryFilters): Promise<{ members: PopulatedLeanMember[], total: number, page: number, limit: number }> => {
+const getAllMembers = async (filters: MemberQueryFilters): Promise<{ members: PopulatedLeanMember[], total: number, page: number, limit: number }> => {
   await connectToDB();
   const { centerId, clusterId, smallGroupId, teamId, spiritualGrowthStage, search, page = 1, limit = 20 } = filters;
   const query: FilterQuery<IMember> = {};
@@ -133,7 +133,7 @@ export const getAllMembersService = async (filters: MemberQueryFilters): Promise
   return { members, total, page, limit };
 };
 
-export const getMemberByIdService = async (id: string): Promise<PopulatedLeanMember | null> => {
+const getMemberById = async (id: string): Promise<PopulatedLeanMember | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
   return Member.findById(id)
@@ -144,7 +144,7 @@ export const getMemberByIdService = async (id: string): Promise<PopulatedLeanMem
     .lean<PopulatedLeanMember | null>();
 };
 
-export const updateMemberService = async (id: string, data: Partial<Omit<IMember, "_id" | "createdAt" | "updatedAt">>): Promise<PopulatedLeanMember | null> => {
+const updateMember = async (id: string, data: Partial<Omit<IMember, "_id" | "createdAt" | "updatedAt">>): Promise<PopulatedLeanMember | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
 
@@ -152,7 +152,7 @@ export const updateMemberService = async (id: string, data: Partial<Omit<IMember
   if (!member) return null;
 
   if (data.centerId && data.centerId.toString() !== member.centerId.toString()) {
-    throw new Error("Changing a member\"s centerId directly is not supported via this update. Use a dedicated transfer function.");
+    throw new Error("Changing a member's centerId directly is not supported via this update. Use a dedicated transfer function.");
   }
 
   const centerIdForUniqueness = member.centerId;
@@ -172,7 +172,7 @@ export const updateMemberService = async (id: string, data: Partial<Omit<IMember
   if (data.clusterId) {
     const clusterExists = await Cluster.findById(data.clusterId).lean<ICluster | null>();
     if (!clusterExists || clusterExists.centerId.toString() !== centerIdForUniqueness.toString()) {
-      throw new Error("Invalid Cluster ID or cluster does not belong to the member\"s center.");
+      throw new Error("Invalid Cluster ID or cluster does not belong to the member's center.");
     }
   } else if (data.hasOwnProperty("clusterId") && data.clusterId === null) {
     member.clusterId = undefined;
@@ -184,7 +184,7 @@ export const updateMemberService = async (id: string, data: Partial<Omit<IMember
     if (!smallGroupExists || 
         (targetClusterId && smallGroupExists.clusterId.toString() !== targetClusterId.toString()) || 
         smallGroupExists.centerId.toString() !== centerIdForUniqueness.toString()) {
-      throw new Error("Invalid Small Group ID or small group does not belong to the member\"s cluster/center.");
+      throw new Error("Invalid Small Group ID or small group does not belong to the member's cluster/center.");
     }
   } else if (data.hasOwnProperty("smallGroupId") && data.smallGroupId === null) {
     member.smallGroupId = undefined;
@@ -203,7 +203,7 @@ export const updateMemberService = async (id: string, data: Partial<Omit<IMember
   return updatedAndPopulatedMember;
 };
 
-export const deleteMemberService = async (id: string): Promise<PopulatedLeanMember | null> => {
+const deleteMember = async (id: string): Promise<PopulatedLeanMember | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
   const deletedMember = await Member.findByIdAndDelete(id)
@@ -218,3 +218,10 @@ export const deleteMemberService = async (id: string): Promise<PopulatedLeanMemb
   return deletedMember;
 };
 
+export const memberService = {
+    createMember,
+    getAllMembers,
+    getMemberById,
+    updateMember,
+    deleteMember
+};

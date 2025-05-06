@@ -1,26 +1,20 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth"; // Changed to use auth()
 import {
-  getSmallGroupByIdService,
-  updateSmallGroupService,
-  deleteSmallGroupService
+  smallGroupService // Assuming smallGroupService is an object with methods
 } from "@/services/smallGroupService";
-import { connectToDB } from "@/lib/mongodb";
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
-import SmallGroup from "@/models/smallGroup"; // Import SmallGroup model for permission checks
+import SmallGroup from "@/models/smallGroup"; 
 
 interface Params {
   params: { id: string };
 }
 
-/**
- * Handles GET requests to retrieve a specific Small Group by ID.
- */
 export async function GET(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -29,17 +23,17 @@ export async function GET(request: Request, { params }: Params) {
     const smallGroupId = params.id;
 
     await connectToDB();
-    const smallGroup = await getSmallGroupByIdService(smallGroupId);
+    const smallGroup = await smallGroupService.getSmallGroupById(smallGroupId); // Changed to use smallGroupService
 
     if (!smallGroup) {
       return NextResponse.json({ message: "Small Group not found" }, { status: 404 });
     }
 
-    // Permissions: HQ_ADMIN, CENTER_ADMIN of group's center, CLUSTER_LEADER of group's cluster, or SMALL_GROUP_LEADER of this group.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: smallGroup.centerId });
-    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: smallGroup.clusterId, centerId: smallGroup.centerId });
-    const isSmallGroupLeader = await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: smallGroup._id, clusterId: smallGroup.clusterId, centerId: smallGroup.centerId });
+    // Ensure IDs are strings for checkPermission if they are ObjectIds
+    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: smallGroup.centerId?.toString() });
+    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: smallGroup.clusterId?.toString(), centerId: smallGroup.centerId?.toString() });
+    const isSmallGroupLeader = await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: smallGroup._id.toString(), clusterId: smallGroup.clusterId?.toString(), centerId: smallGroup.centerId?.toString() });
 
     if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader && !isSmallGroupLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
@@ -52,12 +46,9 @@ export async function GET(request: Request, { params }: Params) {
   }
 }
 
-/**
- * Handles PUT requests to update a specific Small Group by ID.
- */
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -71,18 +62,20 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found" }, { status: 404 });
     }
 
-    // Permissions: HQ_ADMIN, CENTER_ADMIN of group's center, or CLUSTER_LEADER of group's cluster.
-    // SMALL_GROUP_LEADER might have limited update rights, e.g., description. For now, restricting to higher roles for structural changes.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingSmallGroup.centerId });
-    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: existingSmallGroup.clusterId, centerId: existingSmallGroup.centerId });
+    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingSmallGroup.centerId?.toString() });
+    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: existingSmallGroup.clusterId?.toString(), centerId: existingSmallGroup.centerId?.toString() });
 
     if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for update" }, { status: 403 });
     }
 
     const body = await request.json();
-    const updatedSmallGroup = await updateSmallGroupService(smallGroupId, body);
+    // Prevent changing centerId or clusterId directly via this route if not intended
+    delete body.centerId;
+    delete body.clusterId;
+    
+    const updatedSmallGroup = await smallGroupService.updateSmallGroup(smallGroupId, body); // Changed to use smallGroupService
 
     if (!updatedSmallGroup) {
       return NextResponse.json({ message: "Small Group not found or update failed" }, { status: 404 });
@@ -90,16 +83,16 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json(updatedSmallGroup, { status: 200 });
   } catch (error: any) {
     console.error(`Failed to update small group ${params.id}:`, error);
+    if (error.name === "ValidationError" || error.message.includes("Invalid Cluster ID") || error.message.includes("Invalid Leader ID")) {
+        return NextResponse.json({ message: "Validation Error", error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ message: "Failed to update small group", error: error.message }, { status: 500 });
   }
 }
 
-/**
- * Handles DELETE requests to delete a specific Small Group by ID.
- */
 export async function DELETE(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -113,16 +106,15 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found" }, { status: 404 });
     }
 
-    // Permissions: HQ_ADMIN, CENTER_ADMIN of group's center, or CLUSTER_LEADER of group's cluster.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingSmallGroup.centerId });
-    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: existingSmallGroup.clusterId, centerId: existingSmallGroup.centerId });
+    const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingSmallGroup.centerId?.toString() });
+    const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: existingSmallGroup.clusterId?.toString(), centerId: existingSmallGroup.centerId?.toString() });
 
     if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for delete" }, { status: 403 });
     }
 
-    const deletedSmallGroup = await deleteSmallGroupService(smallGroupId);
+    const deletedSmallGroup = await smallGroupService.deleteSmallGroup(smallGroupId); // Changed to use smallGroupService
 
     if (!deletedSmallGroup) {
       return NextResponse.json({ message: "Small Group not found or delete failed" }, { status: 404 });

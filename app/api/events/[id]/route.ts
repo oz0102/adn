@@ -1,28 +1,20 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth"; // Changed to use auth()
 import {
-  getEventByIdService,
-  updateEventService,
-  deleteEventService
+  eventService // Assuming eventService is an object with methods
 } from "@/services/eventService";
-import { connectToDB } from "@/lib/mongodb";
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
-import Event from "@/models/event"; // For fetching event details for permission checks
+import Event from "@/models/event"; 
 
 interface Params {
   params: { id: string };
 }
 
-/**
- * Handles GET requests to retrieve a specific Event by ID.
- */
 export async function GET(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
-    // Public events might be viewable without login.
-    // For now, let's assume login is required to see event details.
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -31,7 +23,7 @@ export async function GET(request: Request, { params }: Params) {
     const eventId = params.id;
 
     await connectToDB();
-    const event = await getEventByIdService(eventId);
+    const event = await eventService.getEventById(eventId); // Changed to use eventService
 
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
@@ -39,10 +31,9 @@ export async function GET(request: Request, { params }: Params) {
 
     let canView = await checkPermission(userId, "HQ_ADMIN");
     if (!canView && event.scope === "CENTER" && event.centerId) {
-      canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: event.centerId });
-      // Add logic here if members of the center can view the event details
+      canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: event.centerId.toString() }); // Ensure centerId is string for checkPermission
     } else if (!canView && event.scope === "HQ") {
-      canView = true; // All logged-in users can view details of HQ events
+      canView = true; 
     }
 
     if (!canView) {
@@ -56,12 +47,9 @@ export async function GET(request: Request, { params }: Params) {
   }
 }
 
-/**
- * Handles PUT requests to update a specific Event by ID.
- */
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -77,22 +65,19 @@ export async function PUT(request: Request, { params }: Params) {
 
     let canUpdate = await checkPermission(userId, "HQ_ADMIN");
     if (!canUpdate && existingEvent.scope === "CENTER" && existingEvent.centerId) {
-      canUpdate = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId });
+      canUpdate = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId.toString() });
     }
-    // Add more granular checks, e.g., if the user is the original creator (existingEvent.createdBy)
-    // or has a specific event_manager role for that scope.
 
     if (!canUpdate) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to update this event" }, { status: 403 });
     }
 
     const body = await request.json();
-    // Prevent changing scope, centerId, or createdBy via this update
     delete body.scope;
     delete body.centerId;
     delete body.createdBy;
 
-    const updatedEvent = await updateEventService(eventId, body);
+    const updatedEvent = await eventService.updateEvent(eventId, body); // Changed to use eventService
 
     if (!updatedEvent) {
       return NextResponse.json({ message: "Event not found or update failed" }, { status: 404 });
@@ -107,12 +92,9 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-/**
- * Handles DELETE requests to delete a specific Event by ID.
- */
 export async function DELETE(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -128,14 +110,14 @@ export async function DELETE(request: Request, { params }: Params) {
 
     let canDelete = await checkPermission(userId, "HQ_ADMIN");
     if (!canDelete && existingEvent.scope === "CENTER" && existingEvent.centerId) {
-      canDelete = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId });
+      canDelete = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId.toString() });
     }
 
     if (!canDelete) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to delete this event" }, { status: 403 });
     }
 
-    const deletedEvent = await deleteEventService(eventId);
+    const deletedEvent = await eventService.deleteEvent(eventId); // Changed to use eventService
     if (!deletedEvent) {
       return NextResponse.json({ message: "Event not found or delete failed" }, { status: 404 });
     }

@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
-import {
-  getSocialMediaAccountByIdService,
-  updateSocialMediaAccountService,
-  deleteSocialMediaAccountService,
-  updateFollowerCountService,
-  getFollowerHistoryService
-} from "@/services/socialMediaService";
+import { auth } from "@/auth"; // Changed to use auth()
+import { socialMediaService } from "@/services/socialMediaService";
 import { connectToDB } from "@/lib/mongodb";
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
-import SocialMediaAccount from "@/models/socialMediaAccount"; // For fetching account details for permission checks
+import SocialMediaAccountModel from "@/models/socialMediaAccount";
 
 interface Params {
   params: { id: string };
@@ -22,7 +15,7 @@ interface Params {
  */
 export async function GET(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Changed to use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -31,17 +24,19 @@ export async function GET(request: Request, { params }: Params) {
     const accountId = params.id;
 
     await connectToDB();
-    const account = await getSocialMediaAccountByIdService(accountId);
+    const account = await socialMediaService.getSocialMediaAccountById(accountId);
 
     if (!account) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
 
     let canView = await checkPermission(userId, "HQ_ADMIN");
-    if (!canView && account.scope === "CENTER" && account.centerId) {
-      canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: account.centerId });
+    const centerIdString = account.centerId?._id?.toString(); 
+
+    if (!canView && account.scope === "CENTER" && centerIdString) {
+      canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: new mongoose.Types.ObjectId(centerIdString) });
     } else if (!canView && account.scope === "HQ") {
-      canView = true; // HQ accounts are generally viewable by logged-in users if directly accessed
+      canView = true; 
     }
 
     if (!canView) {
@@ -60,7 +55,7 @@ export async function GET(request: Request, { params }: Params) {
  */
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Changed to use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -69,7 +64,7 @@ export async function PUT(request: Request, { params }: Params) {
     const accountId = params.id;
 
     await connectToDB();
-    const existingAccount = await SocialMediaAccount.findById(accountId).select("scope centerId").lean();
+    const existingAccount = await SocialMediaAccountModel.findById(accountId).select("scope centerId").lean();
     if (!existingAccount) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
@@ -84,7 +79,7 @@ export async function PUT(request: Request, { params }: Params) {
     }
 
     const body = await request.json();
-    const updatedAccount = await updateSocialMediaAccountService(accountId, body);
+    const updatedAccount = await socialMediaService.updateSocialMediaAccount(accountId, body);
 
     if (!updatedAccount) {
       return NextResponse.json({ message: "Account not found or update failed" }, { status: 404 });
@@ -104,7 +99,7 @@ export async function PUT(request: Request, { params }: Params) {
  */
 export async function DELETE(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Changed to use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -113,7 +108,7 @@ export async function DELETE(request: Request, { params }: Params) {
     const accountId = params.id;
 
     await connectToDB();
-    const existingAccount = await SocialMediaAccount.findById(accountId).select("scope centerId").lean();
+    const existingAccount = await SocialMediaAccountModel.findById(accountId).select("scope centerId").lean();
     if (!existingAccount) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
@@ -127,7 +122,7 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to delete this account" }, { status: 403 });
     }
 
-    const deletedAccount = await deleteSocialMediaAccountService(accountId);
+    const deletedAccount = await socialMediaService.deleteSocialMediaAccount(accountId);
     if (!deletedAccount) {
       return NextResponse.json({ message: "Account not found or delete failed" }, { status: 404 });
     }
@@ -138,15 +133,9 @@ export async function DELETE(request: Request, { params }: Params) {
   }
 }
 
-/**
- * Handles POST requests to manually trigger follower count update for a specific account.
- * /api/social-media/accounts/[id]/update-followers
- */
-// This should be in a separate route file like /api/social-media/accounts/[id]/update-followers/route.ts
-// For now, adding a placeholder here for the concept. A real implementation would call external APIs.
 export async function POST_UpdateFollowers(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Changed to use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -154,7 +143,7 @@ export async function POST_UpdateFollowers(request: Request, { params }: Params)
     const accountId = params.id;
 
     await connectToDB();
-    const accountToUpdate = await SocialMediaAccount.findById(accountId).select("scope centerId").lean();
+    const accountToUpdate = await SocialMediaAccountModel.findById(accountId).select("scope centerId").lean();
     if (!accountToUpdate) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
@@ -168,9 +157,8 @@ export async function POST_UpdateFollowers(request: Request, { params }: Params)
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
 
-    // In a real scenario, this would call an external API to get the follower count
     const mockFollowerCount = Math.floor(Math.random() * 10000);
-    const updatedAccount = await updateFollowerCountService(accountId, mockFollowerCount);
+    const updatedAccount = await socialMediaService.updateFollowerCount(accountId, mockFollowerCount);
     
     return NextResponse.json(updatedAccount, { status: 200 });
   } catch (error: any) {
@@ -179,14 +167,9 @@ export async function POST_UpdateFollowers(request: Request, { params }: Params)
   }
 }
 
-/**
- * Handles GET requests to retrieve follower history for a specific account.
- * /api/social-media/accounts/[id]/history
- */
-// This should be in a separate route file like /api/social-media/accounts/[id]/history/route.ts
 export async function GET_FollowerHistory(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Changed to use auth()
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -196,7 +179,7 @@ export async function GET_FollowerHistory(request: Request, { params }: Params) 
     const days = parseInt(searchParams.get("days") || "30", 10);
 
     await connectToDB();
-    const account = await SocialMediaAccount.findById(accountId).select("scope centerId").lean();
+    const account = await SocialMediaAccountModel.findById(accountId).select("scope centerId").lean();
     if (!account) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
@@ -205,14 +188,13 @@ export async function GET_FollowerHistory(request: Request, { params }: Params) 
     if (!canViewHistory && account.scope === "CENTER" && account.centerId) {
       canViewHistory = await checkPermission(userId, "CENTER_ADMIN", { centerId: account.centerId });
     } else if (!canViewHistory && account.scope === "HQ") {
-      canViewHistory = true; // Allow viewing history for HQ accounts if directly accessed
+      canViewHistory = true; 
     }
 
     if (!canViewHistory) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
-
-    const history = await getFollowerHistoryService(accountId, days);
+    const history = await socialMediaService.getFollowerHistory(accountId, days); // Added days parameter
     return NextResponse.json(history, { status: 200 });
   } catch (error: any) {
     console.error(`Failed to get follower history for account ${params.id}:`, error);

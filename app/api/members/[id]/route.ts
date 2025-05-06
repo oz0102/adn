@@ -1,26 +1,18 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
-import {
-  getMemberByIdService,
-  updateMemberService,
-  deleteMemberService
-} from "@/services/memberService";
-import { connectToDB } from "@/lib/mongodb";
+import { auth } from "@/auth"; 
+import { memberService } from "@/services/memberService";
+import { connectToDB } from "@/lib/mongodb"; 
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
-import Member from "@/models/member"; // To fetch member details for permission scoping
+import Member from "@/models/member"; 
 
 interface Params {
   params: { id: string };
 }
 
-/**
- * Handles GET requests to retrieve a specific Member by ID.
- */
 export async function GET(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -29,39 +21,34 @@ export async function GET(request: Request, { params }: Params) {
     const memberIdToFetch = params.id;
 
     await connectToDB();
-    const member = await getMemberByIdService(memberIdToFetch);
+    const member = await memberService.getMemberById(memberIdToFetch);
 
     if (!member) {
       return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
 
-    // Permission checks: HQ_ADMIN, or admin of the member's scope, or the member themselves.
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     let canAccessMemberData = hasHQAdminPermission;
 
     if (!canAccessMemberData) {
-        const memberScope = {
-            centerId: member.centerId,
-            clusterId: member.clusterId,
-            smallGroupId: member.smallGroupId
-        };
-        const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: member.centerId });
-        const isClusterLeader = member.clusterId ? await checkPermission(userId, "CLUSTER_LEADER", { clusterId: member.clusterId, centerId: member.centerId }) : false;
-        const isSmallGroupLeader = member.smallGroupId ? await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: member.smallGroupId, clusterId: member.clusterId, centerId: member.centerId }) : false;
-        const isMemberAdmin = await checkPermission(userId, "MEMBER_ADMIN", memberScope); // Check MEMBER_ADMIN for the member's specific scope
-        
-        // Check if the requesting user is the member themselves
-        // This requires fetching the User document linked to the session user ID and comparing its linked memberId (if any)
-        // For now, assuming only admins/leaders can fetch other members. Self-fetch needs more logic if User model links to Member.
-        // If session.user.memberId (hypothetical field) === memberIdToFetch, then allow.
+        const memberCenterId = member.centerId?._id?.toString();
+        const memberClusterId = member.clusterId?._id?.toString();
+        const memberSmallGroupId = member.smallGroupId?._id?.toString();
 
+        const isCenterAdmin = memberCenterId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: memberCenterId }) : false;
+        const isClusterLeader = memberClusterId && memberCenterId ? await checkPermission(userId, "CLUSTER_LEADER", { clusterId: memberClusterId, centerId: memberCenterId }) : false;
+        const isSmallGroupLeader = memberSmallGroupId && memberClusterId && memberCenterId ? await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: memberSmallGroupId, clusterId: memberClusterId, centerId: memberCenterId }) : false;
+        const isMemberAdmin = memberCenterId ? await checkPermission(userId, "MEMBER_ADMIN", { centerId: memberCenterId, clusterId: memberClusterId, smallGroupId: memberSmallGroupId }) : false; 
+        
         canAccessMemberData = isCenterAdmin || isClusterLeader || isSmallGroupLeader || isMemberAdmin;
     }
     
-    if (!canAccessMemberData && session.user.id !== memberIdToFetch) { // Basic self-check if IDs were the same (not robust)
-         // More robust self-check: Does the logged-in user correspond to this member profile?
-         // This usually involves a link from the User model to the Member model.
-         // For this iteration, we'll assume only hierarchical superiors or specific admins can view.
+    const userMemberId = (session.user as any).memberId; // Assuming memberId is on session.user
+    if (!canAccessMemberData && userMemberId && userMemberId === memberIdToFetch) {
+        canAccessMemberData = true;
+    }
+
+    if (!canAccessMemberData) { 
         return NextResponse.json({ message: "Forbidden: Insufficient permissions to view this member" }, { status: 403 });
     }
     
@@ -72,12 +59,9 @@ export async function GET(request: Request, { params }: Params) {
   }
 }
 
-/**
- * Handles PUT requests to update a specific Member by ID.
- */
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -86,36 +70,46 @@ export async function PUT(request: Request, { params }: Params) {
     const memberIdToUpdate = params.id;
 
     await connectToDB();
-    const existingMember = await Member.findById(memberIdToUpdate).select("centerId clusterId smallGroupId").lean();
+    const existingMember = await Member.findById(memberIdToUpdate).select("centerId clusterId smallGroupId createdBy").lean();
     if (!existingMember) {
       return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
 
-    // Permission checks for update
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     let canUpdateMemberData = hasHQAdminPermission;
+    const existingMemberCenterId = existingMember.centerId?.toString();
 
     if(!canUpdateMemberData){
-        const memberScope = {
-            centerId: existingMember.centerId,
-            clusterId: existingMember.clusterId,
-            smallGroupId: existingMember.smallGroupId
-        };
-        const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMember.centerId });
-        const isMemberAdminInScope = await checkPermission(userId, "MEMBER_ADMIN", memberScope);
-        // Typically, only admins (HQ, Center, or specific Member Admins for the scope) can update.
-        // Leaders (Cluster/SG) might have more restricted update rights (e.g., notes, not core profile) - not handled here.
+        const isCenterAdmin = existingMemberCenterId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMemberCenterId }) : false;
+        const isMemberAdminInScope = existingMemberCenterId ? await checkPermission(userId, "MEMBER_ADMIN", { centerId: existingMemberCenterId, clusterId: existingMember.clusterId?.toString(), smallGroupId: existingMember.smallGroupId?.toString() }) : false;
         canUpdateMemberData = isCenterAdmin || isMemberAdminInScope;
     }
 
+    const userMemberId = (session.user as any).memberId;
+    if (!canUpdateMemberData && userMemberId && userMemberId === memberIdToUpdate) {
+        canUpdateMemberData = true;
+    }
+
     if (!canUpdateMemberData) {
-      // Add self-update permission if applicable, e.g. if session.user.id corresponds to memberIdToUpdate
-      // For now, restricting to admins.
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to update this member" }, { status: 403 });
     }
 
     const body = await request.json();
-    const updatedMember = await updateMemberService(memberIdToUpdate, body);
+    
+    if (!hasHQAdminPermission && !(userMemberId && userMemberId === memberIdToUpdate)) {
+        delete body.role; // Deprecated, use assignedRoles
+        delete body.permissions; // Deprecated, use assignedRoles
+        delete body.assignedRoles; // Only HQ_ADMIN or specific role admins should change roles
+        delete body.centerId; 
+        delete body.clusterId; // Cluster/SG assignment might be handled by specific functions or roles
+        delete body.smallGroupId;
+        delete body.memberId; // Member ID should generally not be updatable
+    }
+    
+    // Ensure lastUpdatedBy is set
+    body.lastUpdatedBy = userId;
+
+    const updatedMember = await memberService.updateMember(memberIdToUpdate, body);
 
     if (!updatedMember) {
       return NextResponse.json({ message: "Member not found or update failed" }, { status: 404 });
@@ -130,12 +124,9 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-/**
- * Handles DELETE requests to delete a specific Member by ID.
- */
 export async function DELETE(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -148,24 +139,22 @@ export async function DELETE(request: Request, { params }: Params) {
     if (!existingMember) {
       return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
+    const existingMemberCenterId = existingMember.centerId?.toString();
 
-    // Permission checks for delete
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     let canDeleteMember = hasHQAdminPermission;
 
     if(!canDeleteMember){
-        const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMember.centerId });
-        // Generally, only HQ or Center admins can delete members.
-        // MEMBER_ADMIN might also be given this right depending on policy.
-        const isMemberAdminForCenter = await checkPermission(userId, "MEMBER_ADMIN", { centerId: existingMember.centerId });
-        canDeleteMember = isCenterAdmin || isMemberAdminForCenter;
+        const isCenterAdmin = existingMemberCenterId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMemberCenterId }) : false;
+        // MEMBER_ADMIN might be too broad for delete, typically CENTER_ADMIN or HQ_ADMIN
+        canDeleteMember = isCenterAdmin;
     }
 
     if (!canDeleteMember) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to delete this member" }, { status: 403 });
     }
 
-    const deletedMember = await deleteMemberService(memberIdToDelete);
+    const deletedMember = await memberService.deleteMember(memberIdToDelete);
 
     if (!deletedMember) {
       return NextResponse.json({ message: "Member not found or delete failed" }, { status: 404 });

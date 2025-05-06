@@ -62,7 +62,7 @@ if (process.env.NODE_ENV === "development") {
  * Function to establish MongoDB connection using Mongoose.
  * This is the preferred way to ensure DB connection for services using Mongoose models.
  */
-async function connectToDB(): Promise<typeof mongoose> {
+export async function connectToDB(): Promise<typeof mongoose> {
   if (mongoose.connection.readyState >= 1) {
     // console.log("Using existing Mongoose connection.");
     return mongoose;
@@ -77,9 +77,6 @@ async function connectToDB(): Promise<typeof mongoose> {
     throw new Error("Could not connect to DB using Mongoose.");
   }
 }
-
-// Export the function for Mongoose connections
-export default connectToDB;
 
 // Export the MongoClient promise for direct MongoDB driver usage if needed, though connectToDB (Mongoose) is preferred for this app.
 export { clientPromise as mongoClientPromise };

@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
-import {
-  createClusterService,
-  getAllClustersService
-} from "@/services/clusterService";
-import { connectToDB } from "@/lib/mongodb";
+import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
+import { clusterService } from "@/services/clusterService"; // Assuming clusterService exports an object
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
 
@@ -15,14 +11,14 @@ import mongoose from "mongoose";
  */
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const userId = new mongoose.Types.ObjectId(session.user.id);
     const body = await request.json();
-    const { centerId } = body; // Extract centerId from the body
+    const { centerId } = body; 
 
     if (!centerId) {
       return NextResponse.json({ message: "Center ID is required in the request body" }, { status: 400 });
@@ -36,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     await connectToDB();
-    const newCluster = await createClusterService(body);
+    const newCluster = await clusterService.createCluster(body); // Corrected: Use service object
     return NextResponse.json(newCluster, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create cluster:", error);
@@ -51,7 +47,7 @@ export async function POST(request: Request) {
  */
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -66,23 +62,16 @@ export async function GET(request: Request) {
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
 
     if (hasHQAdminPermission) {
-      clusters = await getAllClustersService(centerIdQuery || undefined);
+      clusters = await clusterService.getAllClusters(centerIdQuery || undefined); // Corrected: Use service object
     } else {
-      // For CENTER_ADMIN, they should only see clusters within their assigned center(s).
-      // This requires fetching the user's assigned centers.
-      // For simplicity in this step, if a centerIdQuery is provided, we check if they are admin for THAT center.
-      // A more robust solution would iterate through all their CENTER_ADMIN roles.
       if (centerIdQuery) {
         const isCenterAdminForQueryCenter = await checkPermission(userId, "CENTER_ADMIN", { centerId: centerIdQuery });
         if (isCenterAdminForQueryCenter) {
-          clusters = await getAllClustersService(centerIdQuery);
+          clusters = await clusterService.getAllClusters(centerIdQuery); // Corrected: Use service object
         } else {
           return NextResponse.json({ message: "Forbidden: You are not an admin for the specified center" }, { status: 403 });
         }
       } else {
-        // If no centerId is specified by a non-HQ_ADMIN, it's ambiguous.
-        // Could return all clusters from all centers they manage, or restrict.
-        // For now, restricting to prevent accidental broad queries.
         return NextResponse.json({ message: "Forbidden: Please specify a centerId or have HQ Admin role" }, { status: 403 });
       }
     }

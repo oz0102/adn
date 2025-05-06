@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth"; // Changed to use auth()
 import {
-  createMemberService,
-  getAllMembersService
+  memberService // Assuming memberService is an object with methods
 } from "@/services/memberService";
-import { connectToDB } from "@/lib/mongodb";
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
 import Cluster from "@/models/cluster";
 import SmallGroup from "@/models/smallGroup";
 
-/**
- * Handles POST requests to create a new Member.
- * Requires MEMBER_ADMIN permission for the target center/cluster/small group, or CENTER_ADMIN, or HQ_ADMIN.
- */
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -32,7 +26,6 @@ export async function POST(request: Request) {
 
     await connectToDB();
 
-    // Permission checks
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId });
     let canManageMembersInScope = false;
@@ -42,13 +35,13 @@ export async function POST(request: Request) {
         if (!sg || sg.centerId.toString() !== centerId || (clusterId && sg.clusterId.toString() !== clusterId)) {
             return NextResponse.json({ message: "Small group not found or mismatched hierarchy"}, { status: 400 });
         }
-        canManageMembersInScope = await checkPermission(userId, "MEMBER_ADMIN", { smallGroupId, clusterId: sg.clusterId, centerId: sg.centerId });
+        canManageMembersInScope = await checkPermission(userId, "MEMBER_ADMIN", { smallGroupId: sg._id.toString(), clusterId: sg.clusterId.toString(), centerId: sg.centerId.toString() });
     } else if (clusterId) {
         const cl = await Cluster.findById(clusterId).select("centerId").lean();
         if (!cl || cl.centerId.toString() !== centerId) {
             return NextResponse.json({ message: "Cluster not found or mismatched hierarchy"}, { status: 400 });
         }
-        canManageMembersInScope = await checkPermission(userId, "MEMBER_ADMIN", { clusterId, centerId });
+        canManageMembersInScope = await checkPermission(userId, "MEMBER_ADMIN", { clusterId: cl._id.toString(), centerId: cl.centerId.toString() });
     } else {
         canManageMembersInScope = await checkPermission(userId, "MEMBER_ADMIN", { centerId });
     }
@@ -56,26 +49,22 @@ export async function POST(request: Request) {
     if (!hasHQAdminPermission && !isCenterAdmin && !canManageMembersInScope) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to create member in this scope" }, { status: 403 });
     }
-
-    const newMember = await createMemberService(body);
+    
+    body.createdBy = userId; // Add createdBy before passing to service
+    const newMember = await memberService.createMember(body); // Changed to use memberService
     return NextResponse.json(newMember, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create member:", error);
-    // Check for specific Mongoose validation errors or unique constraint errors
     if (error.message.includes("already exists")) {
-        return NextResponse.json({ message: error.message }, { status: 409 }); // Conflict
+        return NextResponse.json({ message: error.message }, { status: 409 }); 
     }
     return NextResponse.json({ message: "Failed to create member", error: error.message }, { status: 500 });
   }
 }
 
-/**
- * Handles GET requests to retrieve Members, with filters and pagination.
- * Permissions depend on the scope of the query (centerId, clusterId, smallGroupId).
- */
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -94,25 +83,23 @@ export async function GET(request: Request) {
 
     await connectToDB();
 
-    // Determine the narrowest scope for permission checking
     let requiredScope: any = {};
-    let scopeForPermissionCheck = "HQ"; // Default to HQ level access
+    let scopeForPermissionCheck = "HQ"; 
 
     if (filters.smallGroupId) {
         const sg = await SmallGroup.findById(filters.smallGroupId).select("clusterId centerId").lean();
         if (!sg) return NextResponse.json({ message: "Small Group not found for filtering" }, { status: 404 });
-        requiredScope = { smallGroupId: filters.smallGroupId, clusterId: sg.clusterId, centerId: sg.centerId };
+        requiredScope = { smallGroupId: sg._id.toString(), clusterId: sg.clusterId.toString(), centerId: sg.centerId.toString() };
         scopeForPermissionCheck = "SMALL_GROUP";
     } else if (filters.clusterId) {
         const cl = await Cluster.findById(filters.clusterId).select("centerId").lean();
         if (!cl) return NextResponse.json({ message: "Cluster not found for filtering" }, { status: 404 });
-        requiredScope = { clusterId: filters.clusterId, centerId: cl.centerId };
+        requiredScope = { clusterId: cl._id.toString(), centerId: cl.centerId.toString() };
         scopeForPermissionCheck = "CLUSTER";
     } else if (filters.centerId) {
         requiredScope = { centerId: filters.centerId };
         scopeForPermissionCheck = "CENTER";
     }
-    // If no specific scope, implies HQ level or user's general access based on roles.
 
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     let canAccessData = hasHQAdminPermission;
@@ -134,10 +121,18 @@ export async function GET(request: Request) {
                 canAccessData = await checkPermission(userId, "CENTER_ADMIN", requiredScope) || 
                                 await checkPermission(userId, "MEMBER_ADMIN", requiredScope);
                 break;
-            default: // HQ or no specific scope, user must have a role that grants broad access or it's denied.
-                // This part needs refinement: if no filters, what should non-HQ see? Probably nothing or only their own data.
-                // For now, if not HQ and no scope, deny unless they are e.g. a global member admin (not a defined role yet).
-                return NextResponse.json({ message: "Forbidden: Access restricted. Specify a scope or have broader permissions." }, { status: 403 });
+            default: 
+                // If no specific scope, and not HQ admin, this implies they can only see their own data or data from their direct leadership scope.
+                // This part needs to be carefully designed. For now, if no filters, non-HQ admins see nothing unless specific logic is added.
+                // A better default might be to show members of centers they administer if they are CENTER_ADMIN.
+                const userPermissions = session.user.permissions || [];
+                const adminCenterIds = userPermissions.filter(p => p.role === "CENTER_ADMIN" && p.centerId).map(p => p.centerId);
+                if (adminCenterIds.length > 0) {
+                    filters.centerId = { $in: adminCenterIds.map(id => new mongoose.Types.ObjectId(id.toString())) };
+                    canAccessData = true; // They can see members from centers they administer
+                } else {
+                    return NextResponse.json({ message: "Forbidden: Access restricted. Specify a scope or have broader permissions." }, { status: 403 });
+                }
         }
     }
 
@@ -145,12 +140,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for the requested scope" }, { status: 403 });
     }
 
-    // If user is not HQ_ADMIN, ensure their query is scoped to what they are allowed to see.
-    // E.g., a CENTER_ADMIN for center X cannot query for center Y unless filters.centerId is X.
-    // The `checkPermission` already validates if they have the role for the *specific* ID in `requiredScope`.
-    // So, if `canAccessData` is true, they are permitted for the *narrowest* scope defined in filters.
-
-    const result = await getAllMembersService(filters);
+    const result = await memberService.getAllMembers(filters); // Changed to use memberService
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Failed to retrieve members:", error);

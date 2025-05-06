@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth"; // Assuming authOptions is correctly configured
-import {
-  getCenterByIdService,
-  updateCenterService,
-  deleteCenterService
-} from "@/services/centerService";
-import { connectToDB } from "@/lib/mongodb";
+import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
+import { centerService } from "@/services/centerService"; // Assuming centerService exports an object
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
 
@@ -19,7 +14,7 @@ interface Params {
  */
 export async function GET(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -27,8 +22,6 @@ export async function GET(request: Request, { params }: Params) {
     const userId = new mongoose.Types.ObjectId(session.user.id);
     const centerId = params.id;
 
-    // HQ_ADMIN can get any center.
-    // CENTER_ADMIN can get their own assigned center(s).
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     const isCenterAdminForThisCenter = await checkPermission(userId, "CENTER_ADMIN", { centerId });
 
@@ -37,7 +30,7 @@ export async function GET(request: Request, { params }: Params) {
     }
 
     await connectToDB();
-    const center = await getCenterByIdService(centerId);
+    const center = await centerService.getCenterById(centerId); // Corrected: Use service object
 
     if (!center) {
       return NextResponse.json({ message: "Center not found" }, { status: 404 });
@@ -54,7 +47,7 @@ export async function GET(request: Request, { params }: Params) {
  */
 export async function PUT(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -62,8 +55,6 @@ export async function PUT(request: Request, { params }: Params) {
     const userId = new mongoose.Types.ObjectId(session.user.id);
     const centerId = params.id;
 
-    // HQ_ADMIN can update any center.
-    // CENTER_ADMIN can update their own assigned center(s).
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
     const isCenterAdminForThisCenter = await checkPermission(userId, "CENTER_ADMIN", { centerId });
 
@@ -73,7 +64,7 @@ export async function PUT(request: Request, { params }: Params) {
 
     const body = await request.json();
     await connectToDB();
-    const updatedCenter = await updateCenterService(centerId, body);
+    const updatedCenter = await centerService.updateCenter(centerId, body); // Corrected: Use service object
 
     if (!updatedCenter) {
       return NextResponse.json({ message: "Center not found or update failed" }, { status: 404 });
@@ -91,7 +82,7 @@ export async function PUT(request: Request, { params }: Params) {
  */
 export async function DELETE(request: Request, { params }: Params) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -106,12 +97,11 @@ export async function DELETE(request: Request, { params }: Params) {
     }
 
     await connectToDB();
-    const deletedCenter = await deleteCenterService(centerId);
+    const deletedCenter = await centerService.deleteCenter(centerId); // Corrected: Use service object
 
     if (!deletedCenter) {
       return NextResponse.json({ message: "Center not found or delete failed" }, { status: 404 });
     }
-    // Note: deleteCenterService should ideally handle cascading deletes or disassociations.
     return NextResponse.json({ message: "Center deleted successfully" }, { status: 200 });
   } catch (error: any) {
     console.error(`Failed to delete center ${params.id}:`, error);

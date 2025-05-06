@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-// Correct the authOptions import path if it's directly from auth.ts or auth-config.ts
-// Assuming authOptions is part of the handlers export from auth.ts or defined in auth-config
-import { authOptions } from "@/auth"; // This might need to be authConfig if authOptions is not directly exported
-import { createCenterService, getAllCentersService } from "@/services/centerService";
-import { connectToDB } from "@/lib/mongodb";
-import { checkPermission } from "@/lib/permissions"; // Corrected import for permission checking
+import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
+import { centerService } from "@/services/centerService"; // Assuming centerService exports an object
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
+import { checkPermission } from "@/lib/permissions"; 
 import mongoose from "mongoose";
 
 /**
@@ -14,7 +11,7 @@ import mongoose from "mongoose";
  */
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions); // Use authOptions if that's how your NextAuth is configured
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -28,7 +25,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     await connectToDB();
-    const newCenter = await createCenterService(body);
+    const newCenter = await centerService.createCenter(body); // Corrected: Use service object
     return NextResponse.json(newCenter, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create center:", error);
@@ -43,7 +40,7 @@ export async function POST(request: Request) {
  */
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Corrected: Use auth() to get session
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -56,14 +53,8 @@ export async function GET(request: Request) {
     const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
 
     if (hasHQAdminPermission) {
-      centers = await getAllCentersService();
+      centers = await centerService.getAllCenters(); // Corrected: Use service object
     } else {
-      // Non-HQ_ADMINs currently see no centers via this global endpoint.
-      // Future: Implement logic to return centers they are admin of, e.g.,
-      // const userWithRoles = await User.findById(userId).select("assignedRoles").lean();
-      // const centerAdminRoles = userWithRoles.assignedRoles.filter(r => r.role === "CENTER_ADMIN" && r.centerId);
-      // const accessibleCenterIds = centerAdminRoles.map(r => r.centerId);
-      // centers = await Center.find({ _id: { $in: accessibleCenterIds } });
       return NextResponse.json({ message: "Forbidden: Access restricted or no centers assigned" }, { status: 403 }); 
     }
     

@@ -19,11 +19,7 @@ import {
   ListIcon,
   AlertTriangleIcon,
 } from "lucide-react";
-import {
-  getAllSocialMediaAccountsService,
-  updateFollowerCountService, // Assuming this updates a single account
-  // updateAllFollowerCountsService, // Assuming a service for this exists if used
-} from "@/services/socialMediaService"; // Adjusted import
+import { socialMediaService } from "@/services/socialMediaService"; // Corrected: This will now import the object containing all service methods
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ISocialMediaAccount, SocialMediaPlatform, IFollowerHistoryEntry } from "@/models/socialMediaAccount"; // Import the interface
@@ -88,7 +84,7 @@ export default function SocialMediaTrackerPage() {
         // For now, let's assume they see all by default, or you can add UI filters for them
       }
 
-      const data = await getAllSocialMediaAccountsService(filters);
+      const data = await socialMediaService.getAllSocialMediaAccounts(filters); // Corrected: Use the imported object
       // Ensure _id is string if necessary, and other transformations
       const transformedData = data.map(acc => ({
         ...acc,
@@ -120,7 +116,7 @@ export default function SocialMediaTrackerPage() {
     try {
       setIsUpdating(true);
       // Replace with actual service if available
-      // await updateAllFollowerCountsService(); 
+      // await socialMediaService.updateAllFollowerCounts(); // Corrected: Use the imported object
       await mockUpdateAllFollowersService();
       await fetchAccounts();
       toast({
@@ -142,7 +138,7 @@ export default function SocialMediaTrackerPage() {
   const updateAccountFollowers = async (id: string) => {
     if (!canManageSocialMedia) return;
     try {
-      await updateFollowerCountService(id, 0); // The `0` here is a placeholder, the service should fetch the actual count
+      await socialMediaService.updateFollowerCount(id, 0); // Corrected: Use the imported object. The `0` here is a placeholder, the service should fetch the actual count
       await fetchAccounts();
       toast({
         title: "Followers updated",

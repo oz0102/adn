@@ -1,6 +1,15 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type SocialMediaPlatform = "Facebook" | "Instagram" | "Twitter" | "YouTube" | "LinkedIn" | "TikTok" | "Other";
+// Changed from type to enum to allow runtime usage (e.g., Object.values)
+export enum SocialMediaPlatform {
+  Facebook = "Facebook",
+  Instagram = "Instagram",
+  Twitter = "Twitter",
+  YouTube = "YouTube",
+  LinkedIn = "LinkedIn",
+  TikTok = "TikTok",
+  Other = "Other"
+}
 
 export interface IFollowerHistoryEntry {
   date: Date;
@@ -8,18 +17,18 @@ export interface IFollowerHistoryEntry {
 }
 
 export interface ISocialMediaAccount extends Document {
-  platform: SocialMediaPlatform;
+  platform: SocialMediaPlatform; // Now uses the enum
   username: string;
   link: string;
   followerCount: number;
   lastFollowerUpdate?: Date;
   followerHistory: IFollowerHistoryEntry[];
-  scope: "HQ" | "CENTER"; // To define if it's an HQ account or Center-specific
-  centerId?: mongoose.Types.ObjectId; // Required if scope is "CENTER"
+  scope: "HQ" | "CENTER";
+  centerId?: mongoose.Types.ObjectId;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
-  createdBy?: mongoose.Types.ObjectId; // User who added this account
+  createdBy?: mongoose.Types.ObjectId;
 }
 
 const FollowerHistorySchema = new Schema({
@@ -32,7 +41,7 @@ const SocialMediaAccountSchema: Schema = new Schema(
     platform: {
       type: String,
       required: true,
-      enum: ["Facebook", "Instagram", "Twitter", "YouTube", "LinkedIn", "TikTok", "Other"]
+      enum: Object.values(SocialMediaPlatform) // Use enum values for Mongoose enum validator
     },
     username: {
       type: String,
@@ -60,7 +69,7 @@ const SocialMediaAccountSchema: Schema = new Schema(
     centerId: {
       type: Schema.Types.ObjectId,
       ref: "Center",
-      sparse: true // Required if scope is "CENTER"
+      sparse: true
     },
     notes: { type: String, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" }
@@ -70,14 +79,11 @@ const SocialMediaAccountSchema: Schema = new Schema(
   }
 );
 
-// Compound index for platform, username, and centerId (if present) to ensure uniqueness per scope
 SocialMediaAccountSchema.index({ platform: 1, username: 1, centerId: 1 }, { unique: true, partialFilterExpression: { centerId: { $exists: true } } });
 SocialMediaAccountSchema.index({ platform: 1, username: 1, scope: 1 }, { unique: true, partialFilterExpression: { centerId: { $exists: false }, scope: "HQ" } });
-
 SocialMediaAccountSchema.index({ scope: 1 });
 SocialMediaAccountSchema.index({ centerId: 1 });
 
-// Custom validator to ensure centerId is present if scope is "CENTER"
 SocialMediaAccountSchema.path("centerId").validate(function (value: any) {
   if (this.scope === "CENTER") {
     return !!value;
@@ -85,5 +91,7 @@ SocialMediaAccountSchema.path("centerId").validate(function (value: any) {
   return true;
 }, "Center ID is required when social media account scope is CENTER.");
 
-export default mongoose.models.SocialMediaAccount || mongoose.model<ISocialMediaAccount>("SocialMediaAccount", SocialMediaAccountSchema);
+const SocialMediaAccountModel = mongoose.models.SocialMediaAccount || mongoose.model<ISocialMediaAccount>("SocialMediaAccount", SocialMediaAccountSchema);
+
+export default SocialMediaAccountModel;
 

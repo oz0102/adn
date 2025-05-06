@@ -1,9 +1,9 @@
 // services/smallGroupService.ts
-import SmallGroupModel, { ISmallGroup } from "@/models/smallGroup"; // Removed IAddress import
+import SmallGroupModel, { ISmallGroup } from "@/models/smallGroup";
 import ClusterModel, { ICluster } from "@/models/cluster";
 import CenterModel, { ICenter } from "@/models/center";
-import MemberModel, { IMember, IAddress } from "@/models/member"; // Added IAddress import from member
-import connectToDB from "@/lib/mongodb";
+import MemberModel, { IMember, IAddress } from "@/models/member";
+import { connectToDB } from "@/lib/mongodb"; // Changed to named import
 import mongoose, { Types, FilterQuery } from "mongoose"; 
 
 export interface ISmallGroupCreatePayload {
@@ -44,7 +44,7 @@ export type PopulatedLeanSmallGroup = Omit<ISmallGroup, "clusterId" | "centerId"
   };
 };
 
-export const createSmallGroupService = async (data: ISmallGroupCreatePayload): Promise<ISmallGroup> => {
+const createSmallGroup = async (data: ISmallGroupCreatePayload): Promise<ISmallGroup> => {
   await connectToDB();
   const clusterIdObj = new Types.ObjectId(data.clusterId.toString());
   const centerIdObj = new Types.ObjectId(data.centerId.toString());
@@ -83,7 +83,7 @@ export const createSmallGroupService = async (data: ISmallGroupCreatePayload): P
   return populatedSmallGroup!;
 };
 
-export const getAllSmallGroupsService = async (clusterId?: string, centerId?: string): Promise<PopulatedLeanSmallGroup[]> => {
+const getAllSmallGroups = async (clusterId?: string, centerId?: string): Promise<PopulatedLeanSmallGroup[]> => {
   await connectToDB();
   const query: FilterQuery<ISmallGroup> = {};
   if (clusterId && Types.ObjectId.isValid(clusterId)) {
@@ -103,7 +103,7 @@ export const getAllSmallGroupsService = async (clusterId?: string, centerId?: st
   return smallGroups;
 };
 
-export const getSmallGroupByIdService = async (id: string): Promise<PopulatedLeanSmallGroup | null> => {
+const getSmallGroupById = async (id: string): Promise<PopulatedLeanSmallGroup | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
   const smallGroup = await SmallGroupModel.findById(id)
@@ -118,7 +118,7 @@ interface LeanSmallGroupWithPopulatedCluster extends Omit<ISmallGroup, "clusterI
     clusterId?: (Pick<ICluster, "_id" | "centerId"> & { _id: Types.ObjectId }) | null;
 }
 
-export const updateSmallGroupService = async (id: string, data: ISmallGroupUpdatePayload): Promise<PopulatedLeanSmallGroup | null> => {
+const updateSmallGroup = async (id: string, data: ISmallGroupUpdatePayload): Promise<PopulatedLeanSmallGroup | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
 
@@ -173,7 +173,7 @@ export const updateSmallGroupService = async (id: string, data: ISmallGroupUpdat
   return updatedSmallGroup;
 };
 
-export const deleteSmallGroupService = async (id: string): Promise<PopulatedLeanSmallGroup | null> => {
+const deleteSmallGroup = async (id: string): Promise<PopulatedLeanSmallGroup | null> => {
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
   const deletedSmallGroup = await SmallGroupModel.findByIdAndDelete(id)
@@ -181,3 +181,10 @@ export const deleteSmallGroupService = async (id: string): Promise<PopulatedLean
   return deletedSmallGroup;
 };
 
+export const smallGroupService = {
+    createSmallGroup,
+    getAllSmallGroups,
+    getSmallGroupById,
+    updateSmallGroup,
+    deleteSmallGroup
+};

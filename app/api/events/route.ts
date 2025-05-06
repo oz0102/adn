@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth"; // Changed to use auth()
 import {
-  createEventService,
-  getAllEventsService
+  eventService // Assuming eventService is an object with methods
 } from "@/services/eventService";
-import { connectToDB } from "@/lib/mongodb";
+import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
 
-/**
- * Handles POST requests to create a new Event.
- * Requires HQ_ADMIN or CENTER_ADMIN (if scope is CENTER and for that centerId).
- */
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -34,14 +28,13 @@ export async function POST(request: Request) {
     if (!hasPermissionToCreate && scope === "CENTER") {
       hasPermissionToCreate = await checkPermission(userId, "CENTER_ADMIN", { centerId });
     }
-    // Add more granular permissions if event creation is allowed by other roles (e.g., event manager role)
 
     if (!hasPermissionToCreate) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to create event for this scope" }, { status: 403 });
     }
     
-    body.createdBy = userId; // Add createdBy field
-    const newEvent = await createEventService(body);
+    body.createdBy = userId; 
+    const newEvent = await eventService.createEvent(body); // Changed to use eventService
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error: any) {
     console.error("Failed to create event:", error);
@@ -52,15 +45,9 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * Handles GET requests to retrieve Events.
- * Filters by scope (HQ/CENTER) and centerId, and other event properties.
- */
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    // Public events might be viewable without login, or by any logged-in user for HQ scope.
-    // For now, requiring login for all event viewing.
+    const session = await auth(); 
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -72,7 +59,7 @@ export async function GET(request: Request) {
     searchParams.forEach((value, key) => {
         if (key === "page" || key === "limit") {
             filters[key] = parseInt(value, 10);
-        } else if (key === "startDateBefore" || key === "startDateAfter") {
+        } else if (key === "startDateBefore" || key === "startDateAfter" || key === "endDateBefore" || key === "endDateAfter") { // Added endDate filters
             filters[key] = new Date(value);
         } else {
             filters[key] = value;
@@ -80,36 +67,44 @@ export async function GET(request: Request) {
     });
 
     await connectToDB();
-    let canView = await checkPermission(userId, "HQ_ADMIN"); // HQ Admin can see all
+    let canViewAll = await checkPermission(userId, "HQ_ADMIN"); 
 
-    // If not HQ_ADMIN, apply scope-based viewing logic
-    // All logged-in users can see HQ events by default.
-    // For CENTER events, they must be admin of that center or it's a public event (not implemented yet).
-    if (!canView) {
+    const userPermissions = session.user.permissions || []; // Assuming permissions are on session.user
+
+    if (!canViewAll) {
+        const adminOfCenterIds = userPermissions
+            .filter(p => p.role === "CENTER_ADMIN" && p.centerId)
+            .map(p => p.centerId!.toString());
+
         if (filters.scope === "CENTER" && filters.centerId) {
-            canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: filters.centerId });
-            // If not center admin, they can still view if it's their center (e.g. member of that center)
-            // This requires linking user to member and member to center. For now, only admin view.
-        } else if (filters.scope === "HQ") {
-            canView = true; // All logged-in users can view HQ events
+            if (!adminOfCenterIds.includes(filters.centerId.toString())) {
+                 return NextResponse.json({ message: "Forbidden: Insufficient permissions to view events for this center" }, { status: 403 });
+            }
+        } else if (filters.scope === "CENTER" && !filters.centerId) {
+            // If requesting all center events but not HQ_ADMIN, restrict to their admin centers
+            if (adminOfCenterIds.length > 0) {
+                filters.centerId = { $in: adminOfCenterIds.map(id => new mongoose.Types.ObjectId(id)) };
+            } else {
+                // No centers administered, and not HQ_ADMIN, so cannot view general CENTER scope
+                return NextResponse.json({ message: "Forbidden: No centers administered to view events for this scope" }, { status: 403 });
+            }
         } else if (!filters.scope && !filters.centerId) {
-            // No specific scope requested by non-HQ_ADMIN. 
-            // Default to showing HQ events and events from centers they administer.
-            // This is more complex: would need to fetch user's roles, get their centerIds, then OR query.
-            // For simplicity now: if no scope, and not HQ_ADMIN, they only see HQ events by default.
-            filters.scope = "HQ";
-            canView = true;
-        } else {
-            // If a centerId is provided without scope=CENTER, or other ambiguous cases for non-HQ_ADMIN
-            return NextResponse.json({ message: "Forbidden: Insufficient permissions or ambiguous scope for your role." }, { status: 403 });
+            // Default: Show HQ events and events from administered centers
+            const orConditions = [{ scope: "HQ" }];
+            if (adminOfCenterIds.length > 0) {
+                orConditions.push({ scope: "CENTER", centerId: { $in: adminOfCenterIds.map(id => new mongoose.Types.ObjectId(id)) } });
+            }
+            filters.$or = orConditions;
+            delete filters.scope; // Remove scope if $or is used
+            delete filters.centerId; // Remove centerId if $or is used
+        } else if (filters.scope !== "HQ") {
+             return NextResponse.json({ message: "Forbidden: Insufficient permissions or ambiguous scope for your role." }, { status: 403 });
         }
+        // If filters.scope is HQ, any logged-in user can view (implicit by not returning 403 earlier)
     }
+    // If canViewAll (HQ_ADMIN), no additional scope filtering needed here, service will handle filters as is.
 
-    if (!canView && !(filters.scope === "HQ")) { // Double check if not HQ_ADMIN and trying to access restricted center events
-         return NextResponse.json({ message: "Forbidden: Insufficient permissions to view events for this scope" }, { status: 403 });
-    }
-
-    const result = await getAllEventsService(filters);
+    const result = await eventService.getAllEvents(filters, userPermissions, userId); // Changed to use eventService, pass permissions and userId
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Failed to retrieve events:", error);
