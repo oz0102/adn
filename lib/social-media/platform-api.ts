@@ -1,5 +1,5 @@
 // Update platform-api.ts to integrate all social media API implementations
-import axios from 'axios';
+// import axios from 'axios'; // Removed unused import
 import { SocialMediaPlatform } from '@/models/socialMediaAccount';
 import { getTelegramFollowers } from './telegram-scraper';
 import { createTwitterApiClient } from './twitter-api';
@@ -17,17 +17,17 @@ interface PlatformApiHandler {
 // Factory to get the appropriate API handler for each platform
 export function getPlatformApiHandler(platform: SocialMediaPlatform): PlatformApiHandler {
   switch (platform) {
-    case SocialMediaPlatform.TELEGRAM:
+    case SocialMediaPlatform.Telegram:
       return new TelegramApiHandler();
-    case SocialMediaPlatform.TWITTER:
+    case SocialMediaPlatform.Twitter:
       return new TwitterApiHandler();
-    case SocialMediaPlatform.FACEBOOK:
+    case SocialMediaPlatform.Facebook:
       return new FacebookApiHandler();
-    case SocialMediaPlatform.YOUTUBE:
+    case SocialMediaPlatform.YouTube:
       return new YouTubeApiHandler();
-    case SocialMediaPlatform.INSTAGRAM:
+    case SocialMediaPlatform.Instagram:
       return new InstagramApiHandler();
-    case SocialMediaPlatform.TIKTOK:
+    case SocialMediaPlatform.TikTok:
       return new TikTokApiHandler();
     default:
       throw new Error(`Unsupported platform: ${platform}`);

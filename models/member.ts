@@ -277,10 +277,6 @@ MemberSchema.index({ smallGroupId: 1 });
 MemberSchema.index({ 'teams.teamId': 1 });
 MemberSchema.index({ dateOfBirth: 1 });
 
-// Remove old individual unique indexes if they were explicitly defined outside the schema definition
-// MemberSchema.index({ memberId: 1 }, { unique: true }); // REMOVE/REPLACED
-// MemberSchema.index({ email: 1 }, { unique: true }); // REMOVE/REPLACED - Note: current code has no unique constraint on email
-// MemberSchema.index({ phoneNumber: 1 }); // REMOVE/REPLACED - Note: current code has no unique constraint on phoneNumber
 
 export default mongoose.models.Member || mongoose.model<IMember>('Member', MemberSchema);
 

@@ -129,13 +129,13 @@ const NotificationSchema: Schema = new Schema(
       required: true
     }, 
     targetId: {
-      type: Schema.Types.ObjectId,
-      sparse: true 
+      type: Schema.Types.ObjectId
+      // sparse: true 
     }, 
     originatorCenterId: {
       type: Schema.Types.ObjectId,
-      ref: 'Center',
-      sparse: true
+      ref: 'Center'
+      // sparse: true
     }, 
     createdBy: { // Added
       type: Schema.Types.ObjectId,

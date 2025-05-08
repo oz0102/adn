@@ -1,6 +1,6 @@
 // Alert dialog component for confirming social media account deletion
-'use client'
-import React from 'react';
+"use client"
+import React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,15 +10,31 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@/components/ui/alert-dialog';
-import { socialMediaService } from '@/services/socialMediaService';
-import { toast } from '@/components/ui/use-toast';
+} from "@/components/ui/alert-dialog";
+import { socialMediaService } from "@/services/socialMediaService";
+import { toast } from "@/components/ui/use-toast";
+
+interface AccountForDelete {
+  _id: string;
+  platform?: string;
+  username?: string;
+}
 
 interface DeleteAccountDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  account: any;
+  account: AccountForDelete;
   onSuccess: () => void;
+}
+
+// Define a type for the expected structure of an API error response
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+  message?: string; // To also accommodate standard Error objects
 }
 
 export const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({
@@ -32,17 +48,30 @@ export const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({
       await socialMediaService.deleteAccount(account._id);
       
       toast({
-        title: 'Account deleted',
-        description: 'Social media account has been deleted successfully.'
+        title: "Account deleted",
+        description: "Social media account has been deleted successfully."
       });
       
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorMessage = "Something went wrong. Please try again.";
+      
+      if (typeof error === "object" && error !== null) {
+        const apiError = error as ApiError; // Type assertion
+        if (apiError.response?.data?.error) {
+          errorMessage = apiError.response.data.error;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+      }
+
       toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Something went wrong. Please try again.',
-        variant: 'destructive'
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
       });
     }
   };

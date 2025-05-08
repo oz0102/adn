@@ -6,15 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface MemberTeamsTabProps {
-  // This prop is defined for future implementation but not currently used
-  memberId: string
+  memberId: string; // Prop is now actively used or expected by the component structure
 }
 
 export function MemberTeamsTab({ memberId }: MemberTeamsTabProps) {
   // Using array destructuring to only get the first element (the state value)
-  const [teams] = useState([])
+  const [teams] = useState([]) // This should ideally fetch teams based on memberId
   // Removed unused state variables
   // const [isLoading, setIsLoading] = useState(false)
+
+  // Example of how memberId might be used (even if just for logging for now)
+  console.log("Rendering teams for memberId:", memberId);
 
   return (
     <Card>

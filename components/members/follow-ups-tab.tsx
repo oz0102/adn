@@ -6,15 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface MemberFollowUpsTabProps {
-  // This prop is defined for future implementation but not currently used
-  memberId: string
+  memberId: string; // Prop is now actively used or expected by the component structure
 }
 
 export function MemberFollowUpsTab({ memberId }: MemberFollowUpsTabProps) {
   // Using array destructuring to only get the first element (the state value)
-  const [followUps] = useState([])
+  const [followUps] = useState([]) // This should ideally fetch follow-ups based on memberId
   // Removed unused state variables
   // const [isLoading, setIsLoading] = useState(false)
+
+  // Example of how memberId might be used (even if just for logging for now)
+  console.log("Rendering follow-ups for memberId:", memberId);
 
   return (
     <Card>

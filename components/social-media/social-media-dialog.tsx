@@ -4,14 +4,24 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SocialMediaForm } from './social-media-form';
-import { SocialMediaAccountFormValues } from '@/lib/validations/social-media';
+import { SocialMediaAccountFormValues, SocialMediaPlatform } from '@/lib/validations/social-media'; // Added SocialMediaPlatform
 import { socialMediaService } from '@/services/socialMediaService';
 import { toast } from '@/components/ui/use-toast';
+
+// Define a more specific type for initialData, matching expected structure
+interface InitialSocialMediaData {
+  _id: string;
+  platform: SocialMediaPlatform;
+  username: string;
+  link: string;
+  notes?: string;
+  // Add other fields that might be part of initialData if necessary
+}
 
 interface SocialMediaDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  initialData?: any;
+  initialData?: InitialSocialMediaData; // Changed from any
   onSuccess: () => void;
 }
 
@@ -28,7 +38,7 @@ export const SocialMediaDialog: React.FC<SocialMediaDialogProps> = ({
     try {
       setIsSubmitting(true);
       
-      if (isEditing) {
+      if (isEditing && initialData) { // Added null check for initialData
         await socialMediaService.updateAccount(initialData._id, data);
         toast({
           title: 'Account updated',
@@ -44,10 +54,22 @@ export const SocialMediaDialog: React.FC<SocialMediaDialogProps> = ({
       
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) { // Changed from any
+      let errorMessage = 'Something went wrong. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      // Attempt to get a more specific error message if it's an API error response
+      if (typeof error === 'object' && error !== null && 'response' in error && 
+          typeof (error as any).response === 'object' && (error as any).response !== null && 
+          'data' in (error as any).response && typeof (error as any).response.data === 'object' && 
+          (error as any).response.data !== null && 'error' in (error as any).response.data) {
+        errorMessage = (error as any).response.data.error;
+      }
+
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Something went wrong. Please try again.',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

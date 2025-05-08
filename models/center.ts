@@ -52,8 +52,6 @@ const CenterSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-CenterSchema.index({ name: 1 });
-
 // A common pattern for Next.js with Mongoose is to check if the model already exists
 export default mongoose.models.Center || mongoose.model<ICenter>('Center', CenterSchema);
 

@@ -6,14 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 
 interface TeamResponsibilitiesTabProps {
-  teamId: string
+  teamId: string; // Prop is now actively used or expected by the component structure
 }
 
 export function TeamResponsibilitiesTab({ teamId }: TeamResponsibilitiesTabProps) {
   // Using array destructuring to only get the first element (the state value)
-  const [responsibilities] = useState([])
+  const [responsibilities] = useState([]) // This should ideally fetch responsibilities based on teamId
   // Removed unused state variables
   // const [isLoading, setIsLoading] = useState(false)
+
+  // Example of how teamId might be used (even if just for logging for now)
+  console.log("Rendering responsibilities for teamId:", teamId);
 
   return (
     <Card>

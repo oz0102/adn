@@ -1,33 +1,40 @@
 // Follower tracking service for scheduled updates
-import connectToDatabase from '@/lib/db';
-import SocialMediaAccount, { SocialMediaPlatform } from '@/models/socialMediaAccount';
-import { getPlatformApiHandler } from './platform-api';
+import connectToDatabase from "@/lib/db";
+// Attempt to import ISocialMediaAccount, if it fails, we might need to define it or use a more generic Mongoose type
+import SocialMediaAccount, { ISocialMediaAccount, SocialMediaPlatform } from "@/models/socialMediaAccount";
+import { getPlatformApiHandler } from "./platform-api";
+
+// Define the structure for growth metrics based on typical usage
+interface GrowthMetric {
+  count: number;
+  percentage: number; // Assuming this structure, adjust if model method returns differently
+}
+
+// Define the type for the result of updating a single account
+interface UpdateAccountResult {
+  account: ISocialMediaAccount; // Using the imported interface for the account document
+  weeklyGrowth: GrowthMetric;   // Using the defined GrowthMetric type
+  monthlyGrowth: GrowthMetric;  // Using the defined GrowthMetric type
+}
 
 /**
  * Updates follower count for a specific social media account
  * @param accountId The MongoDB ID of the account to update
  * @returns The updated account with follower count and growth metrics
  */
-export async function updateAccountFollowers(accountId: string) {
+export async function updateAccountFollowers(accountId: string): Promise<UpdateAccountResult> { // Added return type
   try {
     await connectToDatabase();
     
-    // Find the account
     const account = await SocialMediaAccount.findById(accountId);
     if (!account) {
       throw new Error(`Account not found with ID: ${accountId}`);
     }
     
-    // Get the appropriate API handler for this platform
     const apiHandler = getPlatformApiHandler(account.platform as SocialMediaPlatform);
-    
-    // Get current follower count
     const followerCount = await apiHandler.getFollowerCount(account.username, account.url);
-    
-    // Update account with new follower count
     const now = new Date();
     
-    // Add to history only if count has changed or it's been at least 24 hours since last update
     const shouldAddToHistory = 
       followerCount !== account.currentFollowers || 
       !account.lastUpdated || 
@@ -45,7 +52,6 @@ export async function updateAccountFollowers(accountId: string) {
     
     await account.save();
     
-    // Calculate growth metrics
     const weeklyGrowth = account.getWeeklyGrowth();
     const monthlyGrowth = account.getMonthlyGrowth();
     
@@ -68,21 +74,18 @@ export async function updateAllAccountFollowers() {
   try {
     await connectToDatabase();
     
-    // Get all accounts
     const accounts = await SocialMediaAccount.find({});
     
-    // Track results
     const results = {
       total: accounts.length,
       successful: 0,
       failed: 0,
-      updatedAccounts: [] as any[]
+      updatedAccounts: [] as UpdateAccountResult[] // Applied the defined type here
     };
     
-    // Update each account
     for (const account of accounts) {
       try {
-        const result = await updateAccountFollowers(account._id);
+        const result = await updateAccountFollowers(account._id.toString()); // Ensure _id is string if needed
         results.successful++;
         results.updatedAccounts.push(result);
       } catch (error) {
@@ -93,7 +96,7 @@ export async function updateAllAccountFollowers() {
     
     return results;
   } catch (error) {
-    console.error('Error updating all account followers:', error);
+    console.error("Error updating all account followers:", error);
     throw error;
   }
 }
@@ -104,12 +107,12 @@ export async function updateAllAccountFollowers() {
  */
 export async function scheduleFollowerUpdates() {
   try {
-    console.log('Starting scheduled follower count updates');
+    console.log("Starting scheduled follower count updates");
     const results = await updateAllAccountFollowers();
     console.log(`Completed scheduled updates: ${results.successful}/${results.total} successful`);
     return results;
   } catch (error) {
-    console.error('Error in scheduled follower updates:', error);
+    console.error("Error in scheduled follower updates:", error);
     throw error;
   }
 }

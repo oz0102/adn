@@ -40,11 +40,11 @@ interface TeamMember {
 }
 
 interface TeamMembersTabProps {
-  teamId: string;
+  // teamId: string; // Commented out as it's not used
   members: TeamMember[];
 }
 
-export function TeamMembersTab({ teamId, members }: TeamMembersTabProps) {
+export function TeamMembersTab({ /* teamId, */ members }: TeamMembersTabProps) { // Commented out teamId prop
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("")

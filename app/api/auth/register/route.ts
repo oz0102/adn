@@ -78,7 +78,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     };
     
     return NextResponse.json(response, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error registering user:', error);
     
     const response: ApiResponse<null> = {

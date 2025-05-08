@@ -1,4 +1,4 @@
-import User, { IUser } from "@/models/user";
+import User from "@/models/user";
 import { connectToDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 

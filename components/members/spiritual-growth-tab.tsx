@@ -103,9 +103,56 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
   })
 
   useEffect(() => {
-    fetchSpiritualGrowth()
-  }, [memberId])
+    // Define fetchSpiritualGrowth inside useEffect or wrap it in useCallback
+    const fetchSpiritualGrowthData = async () => {
+      try {
+        setIsLoading(true)
+        
+        const response = await fetch(`/api/members/${memberId}/spiritual-growth`)
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch spiritual growth data")
+        }
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          const stagesArray: SpiritualGrowthStage[] = []
+          
+          if (data.data) {
+            Object.entries(data.data).forEach(([key, value]: [string, SpiritualGrowthStageData]) => {
+              if (value && value.date) {
+                stagesArray.push({
+                  stage: key,
+                  date: value.date,
+                  notes: value.notes
+                })
+              }
+            })
+          }
+          
+          stagesArray.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          
+          setStages(stagesArray)
+        } else {
+          throw new Error(data.message || "Failed to fetch spiritual growth data")
+        }
+      } catch (error) {
+        console.error("Error fetching spiritual growth:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load spiritual growth data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
+    fetchSpiritualGrowthData()
+  }, [memberId, toast]) // Removed fetchSpiritualGrowth from dependencies, added toast
+
+  // This function is now defined outside useEffect or should be wrapped in useCallback if it were a dependency
   const fetchSpiritualGrowth = async () => {
     try {
       setIsLoading(true)
@@ -113,17 +160,16 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
       const response = await fetch(`/api/members/${memberId}/spiritual-growth`)
       
       if (!response.ok) {
-        throw new Error('Failed to fetch spiritual growth data')
+        throw new Error("Failed to fetch spiritual growth data")
       }
       
       const data = await response.json()
       
       if (data.success) {
-        // Convert the spiritual growth object to an array of stages
         const stagesArray: SpiritualGrowthStage[] = []
         
         if (data.data) {
-          Object.entries(data.data).forEach(([key, value]: [string, any]) => {
+          Object.entries(data.data).forEach(([key, value]: [string, SpiritualGrowthStageData]) => {
             if (value && value.date) {
               stagesArray.push({
                 stage: key,
@@ -134,12 +180,11 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
           })
         }
         
-        // Sort by date
         stagesArray.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         
         setStages(stagesArray)
       } else {
-        throw new Error(data.message || 'Failed to fetch spiritual growth data')
+        throw new Error(data.message || "Failed to fetch spiritual growth data")
       }
     } catch (error) {
       console.error("Error fetching spiritual growth:", error)

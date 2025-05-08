@@ -80,7 +80,7 @@ const EventSchema: Schema = new Schema(
     centerId: {
       type: Schema.Types.ObjectId,
       ref: 'Center',
-      sparse: true, // Required if scope is 'CENTER', otherwise can be null
+      // sparse: true, // Required if scope is 'CENTER', otherwise can be null
       // Add a custom validator if needed to enforce this based on scope value
     }, // Added field
     createdBy: { 

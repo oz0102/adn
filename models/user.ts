@@ -31,9 +31,9 @@ const AssignedRoleSchema: Schema = new Schema({
     required: true,
     enum: ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER", "MEMBER_ADMIN", "REGULAR_MEMBER"] // Define comprehensive roles
   },
-  centerId: { type: Schema.Types.ObjectId, ref: "Center", sparse: true },
-  clusterId: { type: Schema.Types.ObjectId, ref: "Cluster", sparse: true },
-  smallGroupId: { type: Schema.Types.ObjectId, ref: "SmallGroup", sparse: true }
+  centerId: { type: Schema.Types.ObjectId, ref: "Center" },
+  clusterId: { type: Schema.Types.ObjectId, ref: "Cluster" },
+  smallGroupId: { type: Schema.Types.ObjectId, ref: "SmallGroup" }
 }, { _id: false });
 
 const UserSchema: Schema = new Schema(

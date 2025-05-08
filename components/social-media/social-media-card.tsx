@@ -4,9 +4,9 @@
 import React from "react"; // Added React import
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+// import { Badge } from "@/components/ui/badge"; // Removed unused import
 import { ArrowUpIcon, ArrowDownIcon, RefreshCwIcon, ExternalLinkIcon, MoreVerticalIcon, EditIcon, Trash2Icon } from "lucide-react";
-import { SocialMediaPlatform, IFollowerHistoryEntry } from "@/models/socialMediaAccount"; // Import IFollowerHistoryEntry
+import { SocialMediaPlatform } from "@/models/socialMediaAccount"; // Removed IFollowerHistoryEntry as it's not used here
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PopulatedSocialMediaAccount } from "@/app/(dashboard)/social-media/page"; // Import the type from the page
@@ -27,10 +27,9 @@ export const PlatformIcon = ({ platform }: { platform: SocialMediaPlatform }) =>
 };
 
 // Growth indicator component
-export const GrowthIndicator = ({ value, period }: { value: number; period: string }) => {
+export const GrowthIndicator = ({ value }: { value: number }) => {
   const absValue = Math.abs(value);
   const displayValue = isNaN(absValue) ? "N/A" : absValue.toLocaleString();
-  let percentageText = "";
 
   // This is a simplified growth display. Real percentage would need previous value.
   // For now, just showing the count.
@@ -40,7 +39,6 @@ export const GrowthIndicator = ({ value, period }: { value: number; period: stri
       <div className="flex items-center text-green-600">
         <ArrowUpIcon className="h-4 w-4 mr-1" />
         <span>{displayValue}</span>
-        {percentageText && <span className="text-xs text-muted-foreground ml-1">({percentageText})</span>}
       </div>
     );
   } else if (value < 0) {
@@ -48,7 +46,6 @@ export const GrowthIndicator = ({ value, period }: { value: number; period: stri
       <div className="flex items-center text-red-600">
         <ArrowDownIcon className="h-4 w-4 mr-1" />
         <span>{displayValue}</span>
-        {percentageText && <span className="text-xs text-muted-foreground ml-1">({percentageText})</span>}
       </div>
     );
   } else {
@@ -198,12 +195,12 @@ export const SocialMediaAccountCard = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-muted-foreground mb-1">Weekly Growth</div>
-              <GrowthIndicator value={weeklyGrowth} period="weekly" />
+              <GrowthIndicator value={weeklyGrowth} />
             </div>
             
             <div>
               <div className="text-sm text-muted-foreground mb-1">Monthly Growth</div>
-              <GrowthIndicator value={monthlyGrowth} period="monthly" />
+              <GrowthIndicator value={monthlyGrowth} />
             </div>
           </div>
           {account.notes && (

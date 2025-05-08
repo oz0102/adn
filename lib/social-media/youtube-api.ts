@@ -66,7 +66,7 @@ export class YouTubeApiClient {
         if (response.data.items && response.data.items.length > 0) {
           return response.data.items[0];
         }
-      } catch (error) {
+      } catch (_error) { // Marked error as unused
         console.log(`Could not find channel with ${paramName}=${cleanUsername}, trying search...`);
       }
       

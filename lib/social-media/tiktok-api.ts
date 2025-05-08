@@ -38,7 +38,7 @@ export class TikTokApiClient {
     timestamp: number,
     httpMethod: string,
     apiPath: string,
-    queryParams: Record<string, any> = {}
+    queryParams: Record<string, string | number> = {}
   ): string {
     // Convert query params to string
     const queryString = Object.keys(queryParams)
@@ -73,23 +73,23 @@ export class TikTokApiClient {
   async getUserByUsername(username: string) {
     try {
       // Clean the username (remove @ if present)
-      const cleanUsername = username.startsWith('@') ? username.substring(1) : username;
+      const cleanUsername = username.startsWith("@") ? username.substring(1) : username;
       
-      // TikTok Business API doesn't provide a direct way to get user info by username
+      // TikTok Business API doesn"t provide a direct way to get user info by username
       // We need to use the Creator Marketplace API which requires special permissions
       // This is a simplified implementation that would need to be adapted based on
       // the specific permissions and endpoints available to your app
       
       const timestamp = Math.floor(Date.now() / 1000);
-      const apiPath = '/business/creator/info/';
-      const queryParams = {
+      const apiPath = "/business/creator/info/";
+      const queryParams: Record<string, string | number> = { // Explicitly type queryParams
         app_id: this.apiKey,
         timestamp,
-        access_token: this.accessToken || '',
+        access_token: this.accessToken || "",
         username: cleanUsername
       };
       
-      const signature = this.generateSignature(timestamp, 'GET', apiPath, queryParams);
+      const signature = this.generateSignature(timestamp, "GET", apiPath, queryParams);
       
       const response = await axios.get(`${this.apiBaseUrl}${apiPath}`, {
         params: {
@@ -97,7 +97,7 @@ export class TikTokApiClient {
           signature
         },
         headers: {
-          'User-Agent': this.userAgent
+          "User-Agent": this.userAgent
         }
       });
       
@@ -106,9 +106,12 @@ export class TikTokApiClient {
       }
       
       throw new Error(`User not found for username: ${username}`);
-    } catch (error) {
-      console.error('Error fetching TikTok user:', error);
-      throw new Error(`Failed to fetch TikTok user: ${error.message}`);
+    } catch (error: unknown) { // Changed to unknown
+      console.error("Error fetching TikTok user:", error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to fetch TikTok user: ${error.message}`);
+      }
+      throw new Error("Failed to fetch TikTok user due to an unknown error");
     }
   }
 
@@ -121,9 +124,12 @@ export class TikTokApiClient {
     try {
       const userData = await this.getUserByUsername(username);
       return userData.follower_count || 0;
-    } catch (error) {
-      console.error('Error fetching TikTok follower count:', error);
-      throw new Error(`Failed to fetch TikTok follower count: ${error.message}`);
+    } catch (error: unknown) { // Changed to unknown
+      console.error("Error fetching TikTok follower count:", error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to fetch TikTok follower count: ${error.message}`);
+      }
+      throw new Error("Failed to fetch TikTok follower count due to an unknown error");
     }
   }
 
@@ -135,13 +141,13 @@ export class TikTokApiClient {
     try {
       // Make a simple request to verify credentials
       const timestamp = Math.floor(Date.now() / 1000);
-      const apiPath = '/oauth2/app_info/';
-      const queryParams = {
+      const apiPath = "/oauth2/app_info/";
+      const queryParams: Record<string, string | number> = { // Explicitly type queryParams
         app_id: this.apiKey,
         timestamp
       };
       
-      const signature = this.generateSignature(timestamp, 'GET', apiPath, queryParams);
+      const signature = this.generateSignature(timestamp, "GET", apiPath, queryParams);
       
       await axios.get(`${this.apiBaseUrl}${apiPath}`, {
         params: {
@@ -149,13 +155,13 @@ export class TikTokApiClient {
           signature
         },
         headers: {
-          'User-Agent': this.userAgent
+          "User-Agent": this.userAgent
         }
       });
       
       return true;
-    } catch (error) {
-      console.error('TikTok API credentials validation failed:', error);
+    } catch (error: unknown) { // Changed to unknown
+      console.error("TikTok API credentials validation failed:", error);
       return false;
     }
   }
