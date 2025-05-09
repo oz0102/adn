@@ -1,3 +1,4 @@
+//app\api\social-media\accounts\[id]\route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@/auth"; // Changed to use auth()
 import { socialMediaService } from "@/services/socialMediaService";
@@ -21,6 +22,7 @@ export async function GET(request: Request, { params }: Params) {
     }
 
     const userId = new mongoose.Types.ObjectId(session.user.id);
+    
     const accountId = params.id;
 
     await connectToDB();

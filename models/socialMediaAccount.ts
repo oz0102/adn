@@ -1,3 +1,4 @@
+//odels\socialMediaAccount.ts
 import mongoose, { Schema, Document } from "mongoose";
 
 // Changed from type to enum to allow runtime usage (e.g., Object.values)
@@ -8,12 +9,18 @@ export enum SocialMediaPlatform {
   YouTube = "YouTube",
   LinkedIn = "LinkedIn",
   TikTok = "TikTok",
+  Telegram = "Telegram",
   Other = "Other"
 }
 
 export interface IFollowerHistoryEntry {
   date: Date;
   count: number;
+}
+
+export interface GrowthResult {
+  percentage: number;
+  amount: number;
 }
 
 export interface ISocialMediaAccount extends Document {

@@ -16,12 +16,12 @@ export const PlatformIcon = ({ platform }: { platform: SocialMediaPlatform }) =>
   // Using a simple text representation for brevity, replace with actual SVGs if needed
   const iconStyle = "h-5 w-5";
   switch (platform) {
-    case SocialMediaPlatform.TWITTER: return <span className={iconStyle}>🐦</span>; // Placeholder
-    case SocialMediaPlatform.FACEBOOK: return <span className={iconStyle}>👍</span>; // Placeholder
-    case SocialMediaPlatform.YOUTUBE: return <span className={iconStyle}>▶️</span>; // Placeholder
-    case SocialMediaPlatform.INSTAGRAM: return <span className={iconStyle}>📸</span>; // Placeholder
-    case SocialMediaPlatform.TIKTOK: return <span className={iconStyle}>🎵</span>; // Placeholder
-    case SocialMediaPlatform.TELEGRAM: return <span className={iconStyle}>✈️</span>; // Placeholder
+    case SocialMediaPlatform.Twitter: return <span className={iconStyle}>🐦</span>; // Placeholder
+    case SocialMediaPlatform.Facebook: return <span className={iconStyle}>👍</span>; // Placeholder
+    case SocialMediaPlatform.YouTube: return <span className={iconStyle}>▶️</span>; // Placeholder
+    case SocialMediaPlatform.Instagram: return <span className={iconStyle}>📸</span>; // Placeholder
+    case SocialMediaPlatform.TikTok: return <span className={iconStyle}>🎵</span>; // Placeholder
+    case SocialMediaPlatform.Telegram: return <span className={iconStyle}>✈️</span>; // Placeholder
     default: return <span className={iconStyle}>🌐</span>; // Placeholder for unknown
   }
 };
@@ -56,12 +56,12 @@ export const GrowthIndicator = ({ value }: { value: number }) => {
 // Platform color mapping
 export const getPlatformColor = (platform: SocialMediaPlatform) => {
   switch (platform) {
-    case SocialMediaPlatform.TWITTER: return "bg-sky-500 text-white";
-    case SocialMediaPlatform.FACEBOOK: return "bg-blue-600 text-white";
-    case SocialMediaPlatform.YOUTUBE: return "bg-red-600 text-white";
-    case SocialMediaPlatform.INSTAGRAM: return "bg-pink-500 text-white";
-    case SocialMediaPlatform.TIKTOK: return "bg-black text-white";
-    case SocialMediaPlatform.TELEGRAM: return "bg-sky-400 text-white";
+    case SocialMediaPlatform.Twitter: return "bg-sky-500 text-white";
+    case SocialMediaPlatform.Facebook: return "bg-blue-600 text-white";
+    case SocialMediaPlatform.YouTube: return "bg-red-600 text-white";
+    case SocialMediaPlatform.Instagram: return "bg-pink-500 text-white";
+    case SocialMediaPlatform.TikTok: return "bg-black text-white";
+    case SocialMediaPlatform.Telegram: return "bg-sky-400 text-white";
     default: return "bg-gray-500 text-white";
   }
 };

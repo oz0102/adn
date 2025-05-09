@@ -10,28 +10,28 @@ async function getFollowerCount(account: ISocialMediaAccount): Promise<number> {
   const { platform, username } = account;
   
   switch (platform) {
-    case SocialMediaPlatform.TELEGRAM:
+    case SocialMediaPlatform.Telegram:
       return await fetchTelegramFollowers(username);
     
     // For other platforms, we would implement API calls here
     // These would be implemented with proper API keys and rate limiting
-    case SocialMediaPlatform.TWITTER:
+    case SocialMediaPlatform.Twitter:
       // Twitter API implementation would go here
       return 0;
       
-    case SocialMediaPlatform.FACEBOOK:
+    case SocialMediaPlatform.Facebook:
       // Facebook API implementation would go here
       return 0;
       
-    case SocialMediaPlatform.YOUTUBE:
+    case SocialMediaPlatform.YouTube:
       // YouTube API implementation would go here
       return 0;
       
-    case SocialMediaPlatform.INSTAGRAM:
+    case SocialMediaPlatform.Instagram:
       // Instagram API implementation would go here
       return 0;
       
-    case SocialMediaPlatform.TIKTOK:
+    case SocialMediaPlatform.TikTok:
       // TikTok API implementation would go here
       return 0;
       
