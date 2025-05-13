@@ -37,9 +37,9 @@ export class InstagramApiClient {
       });
       
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching Instagram Business Account:', error);
-      throw new Error(`Failed to fetch Instagram Business Account: ${error.message}`);
+      throw new Error(`Failed to fetch Instagram Business Account: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
     }
   }
 
@@ -75,9 +75,9 @@ export class InstagramApiClient {
       }
       
       throw new Error(`Instagram Business Account not found for username: ${username}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error finding Instagram Business Account by username:', error);
-      throw new Error(`Failed to find Instagram Business Account by username: ${error.message}`);
+      throw new Error(`Failed to find Instagram Business Account by username: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
     }
   }
 
@@ -95,9 +95,9 @@ export class InstagramApiClient {
       const accountData = await this.getBusinessAccount(businessId);
       
       return accountData.followers_count || 0;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching Instagram follower count:', error);
-      throw new Error(`Failed to fetch Instagram follower count: ${error.message}`);
+      throw new Error(`Failed to fetch Instagram follower count: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
     }
   }
 
@@ -119,8 +119,8 @@ export class InstagramApiClient {
       });
       
       return true;
-    } catch (error) {
-      console.error('Instagram API credentials validation failed:', error);
+    } catch (error: any) {
+      console.error('Instagram API credentials validation failed:', error?.response?.data || error);
       return false;
     }
   }
@@ -145,8 +145,8 @@ export class InstagramApiClient {
       }
       
       return null;
-    } catch (error) {
-      console.error('Error extracting Instagram username from URL:', error);
+    } catch (error: any) {
+      console.error('Error extracting Instagram username from URL:', error?.message || error);
       return null;
     }
   }

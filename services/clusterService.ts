@@ -3,8 +3,9 @@ import ClusterModel, { ICluster } from "@/models/cluster";
 import CenterModel, { ICenter } from "@/models/center";
 import MemberModel, { IMember } from "@/models/member"; 
 import { connectToDB } from "@/lib/mongodb"; // Ensured named import
-import mongoose, { Types, LeanDocument, FilterQuery } from "mongoose";
+import mongoose, { Types, Document, FilterQuery } from "mongoose";
 
+// Replace LeanDocument with Document<any, any, T> & T
 export interface IClusterCreatePayload extends Omit<Partial<ICluster>, "_id" | "centerId" | "leaderId"> {
   name: string;
   centerId: Types.ObjectId | string;
@@ -15,10 +16,11 @@ export interface IClusterUpdatePayload extends Partial<Omit<IClusterCreatePayloa
     centerId?: Types.ObjectId | string; 
 }
 
-export type PopulatedLeanCluster = Omit<LeanDocument<ICluster>, "centerId" | "leaderId"> & {
+// Update PopulatedLeanCluster type definition
+export type PopulatedLeanCluster = Omit<Document<any, any, ICluster> & ICluster, "centerId" | "leaderId"> & {
   _id: Types.ObjectId;
-  centerId: (Pick<LeanDocument<ICenter>, "_id" | "name"> & { _id: Types.ObjectId }) | null; 
-  leaderId?: (Pick<LeanDocument<IMember>, "_id" | "firstName" | "lastName" | "email"> & { _id: Types.ObjectId }) | null;
+  centerId: (Pick<Document<any, any, ICenter> & ICenter, "_id" | "name"> & { _id: Types.ObjectId }) | null; 
+  leaderId?: (Pick<Document<any, any, IMember> & IMember, "_id" | "firstName" | "lastName" | "email"> & { _id: Types.ObjectId }) | null;
 };
 
 const createCluster = async (data: IClusterCreatePayload): Promise<ICluster> => {
@@ -81,10 +83,12 @@ const updateCluster = async (id: string, data: IClusterUpdatePayload): Promise<P
   await connectToDB();
   if (!Types.ObjectId.isValid(id)) return null;
 
-  const updateData: Partial<ICluster> = { ...data };
+  // Destructure data to separate leaderId/centerId from other properties
+  const { leaderId: incomingLeaderId, centerId: incomingCenterId, ...restData } = data;
+  const updateData: Partial<ICluster> = { ...restData };
 
-  if (data.centerId) {
-    const centerIdObj = new Types.ObjectId(data.centerId.toString());
+  if (incomingCenterId) {
+    const centerIdObj = new Types.ObjectId(incomingCenterId.toString());
     const centerExists = await CenterModel.findById(centerIdObj).lean<ICenter>();
     if (!centerExists) {
       throw new Error("Invalid new Center ID: Center does not exist.");
@@ -92,19 +96,21 @@ const updateCluster = async (id: string, data: IClusterUpdatePayload): Promise<P
     updateData.centerId = centerIdObj;
   }
 
-  if (data.leaderId) {
-    const leaderIdObj = new Types.ObjectId(data.leaderId.toString());
+  if (incomingLeaderId) {
+    const leaderIdObj = new Types.ObjectId(incomingLeaderId.toString());
     const leaderExists = await MemberModel.findById(leaderIdObj).lean<IMember>();
     if (!leaderExists) {
       throw new Error("Invalid new Leader ID: Member does not exist.");
     }
     
-    const targetCenterIdStr = data.centerId?.toString() || (await ClusterModel.findById(id).select("centerId").lean<Pick<ICluster, "centerId">>())?.centerId?.toString();
+    const targetCenterIdStr = incomingCenterId?.toString() || 
+      (await ClusterModel.findById(id).select("centerId").lean<Pick<ICluster, "centerId">>())?.centerId?.toString();
+      
     if (!targetCenterIdStr) {
-        throw new Error("Cluster must have a valid center associated.");
+      throw new Error("Cluster must have a valid center associated.");
     }
     if (leaderExists.centerId?.toString() !== targetCenterIdStr) {
-        throw new Error("Cluster leader must belong to the same center as the cluster.");
+      throw new Error("Cluster leader must belong to the same center as the cluster.");
     }
     updateData.leaderId = leaderIdObj;
   } else if (data.hasOwnProperty("leaderId") && data.leaderId === null) { 

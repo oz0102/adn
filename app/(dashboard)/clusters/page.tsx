@@ -66,11 +66,24 @@ interface PaginationInfo {
   pages: number
 }
 
+// Add a User interface that includes the assignedRoles property
+// This interface defines the expected shape of the user object.
+interface User {
+  _id: string;
+  assignedRoles?: Array<{
+    role: string;
+    scopeId?: string;
+  }>;
+  // Add other user properties as needed
+}
+
 export default function ClustersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { user } = useAuthStore()
+  // Explicitly type `user` according to the local `User` interface.
+  // This tells TypeScript to expect `user` to be of type `User | null`.
+  const { user }: { user: User | null } = useAuthStore();
   
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -84,20 +97,25 @@ export default function ClustersPage() {
   const [filterCenterId, setFilterCenterId] = useState<string | null>(searchParams.get("centerId"))
   const [parentCenterName, setParentCenterName] = useState<string | null>(searchParams.get("centerName"))
 
-  const canViewAnyCluster = user ? checkPermission(user, ["HQ_ADMIN"]) : false;
-  const canCreateCluster = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], filterCenterId || undefined) : false;
+  // With `user` correctly typed as `User | null`:
+  // If `user` is truthy, `user._id` will be `string` (not undefined).
+  // This should resolve the errors for `checkPermission` calls.
+  const canViewAnyCluster = user ? checkPermission(user._id, ["HQ_ADMIN"]) : false;
+  const canCreateCluster = user ? checkPermission(user._id, ["HQ_ADMIN", "CENTER_ADMIN"], filterCenterId || undefined) : false;
 
   const fetchClusters = useCallback(async (page: number, search: string, centerIdForFilter?: string | null) => {
-    if (!user) return;
+    if (!user) return; // After this, `user` is of type `User`.
 
+    // `user.assignedRoles` is now correctly typed as `Array<{...}> | undefined`.
+    // The optional chaining `?.some` will work as expected, resolving the "property does not exist" errors.
     let hasPermissionToFetch = canViewAnyCluster;
-    if (centerIdForFilter && user.assignedRoles?.some(r => r.role === "CENTER_ADMIN" && r.scopeId === centerIdForFilter)) {
+    if (centerIdForFilter && user.assignedRoles?.some((r: { role: string; scopeId?: string }) => r.role === "CENTER_ADMIN" && r.scopeId === centerIdForFilter)) {
         hasPermissionToFetch = true;
     }
-    if (!centerIdForFilter && user.assignedRoles?.some(r => r.role === "CENTER_ADMIN") && !canViewAnyCluster) {
+    if (!centerIdForFilter && user.assignedRoles?.some((r: { role: string; scopeId?: string }) => r.role === "CENTER_ADMIN") && !canViewAnyCluster) {
         hasPermissionToFetch = true; 
     }
-    if (!hasPermissionToFetch && !canViewAnyCluster && !user.assignedRoles?.some(r => r.role === "CLUSTER_LEADER")) {
+    if (!hasPermissionToFetch && !canViewAnyCluster && !user.assignedRoles?.some((r: { role: string; scopeId?: string }) => r.role === "CLUSTER_LEADER")) {
         toast({ title: "Permission Denied", description: "You may not have permission to view all clusters. Try navigating from a center.", variant: "destructive" });
         setClusters([]);
         setPagination({ page:1, limit:10, total:0, pages:0 });
@@ -194,7 +212,9 @@ export default function ClustersPage() {
     return <p>Loading user data or user not authenticated...</p>;
   }
 
-  const canViewPage = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"]) : false;
+  // Fix type error by passing user._id instead of user object
+  const canViewPage = user ? checkPermission(user._id, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"]) : false;
+  
   if (user && !canViewPage) {
       return (
           <div className="text-center py-10">

@@ -90,9 +90,9 @@ export class YouTubeApiClient {
       }
       
       throw new Error(`Channel not found for ${usernameOrHandle}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching YouTube channel:', error);
-      throw new Error(`Failed to fetch YouTube channel: ${error.message}`);
+      throw new Error(`Failed to fetch YouTube channel: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   
@@ -119,9 +119,9 @@ export class YouTubeApiClient {
       }
       
       throw new Error(`Channel not found for ID ${channelId}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching YouTube channel by ID:', error);
-      throw new Error(`Failed to fetch YouTube channel by ID: ${error.message}`);
+      throw new Error(`Failed to fetch YouTube channel by ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -143,9 +143,9 @@ export class YouTubeApiClient {
       
       // Return 0 if subscriber count is hidden
       return 0;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching YouTube subscriber count:', error);
-      throw new Error(`Failed to fetch YouTube subscriber count: ${error.message}`);
+      throw new Error(`Failed to fetch YouTube subscriber count: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -168,7 +168,7 @@ export class YouTubeApiClient {
       });
       
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('YouTube API credentials validation failed:', error);
       return false;
     }
@@ -208,7 +208,7 @@ export class YouTubeApiClient {
       }
       
       return null;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error extracting YouTube channel from URL:', error);
       return null;
     }

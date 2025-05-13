@@ -152,7 +152,7 @@ const getAllDiscipleshipGoals = async (filters: IDiscipleshipGoalFilters, userRo
     .sort({ startDate: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .lean();
+    .lean() as unknown as IDiscipleshipGoal[];
 
   return { goals, total, page, limit };
 };
@@ -165,7 +165,7 @@ const getDiscipleshipGoalById = async (id: string): Promise<IDiscipleshipGoal | 
       { path: "smallGroupId", select: "name" },
       { path: "memberId", select: "firstName lastName memberId" },
       { path: "createdBy", select: "email" }
-  ]).lean();
+  ]).lean() as unknown as IDiscipleshipGoal | null;
 };
 
 const updateDiscipleshipGoal = async (id: string, data: IDiscipleshipGoalUpdatePayload): Promise<IDiscipleshipGoal | null> => {
@@ -178,12 +178,12 @@ const updateDiscipleshipGoal = async (id: string, data: IDiscipleshipGoalUpdateP
         { path: "smallGroupId", select: "name" },
         { path: "memberId", select: "firstName lastName memberId" },
         { path: "createdBy", select: "email" }
-    ]).lean();
+    ]).lean() as unknown as IDiscipleshipGoal | null;
 };
 
 const deleteDiscipleshipGoal = async (id: string): Promise<IDiscipleshipGoal | null> => {
   await connectToDB();
-  return DiscipleshipGoal.findByIdAndDelete(id).lean();
+  return DiscipleshipGoal.findByIdAndDelete(id).lean() as unknown as IDiscipleshipGoal | null;
 };
 
 export const discipleshipGoalService = {

@@ -58,11 +58,20 @@ interface PaginationInfo {
   pages: number
 }
 
+// Add a User interface to ensure _id is always present when user is not null
+interface User {
+  _id: string;
+  // Add other user properties if needed by this page, e.g., assignedRoles
+  // For now, only _id is strictly necessary to fix the current errors.
+  // assignedRoles?: Array<{ role: string; scopeId?: string; }>;
+}
+
 export default function CentersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { user } = useAuthStore()
+  // Explicitly type `user` according to the local `User` interface
+  const { user }: { user: User | null } = useAuthStore()
 
   const [centers, setCenters] = useState<Center[]>([])
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -74,10 +83,11 @@ export default function CentersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
 
-  const canCreateCenter = user ? checkPermission(user, ["HQ_ADMIN"]) : false
+  // Now, if user is truthy, user._id is guaranteed to be a string.
+  const canCreateCenter = user ? checkPermission(user._id, ["HQ_ADMIN"]) : false
 
   const fetchCenters = useCallback(async (page: number, search: string) => {
-    if (!user) return;
+    if (!user) return; // After this check, user is of type User
     try {
       setIsLoading(true)
       const queryParams = new URLSearchParams()
@@ -157,7 +167,8 @@ export default function CentersPage() {
     return <p>Loading user data or user not authenticated...</p>; 
   }
   
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"])) {
+  // Now, if user is truthy, user._id is guaranteed to be a string.
+  if (user && !checkPermission(user._id, ["HQ_ADMIN", "CENTER_ADMIN"])) {
       return (
         <div className="text-center py-10">
             <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
