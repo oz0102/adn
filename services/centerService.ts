@@ -14,7 +14,7 @@ export interface ICenterUpdatePayload extends Partial<ICenterCreatePayload> {}
 // Update PopulatedLeanCenter type
 export type PopulatedLeanCenter = Omit<ICenter, "centerAdmins"> & {
   _id: Types.ObjectId;
-  centerAdmins?: (Pick<IUser, "_id" | "email" | "name"> & { _id: Types.ObjectId })[];
+  centerAdmins?: (Pick<IUser, "_id" | "email" | "firstName" | "lastName"> & { _id: Types.ObjectId })[];
 };
 
 const createCenter = async (data: ICenterCreatePayload): Promise<ICenter> => {
@@ -22,9 +22,9 @@ const createCenter = async (data: ICenterCreatePayload): Promise<ICenter> => {
   if (data.centerAdmins && data.centerAdmins.length > 0) {
     const admins = await UserModel.find({ 
       _id: { $in: data.centerAdmins },
-    }).lean<IUser[]>(); // Add generic type parameter
+    }).lean<IUser[]>();
     if (admins.length !== data.centerAdmins.length) {
-      const foundAdminIds = admins.map(admin => admin._id.toString());
+      const foundAdminIds = admins.map(admin => (admin._id as Types.ObjectId).toString());
       const notFoundAdmins = data.centerAdmins.filter(adminId => !foundAdminIds.includes(adminId.toString()));
       throw new Error(`One or more assigned center admins are invalid: ${notFoundAdmins.join(", ")}.`);
     }
