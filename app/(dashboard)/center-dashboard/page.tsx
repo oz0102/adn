@@ -13,9 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DashboardStats } from '@/components/dashboard/dashboard-stats';
-import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { UpcomingEventsCard } from '@/components/dashboard/upcoming-events-card';
 import { ChartCard } from '@/components/ui/chart-card';
 import { DataCard } from '@/components/ui/data-card';
 import { 
@@ -32,7 +29,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
-import { checkPermission } from "@/lib/permissions";
 
 // Frontend Center interface
 interface Center {
@@ -85,6 +81,7 @@ export default function CenterDashboardPage() {
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState(true);
 
   // Sample chart data for attendance trends
   const attendanceData = {
@@ -159,6 +156,25 @@ export default function CenterDashboardPage() {
     ],
   };
 
+  // Check permission via API instead of direct model access
+  const checkPermission = useCallback(async () => {
+    if (!user || !centerId) return;
+    
+    try {
+      const response = await fetch(`/api/auth/check-permission?centerId=${centerId}`);
+      if (!response.ok) {
+        setHasPermission(false);
+        return;
+      }
+      
+      const data = await response.json();
+      setHasPermission(data.hasPermission);
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      setHasPermission(false);
+    }
+  }, [centerId, user]);
+
   const fetchCenterData = useCallback(async () => {
     if (!user || !centerId) return;
     try {
@@ -203,9 +219,10 @@ export default function CenterDashboardPage() {
 
   useEffect(() => {
     if (user) {
+      checkPermission();
       fetchCenterData();
     }
-  }, [user, fetchCenterData]);
+  }, [user, checkPermission, fetchCenterData]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading center dashboard...</p></div>;
@@ -226,7 +243,7 @@ export default function CenterDashboardPage() {
     );
   }
   
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id)) {
+  if (!hasPermission) {
     return (
       <div className="text-center py-10">
         <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />

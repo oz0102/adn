@@ -30,7 +30,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
-import { checkPermission } from "@/lib/permissions";
 
 // Frontend Cluster interface
 interface Cluster {
@@ -93,6 +92,7 @@ export default function ClusterDashboardPage() {
   const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState(true);
 
   // Sample chart data for member growth within the cluster
   const memberGrowthData = {
@@ -146,6 +146,25 @@ export default function ClusterDashboardPage() {
     ],
   };
 
+  // Check permission via API instead of direct model access
+  const checkPermission = useCallback(async () => {
+    if (!user || !clusterId) return;
+    
+    try {
+      const response = await fetch(`/api/auth/check-permission?clusterId=${clusterId}`);
+      if (!response.ok) {
+        setHasPermission(false);
+        return;
+      }
+      
+      const data = await response.json();
+      setHasPermission(data.hasPermission);
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      setHasPermission(false);
+    }
+  }, [clusterId, user]);
+
   const fetchClusterData = useCallback(async () => {
     if (!user || !clusterId) return;
     try {
@@ -190,9 +209,10 @@ export default function ClusterDashboardPage() {
 
   useEffect(() => {
     if (user) {
+      checkPermission();
       fetchClusterData();
     }
-  }, [user, fetchClusterData]);
+  }, [user, checkPermission, fetchClusterData]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading cluster dashboard...</p></div>;
@@ -213,7 +233,7 @@ export default function ClusterDashboardPage() {
     );
   }
 
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
+  if (!hasPermission) {
     return (
       <div className="text-center py-10">
         <Layers className="mx-auto h-12 w-12 text-red-400 mb-4" />
