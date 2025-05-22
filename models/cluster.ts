@@ -51,7 +51,7 @@ const ClusterSchema: Schema = new Schema(
     clusterId: { 
       type: String, 
       required: true, 
-      unique: true,
+      // Removed unique: true to avoid duplicate index
       trim: true
     },
     name: { 
@@ -112,4 +112,3 @@ ClusterSchema.index({ leaderId: 1 });
 ClusterSchema.index({ centerId: 1 }); // Added index
 
 export default mongoose.models.Cluster || mongoose.model<ICluster>('Cluster', ClusterSchema);
-

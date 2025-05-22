@@ -3,6 +3,7 @@ import Member, { IMember, IAddress, IEducation, ISkill, ISpiritualGrowth, ITrain
 import Center, { ICenter } from "@/models/center";
 import Cluster, { ICluster } from "@/models/cluster";
 import SmallGroup, { ISmallGroup } from "@/models/smallGroup";
+import Team from "@/models/team"; // Import Team model to ensure it's registered
 import { connectToDB } from "@/lib/mongodb";
 import mongoose, { Types, FilterQuery } from "mongoose";
 
@@ -97,7 +98,7 @@ interface MemberQueryFilters {
   limit?: number;
 }
 
-const getAllMembers = async (filters: MemberQueryFilters): Promise<{ members: PopulatedLeanMember[], total: number, page: number, limit: number }> => {
+const getAllMembers = async (filters: MemberQueryFilters): Promise<{ members: PopulatedLeanMember[], pagination: { total: number, page: number, limit: number, pages: number } }> => {
   await connectToDB();
   const { centerId, clusterId, smallGroupId, teamId, spiritualGrowthStage, search, page = 1, limit = 20 } = filters;
   const query: FilterQuery<IMember> = {};
@@ -130,7 +131,16 @@ const getAllMembers = async (filters: MemberQueryFilters): Promise<{ members: Po
     .limit(limit)
     .lean<PopulatedLeanMember[]>();
 
-  return { members, total, page, limit };
+  const pages = Math.ceil(total / limit);
+  return { 
+    members, 
+    pagination: {
+      total, 
+      page, 
+      limit,
+      pages
+    }
+  };
 };
 
 const getMemberById = async (id: string): Promise<PopulatedLeanMember | null> => {

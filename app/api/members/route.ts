@@ -141,10 +141,16 @@ export async function GET(request: Request) {
     }
 
     const result = await memberService.getAllMembers(filters); // Changed to use memberService
-    return NextResponse.json(result, { status: 200 });
+    
+    // Format the response to match what the frontend expects
+    return NextResponse.json({
+      data: {
+        members: result.members,
+        pagination: result.pagination
+      }
+    }, { status: 200 });
   } catch (error: any) {
     console.error("Failed to retrieve members:", error);
     return NextResponse.json({ message: "Failed to retrieve members", error: error.message }, { status: 500 });
   }
 }
-

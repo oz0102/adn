@@ -1,4 +1,3 @@
-// components/dashboard/dashboard-stats.tsx
 "use client"
 
 import React, { useEffect, useState } from 'react';
@@ -51,11 +50,17 @@ export function DashboardStats({ className }: DashboardStatsProps) {
         // For now, we'll calculate an estimate based on total members
         const attendanceRate = Math.floor(Math.random() * 20) + 70; // Random between 70-90%
         
+        // Safely access nested properties with fallbacks
+        const totalMembers = membersData?.data?.pagination?.total || 0;
+        const newMembersCount = newMembersData?.data?.pagination?.total || 0;
+        const upcomingEventsCount = eventsData?.data?.pagination?.total || 0;
+        const pendingFollowUpsCount = followUpsData?.data?.pagination?.total || 0;
+        
         setStats({
-          totalMembers: membersData.data.pagination.total || 0,
-          newMembers: newMembersData.data.pagination.total || 0,
-          upcomingEvents: eventsData.data.pagination.total || 0,
-          pendingFollowUps: followUpsData.data.pagination.total || 0,
+          totalMembers,
+          newMembers: newMembersCount,
+          upcomingEvents: upcomingEventsCount,
+          pendingFollowUps: pendingFollowUpsCount,
           attendanceRate: attendanceRate,
         });
       } catch (error) {

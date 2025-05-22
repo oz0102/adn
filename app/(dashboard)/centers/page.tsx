@@ -30,7 +30,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
-import { checkPermission } from "@/lib/permissions"
 
 // Frontend Center interface - adjust based on actual backend model
 interface Center {
@@ -82,9 +81,35 @@ export default function CentersPage() {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [canCreateCenter, setCanCreateCenter] = useState(false)
+  const [hasViewPermission, setHasViewPermission] = useState(true)
 
-  // Now, if user is truthy, user._id is guaranteed to be a string.
-  const canCreateCenter = user ? checkPermission(user._id, ["HQ_ADMIN"]) : false
+  // Check permissions via API instead of direct model access
+  const checkPermissions = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Check HQ_ADMIN permission for creating centers
+      const createResponse = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
+      if (createResponse.ok) {
+        const data = await createResponse.json();
+        setCanCreateCenter(data.hasPermission);
+      }
+      
+      // Check view permission (HQ_ADMIN or CENTER_ADMIN)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN`);
+      if (viewResponse.ok) {
+        const data = await viewResponse.json();
+        setHasViewPermission(data.hasPermission);
+      } else {
+        setHasViewPermission(false);
+      }
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+      setCanCreateCenter(false);
+      setHasViewPermission(false);
+    }
+  }, [user]);
 
   const fetchCenters = useCallback(async (page: number, search: string) => {
     if (!user) return; // After this check, user is of type User
@@ -128,14 +153,15 @@ export default function CentersPage() {
   }, [pagination.limit, toast, user])
 
   useEffect(() => {
-    const page = parseInt(searchParams.get("page") || "1")
-    const search = searchParams.get("search") || ""
-    setSearchTerm(search)
     if (user) {
-        fetchCenters(page, search)
+      checkPermissions();
+      const page = parseInt(searchParams.get("page") || "1")
+      const search = searchParams.get("search") || ""
+      setSearchTerm(search)
+      fetchCenters(page, search)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, user, fetchCenters]) 
+  }, [searchParams, user, fetchCenters, checkPermissions]) 
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -167,8 +193,7 @@ export default function CentersPage() {
     return <p>Loading user data or user not authenticated...</p>; 
   }
   
-  // Now, if user is truthy, user._id is guaranteed to be a string.
-  if (user && !checkPermission(user._id, ["HQ_ADMIN", "CENTER_ADMIN"])) {
+  if (!hasViewPermission) {
       return (
         <div className="text-center py-10">
             <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
@@ -309,4 +334,3 @@ export default function CentersPage() {
     </div>
   )
 }
-

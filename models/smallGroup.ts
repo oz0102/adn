@@ -52,7 +52,7 @@ const SmallGroupSchema: Schema = new Schema(
     groupId: { 
       type: String, 
       required: true, 
-      unique: true,
+      // Removed unique: true to avoid duplicate index
       trim: true
     },
     name: { 
@@ -119,4 +119,3 @@ SmallGroupSchema.index({ clusterId: 1 }); // Added index
 SmallGroupSchema.index({ centerId: 1 }); // Added index
 
 export default mongoose.models.SmallGroup || mongoose.model<ISmallGroup>('SmallGroup', SmallGroupSchema);
-

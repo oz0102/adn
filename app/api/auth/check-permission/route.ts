@@ -15,12 +15,48 @@ export async function GET(request: NextRequest) {
     const centerId = searchParams.get("centerId");
     const clusterId = searchParams.get("clusterId");
     const smallGroupId = searchParams.get("smallGroupId");
+    const role = searchParams.get("role");
+    const roles = searchParams.get("roles");
 
     await connectToDB();
     const user = await User.findById(session.user.id).select("assignedRoles").lean();
     
     if (!user || !user.assignedRoles) {
       return NextResponse.json({ hasPermission: false }, { status: 403 });
+    }
+
+    // Check for specific role
+    if (role) {
+      if (role === "HQ_ADMIN") {
+        const isHQAdmin = user.assignedRoles.some(ar => 
+          ar.role === "HQ_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
+        );
+        return NextResponse.json({ hasPermission: isHQAdmin });
+      }
+    }
+
+    // Check for multiple roles (comma-separated)
+    if (roles) {
+      const roleList = roles.split(',');
+      const hasAnyRole = roleList.some(r => {
+        if (r === "HQ_ADMIN") {
+          return user.assignedRoles.some(ar => 
+            ar.role === "HQ_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
+          );
+        }
+        if (r === "CENTER_ADMIN") {
+          return user.assignedRoles.some(ar => ar.role === "CENTER_ADMIN");
+        }
+        if (r === "CLUSTER_LEADER") {
+          return user.assignedRoles.some(ar => ar.role === "CLUSTER_LEADER");
+        }
+        if (r === "SMALL_GROUP_LEADER") {
+          return user.assignedRoles.some(ar => ar.role === "SMALL_GROUP_LEADER");
+        }
+        return false;
+      });
+      
+      return NextResponse.json({ hasPermission: hasAnyRole });
     }
 
     // Check for HQ_ADMIN (has access to everything)
