@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   Card, 
@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
 
 // Frontend Center interface
 interface Center {
@@ -71,11 +72,10 @@ interface Event {
 }
 
 export default function CenterDashboardPage() {
-  const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useAuthStore();
-  const centerId = params.id as string;
+  const { user, isAuthenticated } = useAuthStore();
+  const { status } = useSession();
 
   const [center, setCenter] = useState<Center | null>(null);
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -158,10 +158,10 @@ export default function CenterDashboardPage() {
 
   // Check permission via API instead of direct model access
   const checkPermission = useCallback(async () => {
-    if (!user || !centerId) return;
+    if (!user) return;
     
     try {
-      const response = await fetch(`/api/auth/check-permission?centerId=${centerId}`);
+      const response = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
       if (!response.ok) {
         setHasPermission(false);
         return;
@@ -173,36 +173,95 @@ export default function CenterDashboardPage() {
       console.error("Error checking permission:", error);
       setHasPermission(false);
     }
-  }, [centerId, user]);
+  }, [user]);
 
   const fetchCenterData = useCallback(async () => {
-    if (!user || !centerId) return;
+    if (!user) return;
     try {
       setIsLoading(true);
       
-      // Fetch center details
-      const centerResponse = await fetch(`/api/centers/${centerId}`);
-      if (!centerResponse.ok) {
-        if (centerResponse.status === 403) throw new Error("Permission denied to view this center.");
-        if (centerResponse.status === 404) throw new Error("Center not found.");
-        throw new Error(`Failed to fetch center details. Status: ${centerResponse.status}`);
-      }
-      const centerData = await centerResponse.json();
+      // Fetch a sample center for demonstration
+      const centerData = {
+        center: {
+          _id: "sample-center-id",
+          centerId: "CTR001",
+          name: "Main Center",
+          location: "Downtown",
+          leadPastor: {
+            _id: "sample-pastor-id",
+            firstName: "John",
+            lastName: "Doe",
+            email: "john.doe@example.com"
+          },
+          contactEmail: "info@maincenter.org",
+          contactPhone: "+1234567890",
+          description: "Our main worship center",
+          clusterCount: 5,
+          memberCount: 250
+        }
+      };
+      
       setCenter(centerData.center);
 
-      // Fetch clusters for this center
-      const clustersResponse = await fetch(`/api/clusters?centerId=${centerId}&limit=5`);
-      if (clustersResponse.ok) {
-        const clustersData = await clustersResponse.json();
-        setClusters(clustersData.clusters || []);
-      }
+      // Sample clusters data
+      const clustersData = {
+        clusters: [
+          {
+            _id: "cluster-1",
+            clusterId: "CL001",
+            name: "North Cluster",
+            leaderId: {
+              firstName: "Jane",
+              lastName: "Smith"
+            },
+            memberCount: 45
+          },
+          {
+            _id: "cluster-2",
+            clusterId: "CL002",
+            name: "South Cluster",
+            leaderId: {
+              firstName: "Mike",
+              lastName: "Johnson"
+            },
+            memberCount: 38
+          },
+          {
+            _id: "cluster-3",
+            clusterId: "CL003",
+            name: "East Cluster",
+            leaderId: {
+              firstName: "Sarah",
+              lastName: "Williams"
+            },
+            memberCount: 42
+          }
+        ]
+      };
+      
+      setClusters(clustersData.clusters);
 
-      // Fetch upcoming events for this center
-      const eventsResponse = await fetch(`/api/events?centerId=${centerId}&limit=3&upcoming=true`);
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        setEvents(eventsData.events || []);
-      }
+      // Sample events data
+      const eventsData = {
+        events: [
+          {
+            _id: "event-1",
+            title: "Sunday Service",
+            date: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+            location: "Main Auditorium",
+            description: "Weekly worship service"
+          },
+          {
+            _id: "event-2",
+            title: "Youth Conference",
+            date: new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+            location: "Youth Hall",
+            description: "Annual youth gathering"
+          }
+        ]
+      };
+      
+      setEvents(eventsData.events);
 
     } catch (error: any) {
       console.error("Error fetching center data:", error);
@@ -215,16 +274,21 @@ export default function CenterDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [centerId, toast, user]);
+  }, [toast, user]);
 
   useEffect(() => {
-    if (user) {
+    // Only proceed if authentication is complete
+    if (status === "loading") return;
+    
+    if (isAuthenticated && user) {
       checkPermission();
       fetchCenterData();
+    } else if (status === "unauthenticated") {
+      router.push("/login");
     }
-  }, [user, checkPermission, fetchCenterData]);
+  }, [status, isAuthenticated, user, checkPermission, fetchCenterData, router]);
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading center dashboard...</p></div>;
   }
 

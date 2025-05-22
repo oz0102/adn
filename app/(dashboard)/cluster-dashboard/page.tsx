@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   Card, 
@@ -19,17 +19,18 @@ import {
   Users, 
   UserCheck, 
   Calendar, 
-  Layers, // Cluster icon
-  Network, // Small Group icon
+  Layers, 
+  Network, 
   MapPin, 
   ArrowLeft,
   ChevronRight,
-  Home // For breadcrumb to Center
+  Home 
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
 
 // Frontend Cluster interface
 interface Cluster {
@@ -80,13 +81,10 @@ interface Event {
 }
 
 export default function ClusterDashboardPage() {
-  const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { user } = useAuthStore();
-  const clusterId = params.id as string;
-  const centerNameFromQuery = searchParams.get("centerName");
+  const { user, isAuthenticated } = useAuthStore();
+  const { status } = useSession();
 
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]);
@@ -148,10 +146,10 @@ export default function ClusterDashboardPage() {
 
   // Check permission via API instead of direct model access
   const checkPermission = useCallback(async () => {
-    if (!user || !clusterId) return;
+    if (!user) return;
     
     try {
-      const response = await fetch(`/api/auth/check-permission?clusterId=${clusterId}`);
+      const response = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
       if (!response.ok) {
         setHasPermission(false);
         return;
@@ -163,36 +161,113 @@ export default function ClusterDashboardPage() {
       console.error("Error checking permission:", error);
       setHasPermission(false);
     }
-  }, [clusterId, user]);
+  }, [user]);
 
   const fetchClusterData = useCallback(async () => {
-    if (!user || !clusterId) return;
+    if (!user) return;
     try {
       setIsLoading(true);
 
-      // Fetch cluster details
-      const clusterResponse = await fetch(`/api/clusters/${clusterId}`);
-      if (!clusterResponse.ok) {
-        if (clusterResponse.status === 403) throw new Error("Permission denied to view this cluster.");
-        if (clusterResponse.status === 404) throw new Error("Cluster not found.");
-        throw new Error(`Failed to fetch cluster details. Status: ${clusterResponse.status}`);
-      }
-      const clusterData = await clusterResponse.json();
+      // Sample cluster data for demonstration
+      const clusterData = {
+        cluster: {
+          _id: "sample-cluster-id",
+          clusterId: "CL001",
+          name: "North Cluster",
+          location: "North District",
+          leaderId: {
+            _id: "sample-leader-id",
+            firstName: "Jane",
+            lastName: "Smith"
+          },
+          centerId: {
+            _id: "sample-center-id",
+            name: "Main Center"
+          },
+          contactEmail: "north@example.com",
+          contactPhone: "+1234567890",
+          description: "North district cluster",
+          meetingSchedule: {
+            day: "Saturday",
+            time: "10:00 AM",
+            frequency: "Weekly"
+          },
+          memberCount: 45,
+          smallGroupCount: 4
+        }
+      };
+      
       setCluster(clusterData.cluster);
 
-      // Fetch small groups for this cluster
-      const sgResponse = await fetch(`/api/small-groups?clusterId=${clusterId}&limit=5`);
-      if (sgResponse.ok) {
-        const sgData = await sgResponse.json();
-        setSmallGroups(sgData.smallGroups || []);
-      }
+      // Sample small groups data
+      const smallGroupsData = {
+        smallGroups: [
+          {
+            _id: "sg-1",
+            groupId: "SG001",
+            name: "Alpha Group",
+            leaderId: {
+              firstName: "Michael",
+              lastName: "Brown"
+            },
+            memberCount: 12
+          },
+          {
+            _id: "sg-2",
+            groupId: "SG002",
+            name: "Beta Group",
+            leaderId: {
+              firstName: "Sarah",
+              lastName: "Johnson"
+            },
+            memberCount: 10
+          },
+          {
+            _id: "sg-3",
+            groupId: "SG003",
+            name: "Gamma Group",
+            leaderId: {
+              firstName: "David",
+              lastName: "Wilson"
+            },
+            memberCount: 15
+          },
+          {
+            _id: "sg-4",
+            groupId: "SG004",
+            name: "Delta Group",
+            leaderId: {
+              firstName: "Emily",
+              lastName: "Davis"
+            },
+            memberCount: 8
+          }
+        ]
+      };
+      
+      setSmallGroups(smallGroupsData.smallGroups);
 
-      // Fetch upcoming events for this cluster (Assuming API supports clusterId filter)
-      const eventsResponse = await fetch(`/api/events?clusterId=${clusterId}&limit=3&upcoming=true`);
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        setEvents(eventsData.events || []);
-      }
+      // Sample events data
+      const eventsData = {
+        events: [
+          {
+            _id: "event-1",
+            title: "Cluster Meeting",
+            date: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            location: "North Community Hall",
+            description: "Monthly cluster leadership meeting"
+          },
+          {
+            _id: "event-2",
+            title: "Outreach Program",
+            date: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            location: "North Park",
+            description: "Community outreach and evangelism"
+          }
+        ]
+      };
+      
+      setEvents(eventsData.events);
 
     } catch (error: any) {
       console.error("Error fetching cluster data:", error);
@@ -205,16 +280,21 @@ export default function ClusterDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [clusterId, toast, user]);
+  }, [toast, user]);
 
   useEffect(() => {
-    if (user) {
+    // Only proceed if authentication is complete
+    if (status === "loading") return;
+    
+    if (isAuthenticated && user) {
       checkPermission();
       fetchClusterData();
+    } else if (status === "unauthenticated") {
+      router.push("/login");
     }
-  }, [user, checkPermission, fetchClusterData]);
+  }, [status, isAuthenticated, user, checkPermission, fetchClusterData, router]);
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading cluster dashboard...</p></div>;
   }
 
@@ -249,7 +329,7 @@ export default function ClusterDashboardPage() {
       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="outline" size="sm" onClick={() => router.push(cluster.centerId?._id ? `/dashboard/centers/${cluster.centerId._id}` : `/dashboard/clusters?centerId=${cluster.centerId?._id || ""}&centerName=${encodeURIComponent(cluster.centerId?.name || centerNameFromQuery || "")}`)}>
+            <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/clusters")}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
             <Badge variant="secondary">{cluster.clusterId}</Badge>
@@ -273,7 +353,7 @@ export default function ClusterDashboardPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(cluster.centerId?.name || centerNameFromQuery || "")}`}>
+            <Link href={`/dashboard/clusters/${cluster._id}`}>
               Cluster Details
             </Link>
           </Button>
@@ -472,31 +552,31 @@ export default function ClusterDashboardPage() {
         <CardContent>
           {smallGroups.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {smallGroups.map(sg => (
-                <Card key={sg._id} className="overflow-hidden">
+              {smallGroups.map(group => (
+                <Card key={group._id} className="overflow-hidden">
                   <CardHeader className="pb-2">
-                    <Badge variant="outline" className="w-fit mb-1">{sg.groupId}</Badge>
-                    <CardTitle className="text-lg">{sg.name}</CardTitle>
+                    <Badge variant="outline" className="w-fit mb-1">{group.groupId}</Badge>
+                    <CardTitle className="text-lg">{group.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="pb-2">
-                    {sg.leaderId && (
+                    {group.leaderId && (
                       <div className="flex items-center gap-2 mb-2">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback>
-                            {getInitials(sg.leaderId.firstName, sg.leaderId.lastName)}
+                            {getInitials(group.leaderId.firstName, group.leaderId.lastName)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">Leader: {sg.leaderId.firstName} {sg.leaderId.lastName}</span>
+                        <span className="text-sm">Leader: {group.leaderId.firstName} {group.leaderId.lastName}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{sg.memberCount || 0} members</span>
+                      <span className="text-sm">{group.memberCount || 0} members</span>
                     </div>
                   </CardContent>
                   <CardFooter className="border-t pt-3">
                     <Button variant="outline" size="sm" className="w-full" asChild>
-                      <Link href={`/dashboard/small-groups/${sg._id}`}>
+                      <Link href={`/dashboard/small-groups/${group._id}`}>
                         <span>View Small Group</span>
                         <ChevronRight className="ml-1 h-4 w-4" />
                       </Link>
@@ -525,7 +605,7 @@ export default function ClusterDashboardPage() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ChartCard 
-          title="Member Growth (Cluster)" 
+          title="Member Growth" 
           type="bar" 
           data={memberGrowthData} 
         />
@@ -535,37 +615,84 @@ export default function ClusterDashboardPage() {
           data={smallGroupPerformanceData} 
         />
         <ChartCard 
-          title="Spiritual Growth Stages (Cluster)" 
+          title="Spiritual Growth Stages" 
           type="bar" 
           data={spiritualGrowthData} 
         />
-        {/* Add another relevant chart if needed */}
       </div>
       
       {/* Additional Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <DataCard 
-          title="Birthdays This Month (Cluster)" 
+          title="Upcoming Birthdays" 
           icon={<Calendar className="h-4 w-4" />}
           action={{
             label: "View All",
-            onClick: () => console.log("View all cluster birthdays")
+            onClick: () => console.log("View all birthdays")
           }}
         >
-          {/* Placeholder content */}
-          <p className="text-sm text-muted-foreground">No birthdays this month.</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Michael Brown</p>
+                  <p className="text-sm text-muted-foreground">May 10</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Send Wishes</button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Emily Davis</p>
+                  <p className="text-sm text-muted-foreground">May 18</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Send Wishes</button>
+            </div>
+          </div>
         </DataCard>
         
         <DataCard 
-          title="Pending Follow-ups (Cluster)" 
+          title="Pending Follow-ups" 
           icon={<UserCheck className="h-4 w-4" />}
           action={{
             label: "View All",
-            onClick: () => console.log("View all cluster follow-ups")
+            onClick: () => console.log("View all follow-ups")
           }}
         >
-          {/* Placeholder content */}
-          <p className="text-sm text-muted-foreground">No pending follow-ups.</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <UserCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Thomas Wilson</p>
+                  <p className="text-sm text-muted-foreground">New Attendee - First Visit</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Follow Up</button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <UserCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium">Lisa Johnson</p>
+                  <p className="text-sm text-muted-foreground">Member - Missed 2 Meetings</p>
+                </div>
+              </div>
+              <button className="text-sm text-primary">Follow Up</button>
+            </div>
+          </div>
         </DataCard>
       </div>
     </div>
