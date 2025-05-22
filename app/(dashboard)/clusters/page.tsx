@@ -1,4 +1,3 @@
-// app/(dashboard)/clusters/page.tsx
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -31,7 +30,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
-import { checkPermission } from "@/lib/permissions"
+import { useSession } from "next-auth/react"
 
 // Frontend Cluster interface - adjust based on actual backend model
 interface Cluster {
@@ -66,24 +65,12 @@ interface PaginationInfo {
   pages: number
 }
 
-// Add a User interface that includes the assignedRoles property
-// This interface defines the expected shape of the user object.
-interface User {
-  _id: string;
-  assignedRoles?: Array<{
-    role: string;
-    scopeId?: string;
-  }>;
-  // Add other user properties as needed
-}
-
 export default function ClustersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  // Explicitly type `user` according to the local `User` interface.
-  // This tells TypeScript to expect `user` to be of type `User | null`.
-  const { user }: { user: User | null } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore()
+  const { status } = useSession()
   
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -96,32 +83,43 @@ export default function ClustersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCenterId, setFilterCenterId] = useState<string | null>(searchParams.get("centerId"))
   const [parentCenterName, setParentCenterName] = useState<string | null>(searchParams.get("centerName"))
+  const [canCreateCluster, setCanCreateCluster] = useState(false)
+  const [hasViewPermission, setHasViewPermission] = useState(true)
 
-  // With `user` correctly typed as `User | null`:
-  // If `user` is truthy, `user._id` will be `string` (not undefined).
-  // This should resolve the errors for `checkPermission` calls.
-  const canViewAnyCluster = user ? checkPermission(user._id, ["HQ_ADMIN"]) : false;
-  const canCreateCluster = user ? checkPermission(user._id, ["HQ_ADMIN", "CENTER_ADMIN"], filterCenterId || undefined) : false;
+  // Check permissions via API instead of direct model access
+  const checkPermissions = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Check if user can create clusters (HQ_ADMIN or CENTER_ADMIN for the specific center)
+      let createPermissionUrl = `/api/auth/check-permission?roles=HQ_ADMIN`;
+      if (filterCenterId) {
+        createPermissionUrl += `,CENTER_ADMIN&centerId=${filterCenterId}`;
+      }
+      
+      const createResponse = await fetch(createPermissionUrl);
+      if (createResponse.ok) {
+        const data = await createResponse.json();
+        setCanCreateCluster(data.hasPermission);
+      }
+      
+      // Check view permission (HQ_ADMIN, CENTER_ADMIN, or CLUSTER_LEADER)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN,CLUSTER_LEADER`);
+      if (viewResponse.ok) {
+        const data = await viewResponse.json();
+        setHasViewPermission(data.hasPermission);
+      } else {
+        setHasViewPermission(false);
+      }
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+      setCanCreateCluster(false);
+      setHasViewPermission(false);
+    }
+  }, [user, filterCenterId]);
 
   const fetchClusters = useCallback(async (page: number, search: string, centerIdForFilter?: string | null) => {
-    if (!user) return; // After this, `user` is of type `User`.
-
-    // `user.assignedRoles` is now correctly typed as `Array<{...}> | undefined`.
-    // The optional chaining `?.some` will work as expected, resolving the "property does not exist" errors.
-    let hasPermissionToFetch = canViewAnyCluster;
-    if (centerIdForFilter && user.assignedRoles?.some((r: { role: string; scopeId?: string }) => r.role === "CENTER_ADMIN" && r.scopeId === centerIdForFilter)) {
-        hasPermissionToFetch = true;
-    }
-    if (!centerIdForFilter && user.assignedRoles?.some((r: { role: string; scopeId?: string }) => r.role === "CENTER_ADMIN") && !canViewAnyCluster) {
-        hasPermissionToFetch = true; 
-    }
-    if (!hasPermissionToFetch && !canViewAnyCluster && !user.assignedRoles?.some((r: { role: string; scopeId?: string }) => r.role === "CLUSTER_LEADER")) {
-        toast({ title: "Permission Denied", description: "You may not have permission to view all clusters. Try navigating from a center.", variant: "destructive" });
-        setClusters([]);
-        setPagination({ page:1, limit:10, total:0, pages:0 });
-        setIsLoading(false);
-        return;
-    }
+    if (!user) return;
 
     try {
       setIsLoading(true)
@@ -161,23 +159,28 @@ export default function ClustersPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [pagination.limit, toast, user, canViewAnyCluster, parentCenterName])
+  }, [pagination.limit, toast, user, parentCenterName])
 
   useEffect(() => {
-    const page = parseInt(searchParams.get("page") || "1")
-    const search = searchParams.get("search") || ""
-    const centerIdFromQuery = searchParams.get("centerId")
-    const centerNameFromQuery = searchParams.get("centerName")
+    // Only proceed if authentication is complete
+    if (status === "loading") return;
+    
+    if (isAuthenticated && user) {
+      checkPermissions();
+      const page = parseInt(searchParams.get("page") || "1")
+      const search = searchParams.get("search") || ""
+      const centerIdFromQuery = searchParams.get("centerId")
+      const centerNameFromQuery = searchParams.get("centerName")
 
-    setSearchTerm(search)
-    setFilterCenterId(centerIdFromQuery)
-    if (centerNameFromQuery) setParentCenterName(centerNameFromQuery);
+      setSearchTerm(search)
+      setFilterCenterId(centerIdFromQuery)
+      if (centerNameFromQuery) setParentCenterName(centerNameFromQuery);
 
-    if (user) {
-        fetchClusters(page, search, centerIdFromQuery)
+      fetchClusters(page, search, centerIdFromQuery)
+    } else if (status === "unauthenticated") {
+      router.push("/login");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, user, fetchClusters])
+  }, [searchParams, status, isAuthenticated, user, fetchClusters, checkPermissions, router])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -208,14 +211,11 @@ export default function ClustersPage() {
     updateUrlParams({ page })
   }
 
-  if (!user && !isLoading) {
-    return <p>Loading user data or user not authenticated...</p>;
+  if (status === "loading" || isLoading) {
+    return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
   }
-
-  // Fix type error by passing user._id instead of user object
-  const canViewPage = user ? checkPermission(user._id, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"]) : false;
   
-  if (user && !canViewPage) {
+  if (!hasViewPermission) {
       return (
           <div className="text-center py-10">
               <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
@@ -367,4 +367,3 @@ export default function ClustersPage() {
     </div>
   )
 }
-

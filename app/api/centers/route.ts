@@ -1,67 +1,126 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
-import { centerService } from "@/services/centerService"; // Assuming centerService exports an object
-import { connectToDB } from "@/lib/mongodb"; // Ensured named import
-import { checkPermission } from "@/lib/permissions"; 
-import mongoose from "mongoose";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { connectToDB } from "@/lib/mongodb";
+import Center from "@/models/center";
 
-/**
- * Handles POST requests to create a new Center.
- * Requires HQ_ADMIN privileges.
- */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await auth(); // Corrected: Use auth() to get session
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-
-    if (!hasHQAdminPermission) {
-      return NextResponse.json({ message: "Forbidden: Requires HQ Admin role" }, { status: 403 });
+    // Check if user has HQ_ADMIN permission
+    const permissionResponse = await fetch(`${request.nextUrl.origin}/api/auth/check-permission?role=HQ_ADMIN`, {
+      headers: {
+        cookie: request.headers.get("cookie") || "",
+      },
+    });
+    
+    if (!permissionResponse.ok) {
+      const permData = await permissionResponse.json();
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
-    const body = await request.json();
+    const permData = await permissionResponse.json();
+    if (!permData.hasPermission) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+    }
+
+    // Get center data from request
+    const data = await request.json();
+    
     await connectToDB();
-    const newCenter = await centerService.createCenter(body); // Corrected: Use service object
-    return NextResponse.json(newCenter, { status: 201 });
+    
+    // Generate a unique centerId
+    const centerCount = await Center.countDocuments();
+    const centerId = `C${(centerCount + 1).toString().padStart(3, '0')}`;
+    
+    // Create new center
+    const center = new Center({
+      centerId,
+      name: data.name,
+      location: data.location,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      description: data.description,
+      centerAdmins: [session.user.id], // Add current user as admin
+    });
+    
+    await center.save();
+    
+    return NextResponse.json({ 
+      message: "Center created successfully", 
+      center: {
+        _id: center._id,
+        centerId: center.centerId,
+        name: center.name,
+        location: center.location,
+      }
+    }, { status: 201 });
+    
   } catch (error: any) {
-    console.error("Failed to create center:", error);
-    return NextResponse.json({ message: "Failed to create center", error: error.message }, { status: 500 });
+    console.error("Error creating center:", error);
+    return NextResponse.json({ 
+      error: "Failed to create center", 
+      message: error.message 
+    }, { status: 500 });
   }
 }
 
-/**
- * Handles GET requests to retrieve all Centers.
- * HQ_ADMIN gets all centers.
- * Other roles might get a filtered list based on their assignments (future enhancement).
- */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth(); // Corrected: Use auth() to get session
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
-    let centers;
-
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const search = searchParams.get("search") || "";
+    
+    const skip = (page - 1) * limit;
+    
     await connectToDB();
-
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-
-    if (hasHQAdminPermission) {
-      centers = await centerService.getAllCenters(); // Corrected: Use service object
-    } else {
-      return NextResponse.json({ message: "Forbidden: Access restricted or no centers assigned" }, { status: 403 }); 
+    
+    // Build query
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+      ];
     }
     
-    return NextResponse.json(centers, { status: 200 });
+    // Get centers with pagination
+    const centers = await Center.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    
+    // Get total count for pagination
+    const total = await Center.countDocuments(query);
+    
+    // Calculate total pages
+    const pages = Math.ceil(total / limit);
+    
+    return NextResponse.json({
+      centers,
+      paginationInfo: {
+        page,
+        limit,
+        total,
+        pages,
+      },
+    });
+    
   } catch (error: any) {
-    console.error("Failed to retrieve centers:", error);
-    return NextResponse.json({ message: "Failed to retrieve centers", error: error.message }, { status: 500 });
+    console.error("Error fetching centers:", error);
+    return NextResponse.json({ 
+      error: "Failed to fetch centers", 
+      message: error.message 
+    }, { status: 500 });
   }
 }
-

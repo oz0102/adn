@@ -1,85 +1,138 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
-import { clusterService } from "@/services/clusterService"; // Assuming clusterService exports an object
-import { connectToDB } from "@/lib/mongodb"; // Ensured named import
-import { checkPermission } from "@/lib/permissions";
-import mongoose from "mongoose";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { connectToDB } from "@/lib/mongodb";
+import Cluster from "@/models/cluster";
 
-/**
- * Handles POST requests to create a new Cluster.
- * Requires HQ_ADMIN or CENTER_ADMIN (for the target center) privileges.
- */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await auth(); // Corrected: Use auth() to get session
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
-    const body = await request.json();
-    const { centerId } = body; 
-
-    if (!centerId) {
-      return NextResponse.json({ message: "Center ID is required in the request body" }, { status: 400 });
+    // Get cluster data from request
+    const data = await request.json();
+    
+    // Check if user has permission to create cluster for this center
+    const permissionUrl = data.centerId 
+      ? `${request.nextUrl.origin}/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN&centerId=${data.centerId}`
+      : `${request.nextUrl.origin}/api/auth/check-permission?role=HQ_ADMIN`;
+    
+    const permissionResponse = await fetch(permissionUrl, {
+      headers: {
+        cookie: request.headers.get("cookie") || "",
+      },
+    });
+    
+    if (!permissionResponse.ok) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    const isCenterAdminForTargetCenter = await checkPermission(userId, "CENTER_ADMIN", { centerId });
-
-    if (!hasHQAdminPermission && !isCenterAdminForTargetCenter) {
-      return NextResponse.json({ message: "Forbidden: Requires HQ Admin role or Center Admin role for the specified center" }, { status: 403 });
+    const permData = await permissionResponse.json();
+    if (!permData.hasPermission) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
     await connectToDB();
-    const newCluster = await clusterService.createCluster(body); // Corrected: Use service object
-    return NextResponse.json(newCluster, { status: 201 });
+    
+    // Generate a unique clusterId
+    const clusterCount = await Cluster.countDocuments();
+    const clusterId = `CL${(clusterCount + 1).toString().padStart(3, '0')}`;
+    
+    // Create new cluster with multiple meeting schedules
+    const cluster = new Cluster({
+      clusterId,
+      name: data.name,
+      location: data.location,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      description: data.description,
+      centerId: data.centerId,
+      meetingSchedules: data.meetingSchedules, // Store array of meeting schedules
+    });
+    
+    await cluster.save();
+    
+    return NextResponse.json({ 
+      message: "Cluster created successfully", 
+      cluster: {
+        _id: cluster._id,
+        clusterId: cluster.clusterId,
+        name: cluster.name,
+        centerId: cluster.centerId,
+      }
+    }, { status: 201 });
+    
   } catch (error: any) {
-    console.error("Failed to create cluster:", error);
-    return NextResponse.json({ message: "Failed to create cluster", error: error.message }, { status: 500 });
+    console.error("Error creating cluster:", error);
+    return NextResponse.json({ 
+      error: "Failed to create cluster", 
+      message: error.message 
+    }, { status: 500 });
   }
 }
 
-/**
- * Handles GET requests to retrieve all Clusters, optionally filtered by centerId.
- * HQ_ADMIN gets all clusters or all clusters for a specific center.
- * CENTER_ADMIN gets all clusters for their assigned center(s).
- */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth(); // Corrected: Use auth() to get session
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = new mongoose.Types.ObjectId(session.user.id);
     const { searchParams } = new URL(request.url);
-    const centerIdQuery = searchParams.get("centerId");
-
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const search = searchParams.get("search") || "";
+    const centerId = searchParams.get("centerId");
+    
+    const skip = (page - 1) * limit;
+    
     await connectToDB();
-    let clusters;
-
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-
-    if (hasHQAdminPermission) {
-      clusters = await clusterService.getAllClusters(centerIdQuery || undefined); // Corrected: Use service object
-    } else {
-      if (centerIdQuery) {
-        const isCenterAdminForQueryCenter = await checkPermission(userId, "CENTER_ADMIN", { centerId: centerIdQuery });
-        if (isCenterAdminForQueryCenter) {
-          clusters = await clusterService.getAllClusters(centerIdQuery); // Corrected: Use service object
-        } else {
-          return NextResponse.json({ message: "Forbidden: You are not an admin for the specified center" }, { status: 403 });
-        }
-      } else {
-        return NextResponse.json({ message: "Forbidden: Please specify a centerId or have HQ Admin role" }, { status: 403 });
-      }
+    
+    // Build query
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+        { clusterId: { $regex: search, $options: "i" } },
+      ];
     }
     
-    return NextResponse.json(clusters, { status: 200 });
+    if (centerId) {
+      query.centerId = centerId;
+    }
+    
+    // Get clusters with pagination
+    const clusters = await Cluster.find(query)
+      .populate('centerId', 'name')
+      .populate('leaderId', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    
+    // Get total count for pagination
+    const total = await Cluster.countDocuments(query);
+    
+    // Calculate total pages
+    const pages = Math.ceil(total / limit);
+    
+    return NextResponse.json({
+      clusters,
+      paginationInfo: {
+        page,
+        limit,
+        total,
+        pages,
+      },
+    });
+    
   } catch (error: any) {
-    console.error("Failed to retrieve clusters:", error);
-    return NextResponse.json({ message: "Failed to retrieve clusters", error: error.message }, { status: 500 });
+    console.error("Error fetching clusters:", error);
+    return NextResponse.json({ 
+      error: "Failed to fetch clusters", 
+      message: error.message 
+    }, { status: 500 });
   }
 }
-

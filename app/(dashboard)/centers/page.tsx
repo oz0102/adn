@@ -1,4 +1,3 @@
-// app/(dashboard)/centers/page.tsx
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -24,12 +23,14 @@ import {
   Users,
   MapPin,
   Building, // Icon for Center
-  Network // Icon for Clusters count
+  Network, // Icon for Clusters count
+  AlertTriangle
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
+import { useSession } from "next-auth/react"
 
 // Frontend Center interface - adjust based on actual backend model
 interface Center {
@@ -57,20 +58,12 @@ interface PaginationInfo {
   pages: number
 }
 
-// Add a User interface to ensure _id is always present when user is not null
-interface User {
-  _id: string;
-  // Add other user properties if needed by this page, e.g., assignedRoles
-  // For now, only _id is strictly necessary to fix the current errors.
-  // assignedRoles?: Array<{ role: string; scopeId?: string; }>;
-}
-
 export default function CentersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  // Explicitly type `user` according to the local `User` interface
-  const { user }: { user: User | null } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
+  const { status } = useSession()
 
   const [centers, setCenters] = useState<Center[]>([])
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -112,7 +105,7 @@ export default function CentersPage() {
   }, [user]);
 
   const fetchCenters = useCallback(async (page: number, search: string) => {
-    if (!user) return; // After this check, user is of type User
+    if (!user) return;
     try {
       setIsLoading(true)
       const queryParams = new URLSearchParams()
@@ -153,15 +146,19 @@ export default function CentersPage() {
   }, [pagination.limit, toast, user])
 
   useEffect(() => {
-    if (user) {
+    // Only proceed if authentication is complete
+    if (status === "loading") return;
+    
+    if (isAuthenticated && user) {
       checkPermissions();
       const page = parseInt(searchParams.get("page") || "1")
       const search = searchParams.get("search") || ""
       setSearchTerm(search)
       fetchCenters(page, search)
+    } else if (status === "unauthenticated") {
+      router.push("/login");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, user, fetchCenters, checkPermissions]) 
+  }, [searchParams, status, isAuthenticated, user, fetchCenters, checkPermissions, router]) 
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -170,7 +167,7 @@ export default function CentersPage() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    router.push("/dashboard/centers") 
+    router.push("/centers") 
   }
 
   const updateUrlParams = (params: Record<string, string | number | null>) => {
@@ -189,14 +186,14 @@ export default function CentersPage() {
     updateUrlParams({ page })
   }
 
-  if (!user && !isLoading) { // Only show if not loading and no user
-    return <p>Loading user data or user not authenticated...</p>; 
+  if (status === "loading" || isLoading) {
+    return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
   }
   
   if (!hasViewPermission) {
       return (
         <div className="text-center py-10">
-            <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
+            <AlertTriangle className="mx-auto h-12 w-12 text-red-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
             <p className="text-gray-500 mb-4">You do not have permission to view this page.</p>
             <Button onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
