@@ -13,10 +13,11 @@ export async function POST(request: NextRequest) {
     // Get cluster data from request
     const data = await request.json();
     
-    // Check if user has permission to create cluster for this center
+    // Check if user has permission (HQ_ADMIN can create clusters anywhere)
+    // For CENTER_ADMIN, they need permission for the specific center
     const permissionUrl = data.centerId 
       ? `${request.nextUrl.origin}/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN&centerId=${data.centerId}`
-      : `${request.nextUrl.origin}/api/auth/check-permission?role=HQ_ADMIN`;
+      : `${request.nextUrl.origin}/api/auth/check-permission?role=HQ_ADMIN`; // Only HQ_ADMIN can create HQ clusters
     
     const permissionResponse = await fetch(permissionUrl, {
       headers: {
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
     const clusterId = `CL${(clusterCount + 1).toString().padStart(3, '0')}`;
     
     // Create new cluster with multiple meeting schedules
+    // If assignToHQ is true, centerId will be null/undefined
     const cluster = new Cluster({
       clusterId,
       name: data.name,
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
       contactEmail: data.contactEmail,
       contactPhone: data.contactPhone,
       description: data.description,
-      centerId: data.centerId,
+      centerId: data.centerId || null, // Allow null for HQ clusters
       meetingSchedules: data.meetingSchedules, // Store array of meeting schedules
     });
     
@@ -84,6 +86,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
     const centerId = searchParams.get("centerId");
+    const includeHQ = searchParams.get("includeHQ") === "true";
     
     const skip = (page - 1) * limit;
     
@@ -101,6 +104,10 @@ export async function GET(request: NextRequest) {
     
     if (centerId) {
       query.centerId = centerId;
+    } else if (includeHQ) {
+      // If includeHQ is true and no centerId specified, include clusters with null centerId
+      query.$or = query.$or || [];
+      query.$or.push({ centerId: null });
     }
     
     // Get clusters with pagination

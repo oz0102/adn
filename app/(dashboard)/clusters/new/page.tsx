@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useFieldArray } from "react-hook-form"
@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -33,13 +32,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Layers, ArrowLeft, Plus, Trash2, Calendar } from "lucide-react"
+import { Layers, ArrowLeft, Plus, Trash2, Calendar, Building, Home } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { TimePicker } from "@/components/ui/time-picker"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 
-// Form schema with multiple meeting schedules
+// Form schema with multiple meeting schedules and optional centerId
 const clusterFormSchema = z.object({
   name: z.string().min(2, {
     message: "Cluster name must be at least 2 characters.",
@@ -56,9 +56,8 @@ const clusterFormSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  centerId: z.string({
-    required_error: "Please select a center.",
-  }),
+  assignToHQ: z.boolean().default(false),
+  centerId: z.string().optional(),
   meetingSchedules: z.array(
     z.object({
       day: z.string({
@@ -74,7 +73,13 @@ const clusterFormSchema = z.object({
   ).min(1, {
     message: "At least one meeting schedule is required.",
   }),
-})
+}).refine(data => {
+  // If not assigned to HQ, centerId is required
+  return data.assignToHQ || !!data.centerId;
+}, {
+  message: "Please select a center or assign to HQ directly",
+  path: ["centerId"],
+});
 
 type ClusterFormValues = z.infer<typeof clusterFormSchema>
 
@@ -98,6 +103,7 @@ export default function NewClusterPage() {
     contactEmail: "",
     contactPhone: "",
     description: "",
+    assignToHQ: !centerIdFromUrl, // Default to HQ if no center ID provided
     centerId: centerIdFromUrl || "",
     meetingSchedules: [
       {
@@ -112,6 +118,9 @@ export default function NewClusterPage() {
     resolver: zodResolver(clusterFormSchema),
     defaultValues,
   })
+
+  // Watch assignToHQ to update UI
+  const assignToHQ = form.watch("assignToHQ")
 
   // Use field array for meeting schedules
   const { fields, append, remove } = useFieldArray({
@@ -142,21 +151,36 @@ export default function NewClusterPage() {
   }
 
   // Fetch centers on component mount
-  useState(() => {
+  useEffect(() => {
     if (status === "authenticated") {
       fetchCenters()
     }
-  })
+  }, [status])
+
+  // Handle assignment toggle
+  const handleAssignmentToggle = (value: boolean) => {
+    form.setValue("assignToHQ", value);
+    if (value) {
+      // If assigning to HQ, clear centerId
+      form.setValue("centerId", "");
+    }
+  };
 
   async function onSubmit(data: ClusterFormValues) {
     setIsSubmitting(true)
     try {
+      // Prepare data for API - if assignToHQ is true, ensure centerId is null/undefined
+      const submitData = {
+        ...data,
+        centerId: data.assignToHQ ? null : data.centerId
+      };
+
       const response = await fetch("/api/clusters", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(submitData),
       })
 
       if (!response.ok) {
@@ -227,37 +251,87 @@ export default function NewClusterPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="centerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Center *</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      disabled={!!centerIdFromUrl || isLoadingCenters}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingCenters ? "Loading centers..." : "Select a center"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {centers.map((center) => (
-                          <SelectItem key={center._id} value={center._id}>
-                            {center.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      The center this cluster belongs to.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+              {/* Assignment Section */}
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-lg font-medium">Cluster Assignment</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose whether this cluster belongs to a specific center or directly to HQ.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-md">
+                  <div className="flex items-center gap-2">
+                    {assignToHQ ? (
+                      <Home className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Building className="h-5 w-5 text-primary" />
+                    )}
+                    <div>
+                      <p className="font-medium">{assignToHQ ? "Assign to HQ Directly" : "Assign to a Center"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {assignToHQ 
+                          ? "This cluster will be managed directly by HQ" 
+                          : "This cluster will be managed by a specific center"}
+                      </p>
+                    </div>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="assignToHQ"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              handleAssignmentToggle(checked);
+                              field.onChange(checked);
+                            }}
+                            disabled={!!centerIdFromUrl}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {!assignToHQ && (
+                  <FormField
+                    control={form.control}
+                    name="centerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Center *</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={!!centerIdFromUrl || isLoadingCenters}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={isLoadingCenters ? "Loading centers..." : "Select a center"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {centers.map((center) => (
+                              <SelectItem key={center._id} value={center._id}>
+                                {center.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          The center this cluster belongs to.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+              </div>
+
+              <Separator />
 
               <FormField
                 control={form.control}

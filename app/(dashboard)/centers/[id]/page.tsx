@@ -1,4 +1,3 @@
-// app/(dashboard)/centers/[id]/page.tsx
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -23,15 +22,16 @@ import {
   UserCircle, 
   Edit, 
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  AlertTriangle
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
-import { checkPermission } from "@/lib/permissions"
+import { useSession } from "next-auth/react"
 
-// Frontend Center interface - should match the one in centers/page.tsx
+// Frontend Center interface
 interface Center {
   _id: string
   centerId: string
@@ -41,13 +41,13 @@ interface Center {
     _id: string
     firstName: string
     lastName: string
-    email?: string // Added email for display
+    email?: string
   }
   contactEmail?: string
   contactPhone?: string
   description?: string
-  clusterCount?: number // This might be derived or fetched separately
-  memberCount?: number // This might be derived or fetched separately
+  clusterCount?: number
+  memberCount?: number
 }
 
 // Frontend Cluster interface
@@ -60,36 +60,53 @@ interface Cluster {
     lastName: string;
   };
   memberCount?: number;
-  // Add other fields as returned by API
 }
-
-// SmallGroup interface is not used in this component directly for listing, so it can be removed if not needed for other logic.
-// interface SmallGroup {
-//   _id: string;
-//   groupId: string;
-//   name: string;
-//   leaderId?: {
-//     firstName: string;
-//     lastName: string;
-//   };
-//   memberCount?: number;
-//   // Add other fields as returned by API
-// }
 
 export default function CenterDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { user } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
+  const { status } = useSession()
   const centerIdFromParams = params.id as string
 
   const [center, setCenter] = useState<Center | null>(null)
   const [clusters, setClusters] = useState<Cluster[]>([]) 
-  // const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) // Removed as it was unused
   const [isLoading, setIsLoading] = useState(true)
+  const [canEditCenter, setCanEditCenter] = useState(false)
+  const [canCreateCluster, setCanCreateCluster] = useState(false)
+  const [hasViewPermission, setHasViewPermission] = useState(true)
 
-  const canEditCenter = user && center ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id) : false
-  const canCreateCluster = user && center ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id) : false;
+  // Check permissions via API instead of direct model access
+  const checkPermissions = useCallback(async () => {
+    if (!user || !centerIdFromParams) return;
+    
+    try {
+      // Check if user can edit center (HQ_ADMIN or CENTER_ADMIN for this center)
+      const editResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN&centerId=${centerIdFromParams}`);
+      if (editResponse.ok) {
+        const data = await editResponse.json();
+        setCanEditCenter(data.hasPermission);
+      }
+      
+      // Check if user can create clusters (same permissions as edit)
+      setCanCreateCluster(canEditCenter);
+      
+      // Check view permission (HQ_ADMIN or CENTER_ADMIN)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN`);
+      if (viewResponse.ok) {
+        const data = await viewResponse.json();
+        setHasViewPermission(data.hasPermission);
+      } else {
+        setHasViewPermission(false);
+      }
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+      setCanEditCenter(false);
+      setCanCreateCluster(false);
+      setHasViewPermission(false);
+    }
+  }, [user, centerIdFromParams, canEditCenter]);
 
   const fetchCenterDetails = useCallback(async () => {
     if (!user || !centerIdFromParams) return;
@@ -107,7 +124,7 @@ export default function CenterDetailPage() {
       setCenter(centerData.center)
 
       // Fetch clusters for this center
-      const clustersResponse = await fetch(`/api/clusters?centerId=${centerIdFromParams}&limit=100`) // Fetching more clusters, assuming pagination is not on this page for clusters list
+      const clustersResponse = await fetch(`/api/clusters?centerId=${centerIdFromParams}&limit=100`)
       if (!clustersResponse.ok) {
         console.warn(`Failed to fetch clusters for center ${centerIdFromParams}. Status: ${clustersResponse.status}`);
         // Don't throw error, page can still load center details
@@ -130,12 +147,18 @@ export default function CenterDetailPage() {
   }, [centerIdFromParams, toast, user])
 
   useEffect(() => {
-    if (user) {
-        fetchCenterDetails()
+    // Only proceed if authentication is complete
+    if (status === "loading") return;
+    
+    if (isAuthenticated && user) {
+      checkPermissions();
+      fetchCenterDetails();
+    } else if (status === "unauthenticated") {
+      router.push("/login");
     }
-  }, [user, fetchCenterDetails])
+  }, [status, isAuthenticated, user, checkPermissions, fetchCenterDetails, router]);
 
-  if (isLoading) {
+  if (status === "loading" || isLoading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading center details...</p></div>
   }
 
@@ -154,10 +177,10 @@ export default function CenterDetailPage() {
     );
   }
   
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"], center._id)) {
+  if (!hasViewPermission) {
       return (
         <div className="text-center py-10">
-            <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
+            <AlertTriangle className="mx-auto h-12 w-12 text-red-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
             <p className="text-gray-500 mb-4">You do not have permission to view this center.</p>
             <Button onClick={() => router.push("/centers")}>Back to Centers</Button>
@@ -275,4 +298,3 @@ export default function CenterDetailPage() {
     </div>
   )
 }
-
