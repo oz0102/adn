@@ -108,7 +108,7 @@ export default function CreateClusterPage() {
       })
       
       // Redirect to clusters list
-      router.push("/dashboard/clusters")
+      router.push("/clusters")
     } catch (error) {
       console.error("Error creating cluster:", error)
       toast({
@@ -126,7 +126,7 @@ export default function CreateClusterPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Create Cluster</h1>
         <Button variant="outline" asChild>
-          <Link href="/dashboard/clusters">
+          <Link href="/clusters">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Clusters
           </Link>
         </Button>

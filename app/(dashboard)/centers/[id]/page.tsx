@@ -147,7 +147,7 @@ export default function CenterDetailPage() {
             <p className="text-gray-500 mb-4">
             The center you are looking for does not exist or you may not have permission to view it.
             </p>
-            <Button onClick={() => router.push("/dashboard/centers")}>
+            <Button onClick={() => router.push("/centers")}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Centers
             </Button>
         </div>
@@ -160,14 +160,14 @@ export default function CenterDetailPage() {
             <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
             <p className="text-gray-500 mb-4">You do not have permission to view this center.</p>
-            <Button onClick={() => router.push("/dashboard/centers")}>Back to Centers</Button>
+            <Button onClick={() => router.push("/centers")}>Back to Centers</Button>
         </div>
       );
   }
 
   return (
     <div className="space-y-6">
-        <Button variant="outline" onClick={() => router.push("/dashboard/centers")} className="mb-4">
+        <Button variant="outline" onClick={() => router.push("/centers")} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Centers List
         </Button>
 
@@ -181,7 +181,7 @@ export default function CenterDetailPage() {
         </div>
         {canEditCenter && (
           <Button asChild>
-            <Link href={`/dashboard/centers/${center._id}/edit`}> 
+            <Link href={`centers/${center._id}/edit`}> 
               <Edit className="mr-2 h-4 w-4" /> Edit Center
             </Link>
           </Button>
@@ -245,7 +245,7 @@ export default function CenterDetailPage() {
           <CardTitle>Clusters in {center.name}</CardTitle>
           {canCreateCluster && (
             <Button asChild size="sm">
-                <Link href={`/dashboard/clusters/new?centerId=${center._id}&centerName=${encodeURIComponent(center.name)}`}>
+                <Link href={`/clusters/new?centerId=${center._id}&centerName=${encodeURIComponent(center.name)}`}>
                     <Plus className="mr-2 h-4 w-4" /> Add Cluster
                 </Link>
             </Button>
@@ -257,11 +257,11 @@ export default function CenterDetailPage() {
               {clusters.map(cluster => (
                 <li key={cluster._id} className="flex justify-between items-center p-2 border rounded-md">
                   <div>
-                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`} className="font-medium hover:underline">{cluster.name}</Link>
+                    <Link href={`/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`} className="font-medium hover:underline">{cluster.name}</Link>
                     {cluster.leaderId && <span className="text-sm text-gray-500 block">Leader: {cluster.leaderId.firstName} {cluster.leaderId.lastName}</span>}
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`}>View</Link>
+                    <Link href={`/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`}>View</Link>
                   </Button>
                 </li>
               ))}

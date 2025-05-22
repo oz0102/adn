@@ -1,3 +1,5 @@
+//models\user.ts
+
 // This file is only used on the server side
 // Add a check to prevent importing in browser environments
 if (typeof window !== "undefined") {
@@ -17,8 +19,6 @@ export interface IAssignedRole {
 export interface IUser extends Document {
   email: string;
   passwordHash: string;
-  // role: string; // Deprecated
-  // permissions: string[]; // Deprecated
   assignedRoles: IAssignedRole[];
   lastLogin?: Date;
   createdAt: Date;
