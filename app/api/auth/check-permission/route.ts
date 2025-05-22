@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth-config";
+import { auth } from "@/auth"; // Updated import to use auth from @/auth
 import { connectToDB } from "@/lib/mongodb";
 import User from "@/models/user";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth(); // Use auth() instead of getServerSession
     if (!session || !session.user) {
       return NextResponse.json({ hasPermission: false }, { status: 401 });
     }
