@@ -1,22 +1,30 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { IAddress } from './member'; // Assuming IAddress is in member.ts or a shared types file
+
+// Define IAddress interface here to avoid import issues
+export interface IAddress {
+  street: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode?: string;
+}
 
 export interface ICluster extends Document {
   clusterId: string;
   name: string;
   location: string;
   address: IAddress;
-  leaderId: mongoose.Types.ObjectId; // Ref to Member
+  leaderId?: mongoose.Types.ObjectId; // Made optional
   contactPhone: string;
   contactEmail: string;
   photo?: string;
   description: string;
-  meetingSchedule: {
+  meetingSchedules: Array<{  // Changed to array of meeting schedules
     day: string;
     time: string;
     frequency: string;
-  };
-  centerId: mongoose.Types.ObjectId; // Added: Ref to Center
+  }>;
+  centerId?: mongoose.Types.ObjectId; // Made optional for HQ clusters
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,7 +59,6 @@ const ClusterSchema: Schema = new Schema(
     clusterId: { 
       type: String, 
       required: true, 
-      // Removed unique: true to avoid duplicate index
       trim: true
     },
     name: { 
@@ -71,7 +78,7 @@ const ClusterSchema: Schema = new Schema(
     leaderId: { 
       type: Schema.Types.ObjectId, 
       ref: 'Member',
-      required: true
+      required: false  // Made optional
     },
     contactPhone: { 
       type: String,
@@ -91,15 +98,23 @@ const ClusterSchema: Schema = new Schema(
       type: String,
       required: true
     },
-    meetingSchedule: { 
-      type: MeetingScheduleSchema,
-      required: true
+    meetingSchedules: { // Changed from meetingSchedule to meetingSchedules
+      type: [MeetingScheduleSchema],
+      required: true,
+      validate: [
+        {
+          validator: function(schedules: any[]) {
+            return schedules && schedules.length > 0;
+          },
+          message: 'At least one meeting schedule is required'
+        }
+      ]
     },
     centerId: { 
       type: Schema.Types.ObjectId, 
       ref: 'Center',
-      required: true
-    } // Added field
+      required: false  // Made optional for HQ clusters
+    }
   },
   { 
     timestamps: true 
@@ -109,6 +124,6 @@ const ClusterSchema: Schema = new Schema(
 // Create indexes
 ClusterSchema.index({ clusterId: 1 }, { unique: true });
 ClusterSchema.index({ leaderId: 1 });
-ClusterSchema.index({ centerId: 1 }); // Added index
+ClusterSchema.index({ centerId: 1 });
 
 export default mongoose.models.Cluster || mongoose.model<ICluster>('Cluster', ClusterSchema);

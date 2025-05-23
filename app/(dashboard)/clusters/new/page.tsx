@@ -32,20 +32,34 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Layers, ArrowLeft, Plus, Trash2, Calendar, Building, Home } from "lucide-react"
+import { Layers, ArrowLeft, Plus, Trash2, Calendar, Building, Home, MapPin } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 
-// Form schema with multiple meeting schedules and optional centerId
+// Form schema with multiple meeting schedules, optional leader, and address
 const clusterFormSchema = z.object({
   name: z.string().min(2, {
     message: "Cluster name must be at least 2 characters.",
   }),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
+  }),
+  address: z.object({
+    street: z.string().min(2, {
+      message: "Street address is required.",
+    }),
+    city: z.string().min(2, {
+      message: "City is required.",
+    }),
+    state: z.string().min(2, {
+      message: "State/Province is required.",
+    }),
+    country: z.string().min(2, {
+      message: "Country is required.",
+    }),
+    postalCode: z.string().optional(),
   }),
   contactEmail: z.string().email({
     message: "Please enter a valid email address.",
@@ -58,6 +72,7 @@ const clusterFormSchema = z.object({
   }),
   assignToHQ: z.boolean().default(false),
   centerId: z.string().optional(),
+  leaderId: z.string().optional(), // Made optional
   meetingSchedules: z.array(
     z.object({
       day: z.string({
@@ -90,7 +105,9 @@ export default function NewClusterPage() {
   const { status } = useSession()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [centers, setCenters] = useState<Array<{ _id: string; name: string }>>([])
+  const [members, setMembers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([])
   const [isLoadingCenters, setIsLoadingCenters] = useState(true)
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true)
 
   // Get centerId from URL if available
   const centerIdFromUrl = searchParams.get("centerId")
@@ -100,11 +117,19 @@ export default function NewClusterPage() {
   const defaultValues: Partial<ClusterFormValues> = {
     name: "",
     location: "",
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      country: "",
+      postalCode: "",
+    },
     contactEmail: "",
     contactPhone: "",
     description: "",
     assignToHQ: !centerIdFromUrl, // Default to HQ if no center ID provided
     centerId: centerIdFromUrl || "",
+    leaderId: "", // Optional
     meetingSchedules: [
       {
         day: "Sunday",
@@ -150,10 +175,33 @@ export default function NewClusterPage() {
     }
   }
 
-  // Fetch centers on component mount
+  // Fetch members for leader dropdown
+  const fetchMembers = async () => {
+    try {
+      setIsLoadingMembers(true)
+      const response = await fetch("/api/members?limit=100") // Fetch more members for selection
+      if (!response.ok) {
+        throw new Error("Failed to fetch members")
+      }
+      const data = await response.json()
+      setMembers(data.data?.members || [])
+    } catch (error) {
+      console.error("Error fetching members:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load members. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingMembers(false)
+    }
+  }
+
+  // Fetch data on component mount
   useEffect(() => {
     if (status === "authenticated") {
       fetchCenters()
+      fetchMembers()
     }
   }, [status])
 
@@ -172,7 +220,9 @@ export default function NewClusterPage() {
       // Prepare data for API - if assignToHQ is true, ensure centerId is null/undefined
       const submitData = {
         ...data,
-        centerId: data.assignToHQ ? null : data.centerId
+        centerId: data.assignToHQ ? null : data.centerId,
+        // If leaderId is empty string, set to null
+        leaderId: data.leaderId && data.leaderId.trim() !== "" ? data.leaderId : null
       };
 
       const response = await fetch("/api/clusters", {
@@ -367,6 +417,90 @@ export default function NewClusterPage() {
                 )}
               />
 
+              {/* Address Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-medium">Address *</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 p-4 border rounded-md">
+                  <FormField
+                    control={form.control}
+                    name="address.street"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Street Address *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter street address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="address.city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter city" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address.state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State/Province *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter state or province" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="address.country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter country" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address.postalCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Postal/ZIP Code</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter postal code (optional)" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -396,6 +530,39 @@ export default function NewClusterPage() {
                   )}
                 />
               </div>
+
+              {/* Optional Leader Selection */}
+              <FormField
+                control={form.control}
+                name="leaderId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cluster Leader</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a leader (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No leader assigned yet</SelectItem>
+                        {members.map((member) => (
+                          <SelectItem key={member._id} value={member._id}>
+                            {member.firstName} {member.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      You can assign a leader now or add one later.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

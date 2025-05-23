@@ -46,10 +46,12 @@ export async function POST(request: NextRequest) {
       clusterId,
       name: data.name,
       location: data.location,
+      address: data.address,
       contactEmail: data.contactEmail,
       contactPhone: data.contactPhone,
       description: data.description,
       centerId: data.centerId || null, // Allow null for HQ clusters
+      leaderId: data.leaderId || null, // Allow null for optional leader
       meetingSchedules: data.meetingSchedules, // Store array of meeting schedules
     });
     
