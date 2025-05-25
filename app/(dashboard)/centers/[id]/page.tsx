@@ -189,7 +189,7 @@ export default function CenterDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
         <Button variant="outline" onClick={() => router.push("/centers")} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Centers List
         </Button>
@@ -204,7 +204,7 @@ export default function CenterDetailPage() {
         </div>
         {canEditCenter && (
           <Button asChild>
-            <Link href={`centers/${center._id}/edit`}> 
+            <Link href={`/centers/${center._id}/edit`}> 
               <Edit className="mr-2 h-4 w-4" /> Edit Center
             </Link>
           </Button>
@@ -283,9 +283,14 @@ export default function CenterDetailPage() {
                     <Link href={`/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`} className="font-medium hover:underline">{cluster.name}</Link>
                     {cluster.leaderId && <span className="text-sm text-gray-500 block">Leader: {cluster.leaderId.firstName} {cluster.leaderId.lastName}</span>}
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`}>View</Link>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/clusters/${cluster._id}`}>View</Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/clusters/${cluster._id}/dashboard`}>Dashboard</Link>
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -295,6 +300,60 @@ export default function CenterDetailPage() {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Links</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href={`/centers/${center._id}/dashboard`}>
+                <Building className="mr-2 h-4 w-4" /> Center Dashboard
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href={`/centers/${center._id}/members`}>
+                <Users className="mr-2 h-4 w-4" /> View Members
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href={`/centers/${center._id}/events`}>
+                <Calendar className="mr-2 h-4 w-4" /> Center Events
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-100 p-2 rounded-full mt-0.5">
+                  <Users className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium">New member added</p>
+                  <p className="text-sm text-muted-foreground">John Doe was added by Pastor James</p>
+                  <p className="text-xs text-muted-foreground">2 hours ago</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-green-100 p-2 rounded-full mt-0.5">
+                  <Calendar className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium">New event scheduled</p>
+                  <p className="text-sm text-muted-foreground">Youth Conference on June 15th</p>
+                  <p className="text-xs text-muted-foreground">Yesterday</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
