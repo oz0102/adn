@@ -221,8 +221,8 @@ export default function NewClusterPage() {
       const submitData = {
         ...data,
         centerId: data.assignToHQ ? null : data.centerId,
-        // If leaderId is empty string, set to null
-        leaderId: data.leaderId && data.leaderId.trim() !== "" ? data.leaderId : null
+        // If leaderId is empty string or "@none", set to null
+        leaderId: data.leaderId && data.leaderId.trim() !== "" && data.leaderId !== "@none" ? data.leaderId : null
       };
 
       const response = await fetch("/api/clusters", {
@@ -548,7 +548,7 @@ export default function NewClusterPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No leader assigned yet</SelectItem>
+                        <SelectItem value="@none">No leader assigned yet</SelectItem>
                         {members.map((member) => (
                           <SelectItem key={member._id} value={member._id}>
                             {member.firstName} {member.lastName}
