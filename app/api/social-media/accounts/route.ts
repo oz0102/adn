@@ -11,7 +11,7 @@ interface SocialMediaQueryFilters {
   scope?: "HQ" | "CENTER";
   centerId?: string | null;
   platform?: SocialMediaPlatform | string; // Allow string for flexibility if enum is not exhaustive
-  [key: string]: any; // Allow other string keys for dynamic filters
+  // Index signature removed
 }
 
 /**

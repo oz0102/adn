@@ -18,8 +18,10 @@ interface EventQueryFilters {
   scope?: string;
   centerId?: string | { $in: mongoose.Types.ObjectId[] };
   createdBy?: mongoose.Types.ObjectId;
-  $or?: Record<string, any>[]; // For OR conditions
-  [key: string]: any; // Allow other string keys for dynamic filters
+  $or?: Array<Partial<EventQueryFilters>>; // For OR conditions with more specific typing
+  // Index signature for other dynamic string parameters from query string.
+  // Specific properties like 'page', 'limit', 'startDateBefore', etc., handle their own types.
+  [key: string]: string | undefined; // Only allow string values for unspecified keys from query params
 }
 
 export async function POST(request: Request) {
@@ -73,12 +75,29 @@ export async function GET(request: Request) {
     
     const filters: EventQueryFilters = {};
     searchParams.forEach((value, key) => {
-        if (key === "page" || key === "limit") {
-            filters[key] = parseInt(value, 10);
-        } else if (key === "startDateBefore" || key === "startDateAfter" || key === "endDateBefore" || key === "endDateAfter") { // Added endDate filters
-            filters[key] = new Date(value);
+        const k = key as keyof EventQueryFilters; // Cast key to keyof EventQueryFilters
+        if (k === "page" || k === "limit") {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+                filters[k] = numValue;
+            }
+        } else if (k === "startDateBefore" || k === "startDateAfter" || k === "endDateBefore" || k === "endDateAfter") {
+            const dateValue = new Date(value);
+            // Potentially check if dateValue is valid, though Date constructor handles invalid dates gracefully (e.g. returns 'Invalid Date')
+            filters[k] = dateValue;
+        } else if (k === "scope") { // 'scope' is explicitly string
+            filters[k] = value;
+        } else if (k === "centerId") { // 'centerId' is string from query, or ObjectId[] set later
+            filters[k] = value; 
+        } else if (k === "createdBy") {
+            if (mongoose.Types.ObjectId.isValid(value)) {
+                filters[k] = new mongoose.Types.ObjectId(value);
+            }
+            // else: invalid ObjectId string, potentially log or ignore
         } else {
-            filters[key] = value;
+            // This branch handles any other string parameters not explicitly typed above
+            // It relies on the index signature [key: string]: string | undefined;
+            filters[key] = value; // 'key' (original string) is used here for the index signature
         }
     });
 

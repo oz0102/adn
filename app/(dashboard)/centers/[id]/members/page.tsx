@@ -163,7 +163,7 @@ export default function CenterMembersPage() {
       <div className="text-center py-10">
         <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
         <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
-        <p className="text-gray-500 mb-4">You do not have permission to view this center's members.</p>
+        <p className="text-gray-500 mb-4">You do not have permission to view this center&apos;s members.</p>
         <Button onClick={() => router.push("/centers")}>Back to Centers</Button>
       </div>
     );
