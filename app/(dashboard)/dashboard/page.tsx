@@ -158,8 +158,8 @@ export default function DashboardPage() {
                   <Users className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium">Jane Smith</p>
-                  <p className="text-sm text-muted-foreground">April 22</p>
+                  <p className="font-medium">Osazee Samson</p>
+                  <p className="text-sm text-muted-foreground">November 12</p>
                 </div>
               </div>
               <button className="text-sm text-primary">Send Wishes</button>
@@ -170,8 +170,8 @@ export default function DashboardPage() {
                   <Users className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-medium">Michael Johnson</p>
-                  <p className="text-sm text-muted-foreground">April 28</p>
+                  <p className="font-medium">Esohe Grace Festus</p>
+                  <p className="text-sm text-muted-foreground">July 17</p>
                 </div>
               </div>
               <button className="text-sm text-primary">Send Wishes</button>
