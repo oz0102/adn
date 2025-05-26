@@ -1471,7 +1471,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Pagination } from "@/components/ui/pagination"
 import { Badge } from "@/components/ui/badge"
 import { 
-  Search, Plus, Filter, UserCheck, ChevronRight, X, Mail, Phone, 
+  Search, Plus, ChevronRight, X, Mail, Phone, 
   Calendar, AlertCircle, CheckCircle, XCircle, Clock 
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -1550,7 +1550,7 @@ export default function FollowUpsPage() {
     });
     
     fetchFollowUps(page, search, status, responseCategory, personType, assignedTo);
-  }, [searchParams]);
+  }, [searchParams, fetchFollowUps]);
 
   const fetchFollowUps = async (
     page: number, 
@@ -1564,7 +1564,7 @@ export default function FollowUpsPage() {
       setIsLoading(true);
       
       // Build query string
-      let queryParams = new URLSearchParams();
+      const queryParams = new URLSearchParams();
       queryParams.append("page", page.toString());
       queryParams.append("limit", pagination.limit.toString());
       
@@ -1608,7 +1608,7 @@ export default function FollowUpsPage() {
         total: 35, // Mock total
         pages: 4,  // Mock pages
       });
-    } catch (error) {
+    } catch (error: Error) {
       console.error("Error fetching follow-ups:", error);
       toast({
         title: "Error",
@@ -1651,7 +1651,7 @@ export default function FollowUpsPage() {
     router.push("/follow-ups");
   };
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | null>) => {
     const newParams = new URLSearchParams(searchParams.toString());
     
     Object.entries(params).forEach(([key, value]) => {

@@ -184,7 +184,7 @@ export default function FlyersPage() {
     router.push("/dashboard/flyers");
   };
 
-  const updateUrlParams = (params: Record<string, any>) => {
+  const updateUrlParams = (params: Record<string, string | number | null>) => {
     const newParams = new URLSearchParams(searchParams.toString());
     
     Object.entries(params).forEach(([key, value]) => {

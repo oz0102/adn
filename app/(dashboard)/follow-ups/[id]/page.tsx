@@ -1293,8 +1293,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger
+  DialogTitle
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -1362,7 +1361,7 @@ const clusters = [
 
 export default function FollowUpDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
+  // const router = useRouter();
   const { toast } = useToast();
   
   const [followUp, setFollowUp] = useState<FollowUp | null>(null);
@@ -1469,7 +1468,7 @@ export default function FollowUpDetailPage() {
         if (mockFollowUp.nextFollowUpDate) {
           setNextFollowUpDate(new Date(mockFollowUp.nextFollowUpDate).toISOString().split('T')[0]);
         }
-      } catch (error) {
+      } catch (error: Error) {
         console.error("Error fetching follow-up:", error);
         toast({
           title: "Error",
@@ -1492,7 +1491,7 @@ export default function FollowUpDetailPage() {
     setResponseCategory(newCategory as FollowUp['responseCategory']);
   };
   
-  const handleNewAttemptChange = (field: keyof typeof newAttempt, value: any) => {
+  const handleNewAttemptChange = (field: keyof typeof newAttempt, value: string | boolean | string[]) => {
     setNewAttempt(prev => ({
       ...prev,
       [field]: value
@@ -1704,8 +1703,8 @@ export default function FollowUpDetailPage() {
       }
       
       const selectedChannels = Object.entries(messageData.channels)
-        .filter(([_, selected]) => selected)
-        .map(([channel, _]) => channel);
+        .filter(([, selected]) => selected)
+        .map(([channel]) => channel);
       
       if (selectedChannels.length === 0) {
         toast({

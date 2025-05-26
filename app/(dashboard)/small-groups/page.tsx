@@ -142,7 +142,7 @@ export default function SmallGroupsPage() {
         if (!parentCenterName) setParentCenterName(data.smallGroups[0].clusterId?.centerId?.name || null);
       }
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching small groups:", error)
       toast({
         title: "Error",
@@ -154,7 +154,7 @@ export default function SmallGroupsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [pagination.limit, toast, user, canViewAnySmallGroup, parentClusterName, parentCenterName])
+  }, [pagination.limit, toast, user, canViewAnySmallGroup, parentClusterName, parentCenterName, smallGroups])
 
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1")
@@ -171,7 +171,6 @@ export default function SmallGroupsPage() {
     if (user) {
         fetchSmallGroups(page, search, clusterIdFromQuery)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user, fetchSmallGroups])
 
   const handleSearch = (e: React.FormEvent) => {

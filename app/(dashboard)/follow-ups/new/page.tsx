@@ -13,7 +13,6 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card"
@@ -142,7 +141,7 @@ export default function NewFollowUpPage() {
     },
   });
   
-  async function onSubmitNewAttendee(values: z.infer<typeof newAttendeeSchema>) {
+  async function onSubmitNewAttendee(_values: z.infer<typeof newAttendeeSchema>) {
     try {
       setIsSubmitting(true);
       
@@ -190,7 +189,7 @@ export default function NewFollowUpPage() {
     }
   }
   
-  async function onSubmitMember(values: z.infer<typeof memberSchema>) {
+  async function onSubmitMember(_values: z.infer<typeof memberSchema>) {
     try {
       setIsSubmitting(true);
       
