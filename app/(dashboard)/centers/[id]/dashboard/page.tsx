@@ -25,9 +25,7 @@ import {
   ArrowLeft,
   ChevronRight
 } from 'lucide-react';
-// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-// import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
 
@@ -209,7 +207,7 @@ export default function CenterDashboardPage() {
       const eventsData = await eventsResponse.json();
       setEvents(eventsData.events || []);
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching center data:", error);
       toast({
         title: "Error",
@@ -591,7 +589,7 @@ export default function CenterDashboardPage() {
             <div className="text-center py-10">
               <Network className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No Clusters Found</h3>
-              <p className="text-gray-500 mb-4">This center doesn't have any clusters yet.</p>
+              <p className="text-gray-500 mb-4">This center doesn&apos;t have any clusters yet.</p>
               <Button asChild>
                 <Link href={`/clusters/new?centerId=${center._id}`}>
                   Create First Cluster

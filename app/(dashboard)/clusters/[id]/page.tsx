@@ -96,12 +96,12 @@ export default function ClusterDetailPage() {
 
   const [cluster, setCluster] = useState<Cluster | null>(null)
   const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) 
-  const [members, setMembers] = useState<Member[]>([]) 
+  const [members, _setMembers] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
   const canEditCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
   const canCreateSmallGroup = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
-  const canAddMemberToCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  // const canAddMemberToCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
 
   const fetchClusterDetails = useCallback(async () => {
     if (!user || !clusterIdFromParams) return;
@@ -137,7 +137,7 @@ export default function ClusterDetailPage() {
       //   setMembers(membersData.members || [])
       // }
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching cluster details:", error)
       toast({
         title: "Error",

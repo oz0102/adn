@@ -23,7 +23,8 @@ import {
   Edit, 
   Plus,
   ArrowLeft,
-  AlertTriangle
+  AlertTriangle,
+  Calendar
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -133,7 +134,7 @@ export default function CenterDetailPage() {
         setClusters(clustersData.clusters || [])
       }
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching center details:", error)
       toast({
         title: "Error",
