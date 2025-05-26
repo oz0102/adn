@@ -25,9 +25,9 @@ import {
   ArrowLeft,
   ChevronRight
 } from 'lucide-react';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { getInitials } from "@/lib/utils";
+// import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
 
