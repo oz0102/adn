@@ -1,5 +1,5 @@
 // Instagram API implementation for follower count tracking
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 
 // Helper type for Axios-like error structures
 interface ApiErrorData {
