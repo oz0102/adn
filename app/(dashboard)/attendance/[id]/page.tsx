@@ -83,15 +83,12 @@ interface AttendanceDetails {
   };
 }
 
-type PageProps = {
-  params: {
-    id: string;
-  };
-};
+interface PageProps {
+  params: { id: string };
+}
 
-// export default function AttendanceDetailPage({ params }: { params: { id: string } }) {
-  export default function AttendanceDetailPage({ params }: any) {
-    const { id } = params as { id: string };
+
+export default function AttendanceDetailPage({ params }: PageProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [attendance, setAttendance] = useState<AttendanceDetails | null>(null)
