@@ -391,10 +391,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Import only the types/interfaces needed on the client
-import { SocialMediaPlatform, IFollowerHistoryEntry } from "@/models/socialMediaAccount";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { SocialMediaPlatform } from "@/models/socialMediaAccount";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { GrowthSummary } from "@/components/social-media/analytics-components";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/lib/store";
 import { checkPermission } from "@/lib/permissions"; // Assuming this checkPermission is okay on client for UI rendering
 

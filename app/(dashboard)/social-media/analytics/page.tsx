@@ -19,6 +19,14 @@ interface SocialMediaAccountAnalyticsEntry {
   // Add other properties as needed based on actual data structure
 }
 
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+}
+
 export default function SocialMediaAnalyticsPage() {
   const [accounts, setAccounts] = useState<SocialMediaAccountAnalyticsEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +43,7 @@ export default function SocialMediaAnalyticsPage() {
   const fetchAccounts = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await socialMediaService.getAccounts();
+      const data: SocialMediaAccountAnalyticsEntry[] = await socialMediaService.getAccounts();
       setAccounts(data);
       
       // Set first account as selected if available
@@ -44,15 +52,16 @@ export default function SocialMediaAnalyticsPage() {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch accounts';
+      const apiError = error as ApiErrorResponse;
       toast({
         title: 'Error',
-        description: (error as any)?.response?.data?.error || errorMessage,
+        description: apiError?.response?.data?.error || errorMessage,
         variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
     }
-  }, [selectedAccount, toast]);
+  }, [selectedAccount]);
 
   // Update follower counts for all accounts
   const updateAllFollowers = async () => {
@@ -66,9 +75,10 @@ export default function SocialMediaAnalyticsPage() {
       });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update followers';
+      const apiError = error as ApiErrorResponse;
       toast({
         title: 'Error',
-        description: (error as any)?.response?.data?.error || errorMessage,
+        description: apiError?.response?.data?.error || errorMessage,
         variant: 'destructive'
       });
     } finally {
