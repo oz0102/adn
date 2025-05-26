@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    await dbConnect();
+    await connectToDB();
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    await dbConnect();
+    await connectToDB();
 
     const body = await request.json();
 

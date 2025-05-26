@@ -376,7 +376,7 @@
 // app/(dashboard)/members/[id]/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { 
@@ -459,6 +459,7 @@ interface MemberDetails {
 export default function MemberDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { toast } = useToast()
+  const unwrappedParams = use(params);
   const [member, setMember] = useState<MemberDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -468,7 +469,7 @@ export default function MemberDetailPage({ params }: { params: { id: string } })
       try {
         setIsLoading(true)
         
-        const response = await fetch(`/api/members/${params.id}`)
+        const response = await fetch(`/api/members/${unwrappedParams.id}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch member details')
@@ -498,13 +499,13 @@ export default function MemberDetailPage({ params }: { params: { id: string } })
     }
     
     fetchMemberData()
-  }, [params.id, toast])
+  }, [unwrappedParams.id, toast])
 
   const handleDeleteMember = async () => {
     try {
       setIsDeleting(true)
       
-      const response = await fetch(`/api/members/${params.id}`, {
+      const response = await fetch(`/api/members/${unwrappedParams.id}`, {
         method: 'DELETE',
       })
       
