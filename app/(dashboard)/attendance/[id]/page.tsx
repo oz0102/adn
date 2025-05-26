@@ -1,3 +1,15 @@
+// app/(dashboard)/attendance/[id]/page.tsx
+"use client"
+
+export default function TemporaryPlaceholder() {
+  return (
+    <div className="p-8">
+      <h1>Attendance Detail Page (Temporarily Disabled)</h1>
+      <p>This page is currently under maintenance.</p>
+    </div>
+  )
+}
+
 // // app/(dashboard)/attendance/[id]/page.tsx
 // "use client"
 
