@@ -15,12 +15,12 @@ interface AssignedRole {
   role: string;
   scopeId?: string;
   // Add other properties of role object if known
-  [key: string]: any; 
+  [key: string]: string | undefined; 
 }
 
 interface Permission { // Placeholder for permission structure
   name: string;
-  [key: string]: any;
+  [key: string]: string | undefined;
 }
 
 interface CustomSession extends Session {
@@ -74,13 +74,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions to create this notification" }, { status: 403 });
     }
     
+    // Ensure body is treated as Partial for safety when spreading
+    const partialBody = body as Partial<Parameters<typeof notificationService.createNotification>[0]>;
+
     const notificationPayload: Parameters<typeof notificationService.createNotification>[0] = {
-        ...(body as any), // Cast to any to satisfy the spread, ensure all required fields are present
-        message: body.message || "Default message", 
-        type: body.type || "INFO", 
-        targetLevel: targetLevel, 
+        ...partialBody,
+        // Ensure all required fields for INotificationCreationPayload are explicitly set
+        // Required fields from INotificationCreationPayload: type, content, targetLevel, createdBy
+        // 'message' is used for 'content' if body.content is not set
+        // 'type' is from body.type or defaults
+        // 'targetLevel' is from body.targetLevel (already checked not null)
+        // 'createdBy' is currentUserId
+        // Assuming 'title' is optional or handled by 'subject' in body
+        // 'recipient' and other optional fields come from 'body' if present
+        type: partialBody.type || "INFO", // Default if not in body
+        content: partialBody.content || partialBody.message || "Default message", // Use content or message
+        targetLevel: targetLevel!, // Already checked for null
         createdBy: currentUserId,
+        // Optional fields that might be in body:
+        subject: partialBody.subject,
+        recipient: partialBody.recipient,
+        targetId: partialBody.targetId,
+        originatorCenterId: partialBody.originatorCenterId,
+        relatedTo: partialBody.relatedTo,
     };
+    // Remove message if content is used, to avoid confusion if INotificationCreationPayload doesn't have 'message'
+    if (notificationPayload.content === partialBody.message && partialBody.content) {
+        delete (notificationPayload as any).message; 
+    }
+
 
     const newNotification = await notificationService.createNotification(notificationPayload);
     return NextResponse.json(newNotification, { status: 201 });
@@ -104,14 +126,26 @@ export async function GET(request: NextRequest) {
     const currentUserId = new mongoose.Types.ObjectId(session.user.id);
     const { searchParams } = new URL(request.url);
     
-    const filters: Partial<Parameters<typeof notificationService.getAllNotificationsForUser>[0]> = {}; 
+    // Define filters with a more specific index signature for searchParams
+    const filters: { 
+        isRead?: boolean;
+        page?: number;
+        limit?: number;
+        status?: string; // Assuming status might be a string from query params
+        // Add other potential string/number/boolean keys from searchParams if known
+        [key: string]: string | number | boolean | undefined; 
+    } = {}; 
+
     searchParams.forEach((value, key) => {
         if (key === "page" || key === "limit") {
-            (filters as any)[key] = parseInt(value, 10);
+            filters[key] = parseInt(value, 10);
         } else if (key === "isRead") {
             filters.isRead = value === "true";
+        } else if (key === "status") { // Example for specific string filter
+            filters.status = value;
         } else {
-            (filters as any)[key] = value;
+            // For other unknown keys, still assign them but this is safer than `as any`
+            filters[key] = value; 
         }
     });
 
@@ -135,14 +169,32 @@ export async function GET(request: NextRequest) {
         memberOfClusterId: memberProfile?.clusterId ? new mongoose.Types.ObjectId(memberProfile.clusterId.toString()) : undefined,
         memberOfSmallGroupId: memberProfile?.smallGroupId ? new mongoose.Types.ObjectId(memberProfile.smallGroupId.toString()) : undefined,
     };
+    
+    // Construct finalFilters ensuring type compatibility with INotificationFilters
+    // The `filters` object might have extra properties not defined in INotificationFilters.
+    // We select only the properties relevant to INotificationFilters or cast if confident.
+
+    const notificationServiceFilters: Partial<Parameters<typeof notificationService.getAllNotificationsForUser>[0]> = {};
+    if (filters.status !== undefined && typeof filters.status === 'string') {
+        // Assuming status is part of INotificationFilters and is a string enum
+        notificationServiceFilters.status = filters.status as Parameters<typeof notificationService.getAllNotificationsForUser>[0]['status'];
+    }
+    if (filters.isRead !== undefined) {
+        notificationServiceFilters.isRead = filters.isRead;
+    }
+    // page and limit are numbers
+    const pageNum = typeof filters.page === 'number' ? filters.page : (typeof filters.page === 'string' ? parseInt(filters.page,10) : 1);
+    const limitNum = typeof filters.limit === 'number' ? filters.limit : (typeof filters.limit === 'string' ? parseInt(filters.limit,10) : 10);
+
 
     const finalFilters: Parameters<typeof notificationService.getAllNotificationsForUser>[0] = {
-        ...(filters as any),
-        page: filters.page || 1,
-        limit: filters.limit || 10,
-        userIdForScope: currentUserId,
-        memberIdForScope: memberProfile?._id ? new mongoose.Types.ObjectId(memberProfile._id.toString()) : undefined,
+        ...notificationServiceFilters, // Spread known and typed properties
+        page: pageNum || 1,
+        limit: limitNum || 10,
+        userIdForScope: currentUserId, // This is from notificationService
+        memberIdForScope: memberProfile?._id ? new mongoose.Types.ObjectId(memberProfile._id.toString()) : undefined, // This is from notificationService
     };
+    
 
     const result = await notificationService.getAllNotificationsForUser(finalFilters, userRolesAndScopes);
     return NextResponse.json(result, { status: 200 });

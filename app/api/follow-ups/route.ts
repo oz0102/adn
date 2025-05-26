@@ -5,7 +5,7 @@ import FollowUp from "@/models/followUp";
 import Member from "@/models/member";
 import { followUpService } from "@/services/followUpService"; // Corrected import
 import { auth } from "@/auth"; // Using NextAuth v5 auth()
-import mongoose, { Types } from "mongoose"; // Added mongoose for Types
+import { Types } from "mongoose"; // Added mongoose for Types
 
 // Define a more specific type for roles if possible, otherwise keep it general
 interface AssignedRole {

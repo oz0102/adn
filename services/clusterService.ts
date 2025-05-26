@@ -3,7 +3,7 @@ import ClusterModel, { ICluster } from "@/models/cluster";
 import CenterModel, { ICenter } from "@/models/center";
 import MemberModel, { IMember } from "@/models/member"; 
 import { connectToDB } from "@/lib/mongodb"; // Ensured named import
-import mongoose, { Types, Document, FilterQuery } from "mongoose";
+import { Types, Document, FilterQuery } from "mongoose"; // Removed unused 'mongoose' default import
 
 // Replace LeanDocument with Document<any, any, T> & T
 export interface IClusterCreatePayload extends Omit<Partial<ICluster>, "_id" | "centerId" | "leaderId"> {
@@ -17,10 +17,11 @@ export interface IClusterUpdatePayload extends Partial<Omit<IClusterCreatePayloa
 }
 
 // Update PopulatedLeanCluster type definition
-export type PopulatedLeanCluster = Omit<Document<any, any, ICluster> & ICluster, "centerId" | "leaderId"> & {
-  _id: Types.ObjectId;
-  centerId: (Pick<Document<any, any, ICenter> & ICenter, "_id" | "name"> & { _id: Types.ObjectId }) | null; 
-  leaderId?: (Pick<Document<any, any, IMember> & IMember, "_id" | "firstName" | "lastName" | "email"> & { _id: Types.ObjectId }) | null;
+// Assuming ICluster, ICenter, IMember already extend mongoose.Document
+export type PopulatedLeanCluster = Omit<ICluster, "centerId" | "leaderId"> & { // ICluster itself should be a Mongoose Document
+  _id: Types.ObjectId; // Ensure _id is ObjectId after lean
+  centerId: (Pick<ICenter, "_id" | "name"> & { _id: Types.ObjectId }) | null; 
+  leaderId?: (Pick<IMember, "_id" | "firstName" | "lastName" | "email"> & { _id: Types.ObjectId }) | null;
 };
 
 const createCluster = async (data: IClusterCreatePayload): Promise<ICluster> => {
