@@ -119,7 +119,7 @@ export default function GroupDashboardPage() {
       const eventsData = await eventsResponse.json();
       setEvents(eventsData.events || []);
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching group data:", error);
       toast({
         title: "Error",
@@ -212,7 +212,7 @@ export default function GroupDashboardPage() {
       <div className="text-center py-10">
         <Network className="mx-auto h-12 w-12 text-red-400 mb-4" />
         <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
-        <p className="text-gray-500 mb-4">You do not have permission to view this small group's dashboard.</p>
+        <p className="text-gray-500 mb-4">You do not have permission to view this small group&apos;s dashboard.</p>
         <Button onClick={() => router.push("/groups")}>Back to Small Groups</Button>
       </div>
     );

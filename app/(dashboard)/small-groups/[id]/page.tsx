@@ -119,7 +119,7 @@ export default function SmallGroupDetailPage() {
         setMembers(membersData.members || [])
       }
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching small group details:", error)
       toast({
         title: "Error",

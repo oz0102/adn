@@ -328,7 +328,7 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
 
   useEffect(() => {
     fetchSpiritualGrowth()
-  }, [memberId])
+  }, [memberId, fetchSpiritualGrowth])
 
   const fetchSpiritualGrowth = async () => {
     try {
@@ -347,12 +347,13 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
         const stagesArray: SpiritualGrowthStage[] = []
         
         if (data.data) {
-          Object.entries(data.data).forEach(([key, value]: [string, any]) => {
-            if (value && value.date) {
+          Object.entries(data.data).forEach(([key, value]: [string, unknown]) => {
+            // Type guard for value
+            if (value && typeof value === 'object' && 'date' in value) {
               stagesArray.push({
                 stage: key,
-                date: value.date,
-                notes: value.notes
+                date: (value as { date: string }).date,
+                notes: (value as { notes?: string }).notes
               })
             }
           })

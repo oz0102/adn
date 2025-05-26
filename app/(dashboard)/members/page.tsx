@@ -132,7 +132,7 @@ export default function MembersPage() {
     })
     
     fetchMembers(page, search, clusterId, smallGroupId, gender)
-  }, [searchParams])
+  }, [searchParams, fetchMembers])
 
   const fetchMembers = async (
     page: number, 
