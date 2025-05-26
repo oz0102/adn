@@ -7,6 +7,21 @@ import { connectToDB } from "@/lib/mongodb"; // Ensured named import
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
 
+// Define a more specific type for event query filters
+interface EventQueryFilters {
+  page?: number;
+  limit?: number;
+  startDateBefore?: Date;
+  startDateAfter?: Date;
+  endDateBefore?: Date;
+  endDateAfter?: Date;
+  scope?: string;
+  centerId?: string | { $in: mongoose.Types.ObjectId[] };
+  createdBy?: mongoose.Types.ObjectId;
+  $or?: Record<string, any>[]; // For OR conditions
+  [key: string]: any; // Allow other string keys for dynamic filters
+}
+
 export async function POST(request: Request) {
   try {
     const session = await auth(); 
@@ -36,12 +51,13 @@ export async function POST(request: Request) {
     body.createdBy = userId; 
     const newEvent = await eventService.createEvent(body); // Changed to use eventService
     return NextResponse.json(newEvent, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to create event:", error);
-    if (error.name === "ValidationError") {
+    if (error instanceof mongoose.Error.ValidationError) {
         return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ message: "Failed to create event", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to create event", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -55,7 +71,7 @@ export async function GET(request: Request) {
     const userId = new mongoose.Types.ObjectId(session.user.id);
     const { searchParams } = new URL(request.url);
     
-    const filters: any = {};
+    const filters: EventQueryFilters = {};
     searchParams.forEach((value, key) => {
         if (key === "page" || key === "limit") {
             filters[key] = parseInt(value, 10);
@@ -67,7 +83,7 @@ export async function GET(request: Request) {
     });
 
     await connectToDB();
-    let canViewAll = await checkPermission(userId, "HQ_ADMIN"); 
+    const canViewAll = await checkPermission(userId, "HQ_ADMIN"); 
 
     const userPermissions = session.user.permissions || []; // Assuming permissions are on session.user
 
@@ -106,9 +122,10 @@ export async function GET(request: Request) {
 
     const result = await eventService.getAllEvents(filters, userPermissions, userId); // Changed to use eventService, pass permissions and userId
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to retrieve events:", error);
-    return NextResponse.json({ message: "Failed to retrieve events", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve events", error: errorMessage }, { status: 500 });
   }
 }
 

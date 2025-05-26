@@ -1,6 +1,6 @@
 // Analytics dashboard page for Social Media Tracker
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GrowthSummary, PlatformDistribution, FollowerHistoryChart } from '@/components/social-media/analytics-components';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,8 +9,18 @@ import { socialMediaService } from '@/services/socialMediaService';
 import { toast } from '@/components/ui/use-toast';
 import { RefreshCwIcon } from 'lucide-react';
 
+interface SocialMediaAccountAnalyticsEntry {
+  _id: string;
+  platform: string; // Consider using a more specific enum/type if available
+  username: string;
+  followerCount: number;
+  lastFollowerUpdate?: string;
+  followerHistory?: { date: string; count: number }[];
+  // Add other properties as needed based on actual data structure
+}
+
 export default function SocialMediaAnalyticsPage() {
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<SocialMediaAccountAnalyticsEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
@@ -19,10 +29,10 @@ export default function SocialMediaAnalyticsPage() {
   // Fetch all accounts on component mount
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
 
   // Fetch all social media accounts
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await socialMediaService.getAccounts();
@@ -32,16 +42,17 @@ export default function SocialMediaAnalyticsPage() {
       if (data.length > 0 && !selectedAccount) {
         setSelectedAccount(data[0]._id);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch accounts';
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to fetch accounts',
+        description: (error as any)?.response?.data?.error || errorMessage,
         variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedAccount, toast]);
 
   // Update follower counts for all accounts
   const updateAllFollowers = async () => {
@@ -53,10 +64,11 @@ export default function SocialMediaAnalyticsPage() {
         title: 'Followers updated',
         description: 'All social media accounts have been updated.'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update followers';
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to update followers',
+        description: (error as any)?.response?.data?.error || errorMessage,
         variant: 'destructive'
       });
     } finally {

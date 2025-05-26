@@ -3,7 +3,7 @@
 // app/(dashboard)/members/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { 
@@ -134,7 +134,7 @@ export default function MembersPage() {
     fetchMembers(page, search, clusterId, smallGroupId, gender)
   }, [searchParams, fetchMembers])
 
-  const fetchMembers = async (
+  const fetchMembers = useCallback(async (
     page: number, 
     search: string, 
     clusterId: string, 
@@ -183,7 +183,7 @@ export default function MembersPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

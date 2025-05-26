@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 // import dbConnect from "@/lib/dbConnect";
 import { connectToDB } from "@/lib/mongodb";
 import Member from "@/models/member";
+import { FilterQuery } from "mongoose";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     const gender = searchParams.get("gender") || "";
 
     // Build query
-    const query: any = {};
+    const query: FilterQuery<typeof Member> = {};
 
     if (search) {
       query.$or = [
@@ -70,10 +71,11 @@ export async function GET(request: NextRequest) {
         pages: totalPages,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch members";
     console.error("Error fetching members:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to fetch members" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }
@@ -105,10 +107,11 @@ export async function POST(request: NextRequest) {
       message: "Member created successfully",
       member,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to create member";
     console.error("Error creating member:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to create member" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

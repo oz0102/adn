@@ -5,7 +5,19 @@ import { connectToDB } from "@/lib/mongodb"; // Standardized DB connection impor
 import FollowUp from "@/models/followUp";
 import { followUpService } from "@/services/followUpService"; // Corrected import
 import { auth } from "@/auth"; // Using NextAuth v5 auth()
-import mongoose from "mongoose";
+
+// Define a more specific type for roles if possible, otherwise keep it general
+interface AssignedRole {
+  role: string;
+  // Add other properties of role object if known, e.g., scopeId: string
+  [key: string]: any; 
+}
+
+interface SessionUserWithRoles {
+  id: string;
+  assignedRoles?: AssignedRole[];
+  // Add other user properties if needed
+}
 
 const handoffSchema = z.object({
   clusterId: z.string(),
@@ -52,7 +64,8 @@ export async function POST(
     }
     
     // Authorization check: Similar to the attempts route, adapt as needed
-    const userRoles = (session.user as any).assignedRoles?.map((r: any) => r.role) || [];
+    const typedUser = session.user as SessionUserWithRoles;
+    const userRoles = typedUser.assignedRoles?.map((r: AssignedRole) => r.role) || [];
     const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("HQ_ADMIN") || userRoles.includes("CENTER_ADMIN");
 
     if (!isAdminOrPastor && followUp.assignedTo?.toString() !== currentUserId) {
@@ -74,10 +87,11 @@ export async function POST(
       message: "Follow-up handed off successfully",
       data: updatedFollowUp
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     console.error("Handoff follow-up error:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

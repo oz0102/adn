@@ -43,9 +43,10 @@ export async function GET(request: Request, { params }: Params) {
     }
     
     return NextResponse.json(cluster, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to retrieve cluster ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to retrieve cluster", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve cluster", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -82,9 +83,10 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Cluster not found or update failed" }, { status: 404 });
     }
     return NextResponse.json(updatedCluster, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update cluster ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to update cluster", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update cluster", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -120,9 +122,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Cluster not found or delete failed" }, { status: 404 });
     }
     return NextResponse.json({ message: "Cluster deleted successfully" }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to delete cluster ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to delete cluster", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to delete cluster", error: errorMessage }, { status: 500 });
   }
 }
 

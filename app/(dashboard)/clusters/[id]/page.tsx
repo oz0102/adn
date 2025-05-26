@@ -96,7 +96,7 @@ export default function ClusterDetailPage() {
 
   const [cluster, setCluster] = useState<Cluster | null>(null)
   const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]) 
-  const [members, _setMembers] = useState<Member[]>([]) 
+  const [members] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
   const canEditCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;

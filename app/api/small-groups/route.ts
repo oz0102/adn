@@ -41,9 +41,10 @@ export async function POST(request: Request) {
     const smallGroupData = { ...body, createdBy: userId };
     const newSmallGroup = await smallGroupService.createSmallGroup(smallGroupData);
     return NextResponse.json(newSmallGroup, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to create small group:", error);
-    return NextResponse.json({ message: "Failed to create small group", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to create small group", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -95,9 +96,10 @@ export async function GET(request: Request) {
     }
     
     return NextResponse.json(smallGroups, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to retrieve small groups:", error);
-    return NextResponse.json({ message: "Failed to retrieve small groups", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve small groups", error: errorMessage }, { status: 500 });
   }
 }
 

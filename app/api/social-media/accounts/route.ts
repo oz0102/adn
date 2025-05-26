@@ -4,6 +4,15 @@ import { socialMediaService } from "@/services/socialMediaService"; // Corrected
 import { connectToDB } from "@/lib/mongodb";
 import { checkPermission } from "@/lib/permissions";
 import mongoose from "mongoose";
+import { SocialMediaPlatform } from "@/models/socialMediaAccount"; // Assuming platform enum/type
+
+// Define a more specific type for query filters
+interface SocialMediaQueryFilters {
+  scope?: "HQ" | "CENTER";
+  centerId?: string | null;
+  platform?: SocialMediaPlatform | string; // Allow string for flexibility if enum is not exhaustive
+  [key: string]: any; // Allow other string keys for dynamic filters
+}
 
 /**
  * Handles POST requests to create a new Social Media Account.
@@ -38,12 +47,13 @@ export async function POST(request: Request) {
     body.createdBy = userId; // Add createdBy field
     const newAccount = await socialMediaService.createSocialMediaAccount(body); // Corrected usage
     return NextResponse.json(newAccount, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to create social media account:", error);
-    if (error.message.includes("already exists")) {
-        return NextResponse.json({ message: error.message }, { status: 409 });
+    if (errorMessage.includes("already exists")) {
+        return NextResponse.json({ message: errorMessage }, { status: 409 });
     }
-    return NextResponse.json({ message: "Failed to create social media account", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to create social media account", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -62,9 +72,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const scope = searchParams.get("scope") as "HQ" | "CENTER" | undefined;
     const centerId = searchParams.get("centerId");
-    const platform = searchParams.get("platform") as any;
+    const platform = searchParams.get("platform") as SocialMediaPlatform | string | undefined | null;
 
-    const filters: any = {};
+    const filters: SocialMediaQueryFilters = {};
     if (scope) filters.scope = scope;
     if (centerId) filters.centerId = centerId;
     if (platform) filters.platform = platform;
@@ -86,9 +96,10 @@ export async function GET(request: Request) {
     
     const accounts = await socialMediaService.getAllSocialMediaAccounts(filters); // Corrected usage
     return NextResponse.json(accounts, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to retrieve social media accounts:", error);
-    return NextResponse.json({ message: "Failed to retrieve social media accounts", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve social media accounts", error: errorMessage }, { status: 500 });
   }
 }
 

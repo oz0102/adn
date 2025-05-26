@@ -1446,7 +1446,7 @@
 // app/(dashboard)/follow-ups/page.tsx - Main follow-up listing page
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { 
@@ -1552,7 +1552,7 @@ export default function FollowUpsPage() {
     fetchFollowUps(page, search, status, responseCategory, personType, assignedTo);
   }, [searchParams, fetchFollowUps]);
 
-  const fetchFollowUps = async (
+  const fetchFollowUps = useCallback(async (
     page: number, 
     search: string, 
     status: string, 
@@ -1584,13 +1584,13 @@ export default function FollowUpsPage() {
       // Mock data
       const mockFollowUps: FollowUp[] = Array.from({ length: 10 }).map((_, i) => ({
         _id: `followup${i + 1}`,
-        personType: ['New Convert', 'New Attendee', 'Member'][i % 3] as any,
+        personType: ['New Convert', 'New Attendee', 'Member'][i % 3] as FollowUp['personType'],
         personName: `Person ${i + 1}`,
         personEmail: `person${i + 1}@example.com`,
         personPhone: `+1234567890${i}`,
         personWhatsApp: i % 2 === 0 ? `+1234567890${i}` : undefined,
-        status: ['Pending', 'In Progress', 'Completed', 'Failed'][i % 4] as any,
-        responseCategory: ['Promising', 'Undecided', 'Cold'][i % 3] as any,
+        status: ['Pending', 'In Progress', 'Completed', 'Failed'][i % 4] as FollowUp['status'],
+        responseCategory: ['Promising', 'Undecided', 'Cold'][i % 3] as FollowUp['responseCategory'],
         assignedTo: {
           _id: 'user1',
           email: 'user@example.com'
@@ -1618,7 +1618,7 @@ export default function FollowUpsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast, pagination.limit]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

@@ -191,8 +191,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import connectToDatabase from '@/lib/db';
 import FollowUp from '@/models/followUp';
-import Member from '@/models/member';
-import Event from '@/models/event';
 
 export async function GET(
   req: NextRequest,

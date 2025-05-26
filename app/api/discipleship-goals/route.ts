@@ -3,11 +3,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth"; // Corrected: Use auth() for server-side session
 import { discipleshipGoalService } from "@/services/discipleshipGoalService"; // Corrected: Assuming service object export
 import { connectToDB } from "@/lib/mongodb"; 
-import { checkPermission } from "@/lib/permissions";
 import mongoose, { Types } from "mongoose";
-import CenterModel, { ICenter } from "@/models/center";
-import ClusterModel, { ICluster } from "@/models/cluster";
-import SmallGroupModel, { ISmallGroup } from "@/models/smallGroup";
 import MemberModel, { IMember } from "@/models/member";
 import UserModel, { IUser, IAssignedRole } from "@/models/user";
 import { Session } from "next-auth";
@@ -45,7 +41,7 @@ export async function POST(request: NextRequest) {
     let effectiveCenterId: Types.ObjectId | undefined = centerId ? new Types.ObjectId(centerId.toString()) : undefined;
     let effectiveClusterId: Types.ObjectId | undefined = clusterId ? new Types.ObjectId(clusterId.toString()) : undefined;
     let effectiveSmallGroupId: Types.ObjectId | undefined = smallGroupId ? new Types.ObjectId(smallGroupId.toString()) : undefined;
-    let effectiveMemberId: Types.ObjectId | undefined = memberId ? new Types.ObjectId(memberId.toString()) : undefined;
+    const effectiveMemberId: Types.ObjectId | undefined = memberId ? new Types.ObjectId(memberId.toString()) : undefined;
 
     switch (level) {
       case "HQ":
@@ -116,12 +112,13 @@ export async function POST(request: NextRequest) {
 
     const newGoal = await discipleshipGoalService.createDiscipleshipGoal(goalPayload); // Corrected: Use service object
     return NextResponse.json(newGoal, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to create discipleship goal:", error);
-    if (error.name === "ValidationError" || error instanceof mongoose.Error.ValidationError) {
+    if (error instanceof mongoose.Error.ValidationError) {
         return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ message: "Failed to create discipleship goal", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to create discipleship goal", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -182,9 +179,10 @@ export async function GET(request: NextRequest) {
 
     const result = await discipleshipGoalService.getAllDiscipleshipGoals(finalFilters, userRoles, currentUserId); // Corrected: Use service object
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to retrieve discipleship goals:", error);
-    return NextResponse.json({ message: "Failed to retrieve discipleship goals", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve discipleship goals", error: errorMessage }, { status: 500 });
   }
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectToDB } from "@/lib/mongodb";
 import Center from "@/models/center";
+import { FilterQuery } from "mongoose";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,14 +18,10 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    if (!permissionResponse.ok) {
-      const permData = await permissionResponse.json();
-      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
-    }
-
     const permData = await permissionResponse.json();
-    if (!permData.hasPermission) {
-      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+
+    if (!permissionResponse.ok || !permData.hasPermission) {
+      return NextResponse.json({ error: permData.error || "Permission denied" }, { status: 403 });
     }
 
     // Get center data from request
@@ -59,11 +56,12 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Error creating center:", error);
     return NextResponse.json({ 
       error: "Failed to create center", 
-      message: error.message 
+      message: errorMessage 
     }, { status: 500 });
   }
 }
@@ -85,7 +83,7 @@ export async function GET(request: NextRequest) {
     await connectToDB();
     
     // Build query
-    const query: any = {};
+    const query: FilterQuery<typeof Center> = {};
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -116,11 +114,12 @@ export async function GET(request: NextRequest) {
       },
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Error fetching centers:", error);
     return NextResponse.json({ 
       error: "Failed to fetch centers", 
-      message: error.message 
+      message: errorMessage 
     }, { status: 500 });
   }
 }

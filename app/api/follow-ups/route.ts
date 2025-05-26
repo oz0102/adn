@@ -5,7 +5,42 @@ import FollowUp from "@/models/followUp";
 import Member from "@/models/member";
 import { followUpService } from "@/services/followUpService"; // Corrected import
 import { auth } from "@/auth"; // Using NextAuth v5 auth()
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose"; // Added mongoose for Types
+
+// Define a more specific type for roles if possible, otherwise keep it general
+interface AssignedRole {
+  role: string;
+  [key: string]: any; 
+}
+
+interface SessionUserWithRoles {
+  id: string;
+  assignedRoles?: AssignedRole[];
+}
+
+interface FollowUpQueryFilters {
+  $or?: Record<string, any>[];
+  status?: string;
+  responseCategory?: string;
+  personType?: string;
+  assignedTo?: string | Types.ObjectId;
+  [key: string]: any; // For page, limit etc.
+}
+
+interface IPersonPopulated {
+  _id: Types.ObjectId;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phoneNumber?: string;
+  whatsappNumber?: string;
+}
+
+interface IAssignedUserPopulated {
+  _id: Types.ObjectId;
+  email: string;
+}
+
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +53,8 @@ export async function GET(req: NextRequest) {
       );
     }
     const currentUserId = session.user.id;
-    const userRoles = (session.user as any).assignedRoles?.map((r: any) => r.role) || [];
+    const typedUser = session.user as SessionUserWithRoles;
+    const userRoles = typedUser.assignedRoles?.map((r: AssignedRole) => r.role) || [];
     const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("HQ_ADMIN") || userRoles.includes("CENTER_ADMIN");
 
     const { searchParams } = new URL(req.url);
@@ -30,7 +66,7 @@ export async function GET(req: NextRequest) {
     const personType = searchParams.get("personType") || "";
     const assignedToFilter = searchParams.get("assignedTo") || "";
 
-    const query: Record<string, any> = {};
+    const query: FollowUpQueryFilters = {};
     
     if (search) {
       query.$or = [
@@ -84,15 +120,18 @@ export async function GET(req: NextRequest) {
       .sort({ nextFollowUpDate: 1, createdAt: -1 });
     
     const transformedFollowUps = followUps.map(followUp => {
-      const personName = followUp.personId ? 
-        `${(followUp.personId as any).firstName} ${(followUp.personId as any).lastName}` : 
+      const populatedPerson = followUp.personId as IPersonPopulated | null;
+      const populatedAssignedTo = followUp.assignedTo as IAssignedUserPopulated | null;
+
+      const personName = populatedPerson ? 
+        `${populatedPerson.firstName} ${populatedPerson.lastName}` : 
         followUp.newAttendee ? 
           `${followUp.newAttendee.firstName} ${followUp.newAttendee.lastName}` : 
           "Unknown";
           
-      const personEmail = (followUp.personId as any)?.email || followUp.newAttendee?.email;
-      const personPhone = (followUp.personId as any)?.phoneNumber || followUp.newAttendee?.phoneNumber;
-      const personWhatsApp = (followUp.personId as any)?.whatsappNumber || followUp.newAttendee?.whatsappNumber;
+      const personEmail = populatedPerson?.email || followUp.newAttendee?.email;
+      const personPhone = populatedPerson?.phoneNumber || followUp.newAttendee?.phoneNumber;
+      const personWhatsApp = populatedPerson?.whatsappNumber || followUp.newAttendee?.whatsappNumber;
       
       return {
         _id: followUp._id.toString(),
@@ -103,9 +142,9 @@ export async function GET(req: NextRequest) {
         personWhatsApp,
         status: followUp.status,
         responseCategory: followUp.responseCategory,
-        assignedTo: followUp.assignedTo ? {
-          _id: (followUp.assignedTo as any)._id.toString(),
-          email: (followUp.assignedTo as any).email
+        assignedTo: populatedAssignedTo ? {
+          _id: populatedAssignedTo._id.toString(),
+          email: populatedAssignedTo.email
         } : null,
         nextFollowUpDate: followUp.nextFollowUpDate,
         attempts: followUp.attempts.length,
@@ -124,10 +163,11 @@ export async function GET(req: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error fetching follow-ups";
     console.error("Error fetching follow-ups:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Error fetching follow-ups" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }
@@ -189,10 +229,11 @@ export async function POST(req: NextRequest) {
       message: "Follow-up created successfully",
       data: followUp
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error creating follow-up";
     console.error("Error creating follow-up:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Error creating follow-up" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

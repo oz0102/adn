@@ -1251,7 +1251,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { 
   Card, 
@@ -1361,7 +1361,6 @@ const clusters = [
 
 export default function FollowUpDetailPage() {
   const params = useParams<{ id: string }>();
-  // const router = useRouter();
   const { toast } = useToast();
   
   const [followUp, setFollowUp] = useState<FollowUp | null>(null);

@@ -54,17 +54,26 @@ export const SocialMediaDialog: React.FC<SocialMediaDialogProps> = ({
       
       onSuccess();
       onClose();
-    } catch (error: unknown) { // Changed from any
+    } catch (error: unknown) { 
       let errorMessage = 'Something went wrong. Please try again.';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      // Attempt to get a more specific error message if it's an API error response
-      if (typeof error === 'object' && error !== null && 'response' in error && 
-          typeof (error as any).response === 'object' && (error as any).response !== null && 
-          'data' in (error as any).response && typeof (error as any).response.data === 'object' && 
-          (error as any).response.data !== null && 'error' in (error as any).response.data) {
-        errorMessage = (error as any).response.data.error;
+      
+      // More type-safe way to check for API error structure
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const response = (error as { response?: unknown }).response;
+        if (typeof response === 'object' && response !== null && 'data' in response) {
+          const data = (response as { data?: unknown }).data;
+          if (typeof data === 'object' && data !== null) {
+            if ('error' in data && typeof (data as { error?: unknown }).error === 'string') {
+              errorMessage = (data as { error: string }).error;
+            } else if ('message' in data && typeof (data as { message?: unknown }).message === 'string') {
+              // Handle cases where the error message might be in data.message
+              errorMessage = (data as { message: string }).message;
+            }
+          }
+        }
       }
 
       toast({

@@ -166,7 +166,7 @@ export default function NewCenterPage() {
                       <Input placeholder="Enter location" {...field} />
                     </FormControl>
                     <FormDescription>
-                      The general location of the center (e.g., "Downtown", "North District").
+                      The general location of the center (e.g., &quot;Downtown&quot;, &quot;North District&quot;).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

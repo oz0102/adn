@@ -36,9 +36,10 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Center not found" }, { status: 404 });
     }
     return NextResponse.json(center, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to retrieve center ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to retrieve center", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve center", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -70,9 +71,10 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Center not found or update failed" }, { status: 404 });
     }
     return NextResponse.json(updatedCenter, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update center ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to update center", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update center", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -103,9 +105,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Center not found or delete failed" }, { status: 404 });
     }
     return NextResponse.json({ message: "Center deleted successfully" }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to delete center ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to delete center", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to delete center", error: errorMessage }, { status: 500 });
   }
 }
 
