@@ -50,11 +50,11 @@ interface Cluster {
   contactEmail?: string;
   contactPhone?: string;
   description?: string;
-  meetingSchedules?: Array<{
+  meetingSchedule?: {
     day: string;
     time: string;
     frequency: string;
-  }>;
+  };
   memberCount?: number;
   smallGroupCount?: number;
 }
@@ -209,7 +209,7 @@ export default function ClusterDashboardPage() {
       setCluster({
         _id: clusterId,
         clusterId: "CL001",
-        name: "Sample Cluster",
+        name: "North Cluster",
         location: "North District",
         leaderId: {
           _id: "sample-leader-id",
@@ -223,13 +223,11 @@ export default function ClusterDashboardPage() {
         contactEmail: "north@example.com",
         contactPhone: "+1234567890",
         description: "North district cluster",
-        meetingSchedules: [
-          {
-            day: "Saturday",
-            time: "10:00 AM",
-            frequency: "Weekly"
-          }
-        ],
+        meetingSchedule: {
+          day: "Saturday",
+          time: "10:00 AM",
+          frequency: "Weekly"
+        },
         memberCount: 45,
         smallGroupCount: 4
       });
@@ -341,13 +339,10 @@ export default function ClusterDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="outline" size="sm" onClick={() => router.push("/clusters")}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
-            </Button>
             <Badge variant="secondary">{cluster.clusterId}</Badge>
           </div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -540,61 +535,76 @@ export default function ClusterDashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Small Groups</CardTitle>
-            <CardDescription>Small groups under {cluster.name}</CardDescription>
+            <CardTitle>Small Groups in {cluster.name}</CardTitle>
+            <CardDescription>Total: {smallGroups.length} small groups</CardDescription>
           </div>
           <Button asChild>
-            <Link href={`/clusters/${cluster._id}/groups`}>
-              View All Small Groups
+            <Link href={`/groups/new?clusterId=${cluster._id}`}>
+              Add Small Group
             </Link>
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {smallGroups.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4 col-span-full">No small groups found</p>
-            ) : (
-              smallGroups.map((group) => (
+          {smallGroups.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {smallGroups.map((group) => (
                 <Card key={group._id} className="overflow-hidden">
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline">{group.groupId}</Badge>
-                      <div className="bg-purple-100 p-2 rounded-full">
-                        <Network className="h-4 w-4 text-purple-600" />
+                    <div className="flex items-center gap-3">
+                      <div className="bg-indigo-100 p-2 rounded-full">
+                        <Users className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{group.name}</CardTitle>
+                        <Badge variant="outline" className="mt-1">{group.groupId}</Badge>
                       </div>
                     </div>
-                    <CardTitle className="text-lg mt-2">{group.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="pb-2">
                     {group.leaderId && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback>{getInitials(group.leaderId.firstName, group.leaderId.lastName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">
-                          Led by {group.leaderId.firstName} {group.leaderId.lastName}
-                        </span>
-                      </div>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2 mb-1">
+                        <span className="i-lucide-user-circle h-4 w-4"></span>
+                        Leader: {group.leaderId.firstName} {group.leaderId.lastName}
+                      </p>
                     )}
-                    <div className="text-sm text-muted-foreground">
-                      {group.memberCount || 0} members
-                    </div>
+                    {group.memberCount !== undefined && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <span className="i-lucide-users h-4 w-4"></span>
+                        {group.memberCount} Members
+                      </p>
+                    )}
                   </CardContent>
-                  <CardFooter className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full" asChild>
+                  <CardFooter className="pt-2 flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
                       <Link href={`/groups/${group._id}`}>
-                        View Small Group
+                        View
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <Link href={`/groups/${group._id}/dashboard`}>
+                        Dashboard
                       </Link>
                     </Button>
                   </CardFooter>
                 </Card>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Small Groups Found</h3>
+              <p className="text-gray-500 mb-4">This cluster doesn't have any small groups yet.</p>
+              <Button asChild>
+                <Link href={`/groups/new?clusterId=${cluster._id}`}>
+                  Create First Small Group
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       
-      {/* Charts Section */}
+      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ChartCard 
           title="Member Growth" 
@@ -606,13 +616,13 @@ export default function ClusterDashboardPage() {
         <ChartCard 
           title="Small Group Performance" 
           description="Attendance rate by small group"
-          type="pie"
+          type="bar"
           data={smallGroupPerformanceData}
         />
         
         <ChartCard 
           title="Spiritual Growth" 
-          description="Member spiritual journey"
+          description="Member spiritual journey stages"
           type="bar"
           data={spiritualGrowthData}
         />
@@ -621,22 +631,42 @@ export default function ClusterDashboardPage() {
       {/* Additional Data Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <DataCard
-          title="Upcoming Birthdays"
-          description="Members with birthdays this month"
-          data={[
-            { name: "John Smith", value: "May 5", icon: "🎂" },
-            { name: "Mary Johnson", value: "May 12", icon: "🎂" },
-            { name: "Robert Williams", value: "May 18", icon: "🎂" },
+          title="Cluster Information"
+          description="Key details about this cluster"
+          items={[
+            { 
+              title: "Meeting Schedule", 
+              description: cluster.meetingSchedule ? 
+                `${cluster.meetingSchedule.day}s at ${cluster.meetingSchedule.time} (${cluster.meetingSchedule.frequency})` : 
+                "Not specified", 
+              icon: "calendar" 
+            },
+            { 
+              title: "Contact Email", 
+              description: cluster.contactEmail || "Not specified", 
+              icon: "mail" 
+            },
+            { 
+              title: "Contact Phone", 
+              description: cluster.contactPhone || "Not specified", 
+              icon: "phone" 
+            },
+            { 
+              title: "Location", 
+              description: cluster.location || "Not specified", 
+              icon: "map-pin" 
+            },
           ]}
         />
         
         <DataCard
           title="Recent Follow-ups"
           description="Latest follow-up activities"
-          data={[
-            { name: "New Convert Follow-up", value: "3 days ago", icon: "🔔" },
-            { name: "First-time Visitor", value: "1 week ago", icon: "🔔" },
-            { name: "Absentee Follow-up", value: "2 weeks ago", icon: "🔔" },
+          items={[
+            { title: "New Convert Follow-up", description: "James Wilson - 3 days ago", icon: "user-check" },
+            { title: "First-time Visitor", description: "Sarah Johnson - 1 week ago", icon: "user-check" },
+            { title: "Absentee Follow-up", description: "Michael Brown - 2 weeks ago", icon: "user-check" },
+            { title: "Prayer Request", description: "Emily Davis - 2 weeks ago", icon: "user-check" },
           ]}
         />
       </div>

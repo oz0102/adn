@@ -221,7 +221,7 @@ export default function CenterDashboardPage() {
       setCenter({
         _id: centerId,
         centerId: "CTR001",
-        name: "Sample Center",
+        name: "Main Center",
         location: "Downtown",
         leadPastor: {
           _id: "sample-pastor-id",
@@ -229,9 +229,9 @@ export default function CenterDashboardPage() {
           lastName: "Doe",
           email: "john.doe@example.com"
         },
-        contactEmail: "info@samplecenter.org",
+        contactEmail: "info@maincenter.org",
         contactPhone: "+1234567890",
-        description: "Sample center description",
+        description: "Our main worship center",
         clusterCount: 5,
         memberCount: 250
       });
@@ -333,13 +333,10 @@ export default function CenterDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="outline" size="sm" onClick={() => router.push("/centers")}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
-            </Button>
             <Badge variant="secondary">{center.centerId}</Badge>
           </div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -502,11 +499,9 @@ export default function CenterDashboardPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {events.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">No upcoming events scheduled</p>
-                ) : (
-                  events.map((event) => (
+              {events.length > 0 ? (
+                <div className="space-y-4">
+                  {events.map((event) => (
                     <div key={event._id} className="flex items-start gap-4 p-3 rounded-lg border">
                       <div className="bg-green-100 p-3 rounded-lg">
                         <Calendar className="h-5 w-5 text-green-600" />
@@ -524,9 +519,11 @@ export default function CenterDashboardPage() {
                         </Link>
                       </Button>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No upcoming events scheduled</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -536,61 +533,76 @@ export default function CenterDashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Clusters</CardTitle>
-            <CardDescription>Clusters under {center.name}</CardDescription>
+            <CardTitle>Clusters in {center.name}</CardTitle>
+            <CardDescription>Total: {clusters.length} clusters</CardDescription>
           </div>
           <Button asChild>
-            <Link href={`/centers/${center._id}/clusters`}>
-              View All Clusters
+            <Link href={`/clusters/new?centerId=${center._id}`}>
+              Add Cluster
             </Link>
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clusters.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4 col-span-full">No clusters found</p>
-            ) : (
-              clusters.map((cluster) => (
+          {clusters.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {clusters.map((cluster) => (
                 <Card key={cluster._id} className="overflow-hidden">
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline">{cluster.clusterId}</Badge>
+                    <div className="flex items-center gap-3">
                       <div className="bg-purple-100 p-2 rounded-full">
-                        <Network className="h-4 w-4 text-purple-600" />
+                        <Network className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{cluster.name}</CardTitle>
+                        <Badge variant="outline" className="mt-1">{cluster.clusterId}</Badge>
                       </div>
                     </div>
-                    <CardTitle className="text-lg mt-2">{cluster.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="pb-2">
                     {cluster.leaderId && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback>{getInitials(cluster.leaderId.firstName, cluster.leaderId.lastName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">
-                          Led by {cluster.leaderId.firstName} {cluster.leaderId.lastName}
-                        </span>
-                      </div>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2 mb-1">
+                        <span className="i-lucide-user-circle h-4 w-4"></span>
+                        Leader: {cluster.leaderId.firstName} {cluster.leaderId.lastName}
+                      </p>
                     )}
-                    <div className="text-sm text-muted-foreground">
-                      {cluster.memberCount || 0} members
-                    </div>
+                    {cluster.memberCount !== undefined && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <span className="i-lucide-users h-4 w-4"></span>
+                        {cluster.memberCount} Members
+                      </p>
+                    )}
                   </CardContent>
-                  <CardFooter className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full" asChild>
+                  <CardFooter className="pt-2 flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
                       <Link href={`/clusters/${cluster._id}`}>
-                        View Cluster
+                        View
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <Link href={`/clusters/${cluster._id}/dashboard`}>
+                        Dashboard
                       </Link>
                     </Button>
                   </CardFooter>
                 </Card>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <Network className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Clusters Found</h3>
+              <p className="text-gray-500 mb-4">This center doesn't have any clusters yet.</p>
+              <Button asChild>
+                <Link href={`/clusters/new?centerId=${center._id}`}>
+                  Create First Cluster
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       
-      {/* Charts Section */}
+      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ChartCard 
           title="Attendance Trends" 
@@ -615,7 +627,7 @@ export default function CenterDashboardPage() {
         
         <ChartCard 
           title="Spiritual Growth" 
-          description="Member spiritual journey"
+          description="Member spiritual journey stages"
           type="bar"
           data={spiritualGrowthData}
         />
@@ -626,22 +638,22 @@ export default function CenterDashboardPage() {
         <DataCard
           title="Upcoming Birthdays"
           description="Members with birthdays this month"
-          data={[
-            { name: "John Smith", value: "May 5", icon: "🎂" },
-            { name: "Mary Johnson", value: "May 12", icon: "🎂" },
-            { name: "Robert Williams", value: "May 18", icon: "🎂" },
-            { name: "Sarah Brown", value: "May 25", icon: "🎂" },
+          items={[
+            { title: "John Smith", description: "May 15", icon: "cake" },
+            { title: "Mary Johnson", description: "May 18", icon: "cake" },
+            { title: "Robert Brown", description: "May 22", icon: "cake" },
+            { title: "Jennifer Davis", description: "May 30", icon: "cake" },
           ]}
         />
         
         <DataCard
           title="Recent Follow-ups"
           description="Latest follow-up activities"
-          data={[
-            { name: "New Convert Follow-up", value: "3 days ago", icon: "🔔" },
-            { name: "First-time Visitor", value: "1 week ago", icon: "🔔" },
-            { name: "Absentee Follow-up", value: "2 weeks ago", icon: "🔔" },
-            { name: "Prayer Request", value: "3 weeks ago", icon: "🔔" },
+          items={[
+            { title: "New Convert Follow-up", description: "James Wilson - 3 days ago", icon: "user-check" },
+            { title: "First-time Visitor", description: "Sarah Johnson - 1 week ago", icon: "user-check" },
+            { title: "Absentee Follow-up", description: "Michael Brown - 2 weeks ago", icon: "user-check" },
+            { title: "Prayer Request", description: "Emily Davis - 2 weeks ago", icon: "user-check" },
           ]}
         />
       </div>
