@@ -83,7 +83,14 @@ interface AttendanceDetails {
   };
 }
 
-export default function AttendanceDetailPage({ params }: { params: { id: string } }) {
+type PageProps = {
+  params: {
+    id: string;
+  };
+};
+
+// export default function AttendanceDetailPage({ params }: { params: { id: string } }) {
+  export default function AttendanceDetailPage({ params }: PageProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [attendance, setAttendance] = useState<AttendanceDetails | null>(null)
