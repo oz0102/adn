@@ -10,7 +10,8 @@ import { Types } from "mongoose"; // Added mongoose for Types
 // Define a more specific type for roles if possible, otherwise keep it general
 interface AssignedRole {
   role: string;
-  [key: string]: any; 
+  scopeId?: string;
+  parentScopeId?: string;
 }
 
 interface SessionUserWithRoles {
@@ -19,12 +20,14 @@ interface SessionUserWithRoles {
 }
 
 interface FollowUpQueryFilters {
-  $or?: Record<string, any>[];
+  $or?: Array<Record<string, any>>; // More specific than Record<string, any>[]
   status?: string;
   responseCategory?: string;
   personType?: string;
   assignedTo?: string | Types.ObjectId;
-  [key: string]: any; // For page, limit etc.
+  page?: number; // Added page
+  limit?: number; // Added limit
+  personId?: string | Types.ObjectId | { $in: Types.ObjectId[] }; // Added personId for flexibility
 }
 
 interface IPersonPopulated {

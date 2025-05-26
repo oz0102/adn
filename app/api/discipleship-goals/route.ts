@@ -134,13 +134,17 @@ export async function GET(request: NextRequest) {
 
     const filters: Partial<IDiscipleshipGoalFilters> = {};
     searchParams.forEach((value, key) => {
-        if (key === "page" || key === "limit") {
-            (filters as any)[key] = parseInt(value, 10);
-        } else if (key === "level" || key === "status" || key === "category") {
-            (filters as any)[key] = value;
-        } else if (key === "centerId" || key === "clusterId" || key === "smallGroupId" || key === "memberId" || key === "createdBy") {
+        const filterKey = key as keyof IDiscipleshipGoalFilters;
+        if (filterKey === "page" || filterKey === "limit") {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+                filters[filterKey] = numValue;
+            }
+        } else if (filterKey === "level" || filterKey === "status" || filterKey === "category") {
+            filters[filterKey] = value as IDiscipleshipGoalFilters[typeof filterKey];
+        } else if (filterKey === "centerId" || filterKey === "clusterId" || filterKey === "smallGroupId" || filterKey === "memberId" || filterKey === "createdBy") {
             if (Types.ObjectId.isValid(value)) {
-                (filters as any)[key] = new Types.ObjectId(value);
+                filters[filterKey] = new Types.ObjectId(value) as IDiscipleshipGoalFilters[typeof filterKey];
             }
         }
     });

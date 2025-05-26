@@ -9,8 +9,8 @@ import { auth } from "@/auth"; // Using NextAuth v5 auth()
 // Define a more specific type for roles if possible, otherwise keep it general
 interface AssignedRole {
   role: string;
-  // Add other properties of role object if known, e.g., scopeId: string
-  [key: string]: any; 
+  scopeId?: string;
+  parentScopeId?: string;
 }
 
 interface SessionUserWithRoles {

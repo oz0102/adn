@@ -14,13 +14,13 @@ import { Session } from "next-auth";
 interface AssignedRole {
   role: string;
   scopeId?: string;
-  // Add other properties of role object if known
-  [key: string]: string | undefined; 
+  parentScopeId?: string; // Added parentScopeId
+  // Index signature removed
 }
 
 interface Permission { // Placeholder for permission structure
   name: string;
-  [key: string]: string | undefined;
+  // Index signature removed
 }
 
 interface CustomSession extends Session {
@@ -97,14 +97,30 @@ export async function POST(request: NextRequest) {
         targetId: partialBody.targetId,
         originatorCenterId: partialBody.originatorCenterId,
         relatedTo: partialBody.relatedTo,
+        // message from partialBody might be spread here if INotificationCreationPayload allows it
     };
-    // Remove message if content is used, to avoid confusion if INotificationCreationPayload doesn't have 'message'
-    if (notificationPayload.content === partialBody.message && partialBody.content) {
-        delete (notificationPayload as any).message; 
+
+    let finalPayload = { ...notificationPayload }; // Use a mutable copy
+
+    // If content was derived from partialBody.message, and partialBody.content also existed (and was different),
+    // then 'message' might be an unintentional artifact on finalPayload if it was spread from partialBody.
+    // The condition provided in the subtask aims to remove 'message' in such specific scenarios.
+    if (finalPayload.content === partialBody.message && partialBody.content && partialBody.message) {
+        // This implies 'message' might be on finalPayload due to the initial spread of partialBody.
+        // We want to remove it.
+        const { message, ...rest } = finalPayload as typeof finalPayload & { message?: any }; // Cast to allow destructuring of potentially existing message
+        finalPayload = rest;
+    }
+    // Ensure 'message' is not part of the payload if it's not a valid field in the service's expected type,
+    // independent of the condition above. The most robust way for this is if the service expects a type
+    // that explicitly does or does not include 'message'. Assuming it does not include 'message':
+    else if ('message' in finalPayload) { // If 'message' still exists and the above condition didn't catch it
+        const { message, ...rest } = finalPayload as typeof finalPayload & { message?: any };
+        finalPayload = rest;
     }
 
 
-    const newNotification = await notificationService.createNotification(notificationPayload);
+    const newNotification = await notificationService.createNotification(finalPayload);
     return NextResponse.json(newNotification, { status: 201 });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
@@ -127,25 +143,28 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     // Define filters with a more specific index signature for searchParams
-    const filters: { 
+    const filters: {
         isRead?: boolean;
         page?: number;
         limit?: number;
         status?: string; // Assuming status might be a string from query params
-        // Add other potential string/number/boolean keys from searchParams if known
-        [key: string]: string | number | boolean | undefined; 
-    } = {}; 
+        // Index signature for any other dynamic string parameters from query string
+        [key: string]: string | undefined; // Changed index signature
+    } = {};
 
     searchParams.forEach((value, key) => {
         if (key === "page" || key === "limit") {
-            filters[key] = parseInt(value, 10);
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+                 filters[key as 'page' | 'limit'] = numValue;
+            }
         } else if (key === "isRead") {
             filters.isRead = value === "true";
         } else if (key === "status") { // Example for specific string filter
             filters.status = value;
         } else {
-            // For other unknown keys, still assign them but this is safer than `as any`
-            filters[key] = value; 
+            // For other unknown keys, they are assigned as strings.
+            filters[key] = value;
         }
     });
 
