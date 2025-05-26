@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Card, 
   CardContent, 
@@ -15,13 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Users, 
-  UserCheck, 
-  Calendar, 
   Building, 
-  Network, 
-  MapPin, 
-  ArrowLeft,
-  ChevronRight
+  ArrowLeft
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -97,7 +93,7 @@ export default function CenterMembersPage() {
       const membersData = await membersResponse.json();
       setMembers(membersData.members || []);
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching center members:", error);
       toast({
         title: "Error",
@@ -210,7 +206,7 @@ export default function CenterMembersPage() {
             <div className="text-center py-10">
               <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No Members Found</h3>
-              <p className="text-gray-500 mb-4">This center doesn't have any members yet.</p>
+              <p className="text-gray-500 mb-4">This center doesn&apos;t have any members yet.</p>
               <Button asChild>
                 <Link href={`/centers/${centerId}/members/add`}>
                   Add First Member
@@ -225,7 +221,7 @@ export default function CenterMembersPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         {member.profileImage ? (
-                          <img src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
+                          <Image src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} width={40} height={40} className="rounded-full" />
                         ) : (
                           <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                         )}

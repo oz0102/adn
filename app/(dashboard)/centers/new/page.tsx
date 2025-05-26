@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -93,7 +92,7 @@ export default function NewCenterPage() {
       
       // Redirect to the new center's page
       router.push(`/centers/${result.center._id}`)
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error creating center:", error)
       toast({
         title: "Error",

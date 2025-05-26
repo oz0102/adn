@@ -26,9 +26,7 @@ import {
   ChevronRight,
   Home 
 } from 'lucide-react';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
 
@@ -197,7 +195,7 @@ export default function ClusterDashboardPage() {
       const eventsData = await eventsResponse.json();
       setEvents(eventsData.events || []);
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching cluster data:", error);
       toast({
         title: "Error",
@@ -332,7 +330,7 @@ export default function ClusterDashboardPage() {
       <div className="text-center py-10">
         <Layers className="mx-auto h-12 w-12 text-red-400 mb-4" />
         <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
-        <p className="text-gray-500 mb-4">You do not have permission to view this cluster's dashboard.</p>
+        <p className="text-gray-500 mb-4">You do not have permission to view this cluster&apos;s dashboard.</p>
         <Button onClick={() => router.push("/clusters")}>Back to Clusters</Button>
       </div>
     );
@@ -593,7 +591,7 @@ export default function ClusterDashboardPage() {
             <div className="text-center py-10">
               <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No Small Groups Found</h3>
-              <p className="text-gray-500 mb-4">This cluster doesn't have any small groups yet.</p>
+              <p className="text-gray-500 mb-4">This cluster doesn&apos;t have any small groups yet.</p>
               <Button asChild>
                 <Link href={`/groups/new?clusterId=${cluster._id}`}>
                   Create First Small Group

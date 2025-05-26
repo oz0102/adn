@@ -131,7 +131,7 @@ export default function CentersPage() {
       setCenters(data.centers || [])
       setPagination(data.paginationInfo || { page, limit: pagination.limit, total: 0, pages: 0 })
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching centers:", error)
       toast({
         title: "Error",

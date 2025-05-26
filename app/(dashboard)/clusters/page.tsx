@@ -147,7 +147,7 @@ export default function ClustersPage() {
         setParentCenterName(data.clusters[0].centerId?.name || null);
       }
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error fetching clusters:", error)
       toast({
         title: "Error",

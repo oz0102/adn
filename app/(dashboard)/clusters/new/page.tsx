@@ -107,7 +107,7 @@ export default function NewClusterPage() {
   const [centers, setCenters] = useState<Array<{ _id: string; name: string }>>([])
   const [members, setMembers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([])
   const [isLoadingCenters, setIsLoadingCenters] = useState(true)
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true)
+  const [_isLoadingMembers, setIsLoadingMembers] = useState(true)
 
   // Get centerId from URL if available
   const centerIdFromUrl = searchParams.get("centerId")
@@ -203,7 +203,7 @@ export default function NewClusterPage() {
       fetchCenters()
       fetchMembers()
     }
-  }, [status])
+  }, [status, fetchCenters, fetchMembers])
 
   // Handle assignment toggle
   const handleAssignmentToggle = (value: boolean) => {
@@ -247,7 +247,7 @@ export default function NewClusterPage() {
       
       // Redirect to the new cluster's page
       router.push(`/clusters/${result.cluster._id}`)
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error creating cluster:", error)
       toast({
         title: "Error",
