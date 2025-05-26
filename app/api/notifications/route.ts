@@ -10,15 +10,28 @@ import UserModel, { IUser } from "@/models/user";
 import MemberModel, { IMember } from "@/models/member"; 
 import { Session } from "next-auth"; 
 
+// Define a more specific type for roles if possible
+interface AssignedRole {
+  role: string;
+  scopeId?: string;
+  // Add other properties of role object if known
+  [key: string]: any; 
+}
+
+interface Permission { // Placeholder for permission structure
+  name: string;
+  [key: string]: any;
+}
+
 interface CustomSession extends Session {
   user?: {
     id?: string | null;
     name?: string | null;
     email?: string | null;
     image?: string | null;
-    assignedRoles?: any[]; 
-    permissions?: any[]; // Added permissions based on previous patterns
-    memberId?: string | null; // Added memberId based on previous patterns
+    assignedRoles?: AssignedRole[]; 
+    permissions?: Permission[]; 
+    memberId?: string | null; 
   };
 }
 
@@ -71,12 +84,13 @@ export async function POST(request: NextRequest) {
 
     const newNotification = await notificationService.createNotification(notificationPayload);
     return NextResponse.json(newNotification, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to create notification:", error);
-    if (error.name === "ValidationError" || error instanceof mongoose.Error.ValidationError) {
+    if (error instanceof mongoose.Error.ValidationError) { // Check specific error type
         return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ message: "Failed to create notification", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to create notification", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -108,7 +122,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
     
-    let memberProfile = await MemberModel.findOne({ email: dbUser.email })
+    const memberProfile = await MemberModel.findOne({ email: dbUser.email })
                             .select("_id centerId clusterId smallGroupId")
                             .lean<Pick<IMember, "_id" | "centerId" | "clusterId" | "smallGroupId">>();
 
@@ -132,9 +146,10 @@ export async function GET(request: NextRequest) {
 
     const result = await notificationService.getAllNotificationsForUser(finalFilters, userRolesAndScopes);
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Failed to retrieve notifications:", error);
-    return NextResponse.json({ message: "Failed to retrieve notifications", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve notifications", error: errorMessage }, { status: 500 });
   }
 }
 

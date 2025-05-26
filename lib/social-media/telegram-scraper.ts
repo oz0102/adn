@@ -338,7 +338,7 @@ export async function validateTelegramUsername(username: string): Promise<boolea
     });
     
     return true;
-  } catch (_error) { // Marked error as unused
+  } catch {
     return false;
   }
 }

@@ -5,7 +5,19 @@ import { connectToDB } from "@/lib/mongodb"; // Assuming this is the correct pat
 import FollowUp from "@/models/followUp";
 import { followUpService } from "@/services/followUpService"; // Corrected import
 import { auth } from "@/auth"; // Using NextAuth v5 auth()
-import mongoose from "mongoose";
+
+// Define a more specific type for roles if possible, otherwise keep it general
+interface AssignedRole {
+  role: string;
+  // Add other properties of role object if known, e.g., scopeId: string
+  [key: string]: any; 
+}
+
+interface SessionUserWithRoles {
+  id: string;
+  assignedRoles?: AssignedRole[];
+  // Add other user properties if needed
+}
 
 const followUpAttemptSchema = z.object({
   contactMethod: z.enum(["Email", "SMS", "WhatsApp", "Call", "In Person"]),
@@ -13,11 +25,6 @@ const followUpAttemptSchema = z.object({
   notes: z.string(),
   prayerRequests: z.array(z.string()).optional()
 });
-
-interface CustomSessionUser {
-    id?: string | null;
-    // Add other properties you expect on session.user
-}
 
 export async function POST(
   req: NextRequest,
@@ -61,7 +68,8 @@ export async function POST(
     
     // Authorization check: Ensure the user is assigned to this follow-up or has admin/pastor role
     // This logic might need to be more sophisticated based on your permission system (e.g., using checkPermission utility)
-    const userRoles = (session.user as any).assignedRoles?.map((r: any) => r.role) || [];
+    const typedUser = session.user as SessionUserWithRoles;
+    const userRoles = typedUser.assignedRoles?.map((r: AssignedRole) => r.role) || [];
     const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("HQ_ADMIN") || userRoles.includes("CENTER_ADMIN");
 
     if (!isAdminOrPastor && followUp.assignedTo?.toString() !== currentUserId) {
@@ -82,10 +90,11 @@ export async function POST(
       message: "Follow-up attempt added successfully",
       data: updatedFollowUp
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     console.error("Add follow-up attempt error:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

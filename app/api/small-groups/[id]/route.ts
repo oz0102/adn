@@ -40,9 +40,10 @@ export async function GET(request: Request, { params }: Params) {
     }
     
     return NextResponse.json(smallGroup, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to retrieve small group ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to retrieve small group", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve small group", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -81,12 +82,13 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found or update failed" }, { status: 404 });
     }
     return NextResponse.json(updatedSmallGroup, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update small group ${params.id}:`, error);
-    if (error.name === "ValidationError" || error.message.includes("Invalid Cluster ID") || error.message.includes("Invalid Leader ID")) {
-        return NextResponse.json({ message: "Validation Error", error: error.message }, { status: 400 });
+    if (error instanceof mongoose.Error.ValidationError || errorMessage.includes("Invalid Cluster ID") || errorMessage.includes("Invalid Leader ID")) {
+        return NextResponse.json({ message: "Validation Error", error: errorMessage }, { status: 400 });
     }
-    return NextResponse.json({ message: "Failed to update small group", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update small group", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -120,9 +122,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found or delete failed" }, { status: 404 });
     }
     return NextResponse.json({ message: "Small Group deleted successfully" }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to delete small group ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to delete small group", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to delete small group", error: errorMessage }, { status: 500 });
   }
 }
 

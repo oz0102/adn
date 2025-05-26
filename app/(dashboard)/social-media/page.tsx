@@ -382,8 +382,6 @@ import {
   BarChart3Icon,
   TrendingUpIcon,
   UsersIcon,
-  ArrowUpIcon, // Not used?
-  LineChartIcon, // Not used?
   LayoutDashboardIcon,
   ListIcon,
   AlertTriangleIcon,
@@ -397,8 +395,6 @@ import { SocialMediaPlatform, IFollowerHistoryEntry } from "@/models/socialMedia
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { GrowthSummary } from "@/components/social-media/analytics-components";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Not used?
-import { Badge } from "@/components/ui/badge"; // Not used?
 import { useAuthStore } from "@/lib/store";
 import { checkPermission } from "@/lib/permissions"; // Assuming this checkPermission is okay on client for UI rendering
 
@@ -453,10 +449,10 @@ interface ClientUser {
 }
 
 // Ensure useAuthStore returns the correct type
-const { user } = useAuthStore() as { user: ClientUser | null };
 
 
 export default function SocialMediaTrackerPage() {
+  const { user } = useAuthStore() as { user: ClientUser | null };
   // Use client-side types for state
   const [accounts, setAccounts] = useState<PopulatedSocialMediaAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -503,11 +499,12 @@ export default function SocialMediaTrackerPage() {
       }
       const data: PopulatedSocialMediaAccount[] = await response.json();
       setAccounts(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch accounts";
       console.error("Failed to fetch accounts:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch accounts",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -544,11 +541,12 @@ export default function SocialMediaTrackerPage() {
         title: "Followers updated",
         description: "All social media accounts have been updated.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update followers";
       console.error("Failed to update all followers:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update followers",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -570,11 +568,12 @@ export default function SocialMediaTrackerPage() {
         title: "Followers updated",
         description: "Account followers have been updated.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update followers for this account";
       console.error(`Failed to update followers for account ${id}:`, error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update followers for this account",
+        description: errorMessage,
         variant: "destructive",
       });
     }

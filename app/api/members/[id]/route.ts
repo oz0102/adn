@@ -10,6 +10,12 @@ interface Params {
   params: { id: string };
 }
 
+interface SessionUserWithMemberId {
+  id: string;
+  memberId?: string; // Assuming memberId might be on the session user
+  // Add other user properties if needed from session.user
+}
+
 export async function GET(request: Request, { params }: Params) {
   try {
     const session = await auth(); 
@@ -43,7 +49,8 @@ export async function GET(request: Request, { params }: Params) {
         canAccessMemberData = isCenterAdmin || isClusterLeader || isSmallGroupLeader || isMemberAdmin;
     }
     
-    const userMemberId = (session.user as any).memberId; // Assuming memberId is on session.user
+    const typedUser = session.user as SessionUserWithMemberId;
+    const userMemberId = typedUser.memberId; 
     if (!canAccessMemberData && userMemberId && userMemberId === memberIdToFetch) {
         canAccessMemberData = true;
     }
@@ -53,9 +60,10 @@ export async function GET(request: Request, { params }: Params) {
     }
     
     return NextResponse.json(member, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to retrieve member ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to retrieve member", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve member", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -85,7 +93,8 @@ export async function PUT(request: Request, { params }: Params) {
         canUpdateMemberData = isCenterAdmin || isMemberAdminInScope;
     }
 
-    const userMemberId = (session.user as any).memberId;
+    const typedUser = session.user as SessionUserWithMemberId;
+    const userMemberId = typedUser.memberId;
     if (!canUpdateMemberData && userMemberId && userMemberId === memberIdToUpdate) {
         canUpdateMemberData = true;
     }
@@ -115,12 +124,13 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Member not found or update failed" }, { status: 404 });
     }
     return NextResponse.json(updatedMember, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update member ${params.id}:`, error);
-    if (error.message.includes("already exists")) {
-        return NextResponse.json({ message: error.message }, { status: 409 });
+    if (errorMessage.includes("already exists")) { // Check on errorMessage
+        return NextResponse.json({ message: errorMessage }, { status: 409 });
     }
-    return NextResponse.json({ message: "Failed to update member", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update member", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -160,9 +170,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Member not found or delete failed" }, { status: 404 });
     }
     return NextResponse.json({ message: "Member deleted successfully" }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to delete member ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to delete member", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to delete member", error: errorMessage }, { status: 500 });
   }
 }
 

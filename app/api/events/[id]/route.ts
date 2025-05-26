@@ -41,9 +41,10 @@ export async function GET(request: Request, { params }: Params) {
     }
     
     return NextResponse.json(event, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to retrieve event ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to retrieve event", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve event", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -83,12 +84,13 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Event not found or update failed" }, { status: 404 });
     }
     return NextResponse.json(updatedEvent, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update event ${params.id}:`, error);
-    if (error.name === "ValidationError") {
+    if (error instanceof mongoose.Error.ValidationError) {
         return NextResponse.json({ message: "Validation Error", errors: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ message: "Failed to update event", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update event", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -122,9 +124,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Event not found or delete failed" }, { status: 404 });
     }
     return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to delete event ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to delete event", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to delete event", error: errorMessage }, { status: 500 });
   }
 }
 

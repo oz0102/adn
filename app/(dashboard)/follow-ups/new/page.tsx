@@ -141,7 +141,7 @@ export default function NewFollowUpPage() {
     },
   });
   
-  async function onSubmitNewAttendee(_values: z.infer<typeof newAttendeeSchema>) {
+  async function onSubmitNewAttendee() {
     try {
       setIsSubmitting(true);
       
@@ -189,7 +189,7 @@ export default function NewFollowUpPage() {
     }
   }
   
-  async function onSubmitMember(_values: z.infer<typeof memberSchema>) {
+  async function onSubmitMember() {
     try {
       setIsSubmitting(true);
       

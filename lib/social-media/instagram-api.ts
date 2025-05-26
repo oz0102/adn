@@ -1,5 +1,17 @@
 // Instagram API implementation for follower count tracking
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+
+// Helper type for Axios-like error structures
+interface ApiErrorData {
+  message?: string;
+  // Add other properties if your API returns more error details
+}
+
+interface AxiosErrorLike extends Error {
+  response?: {
+    data?: ApiErrorData;
+  };
+}
 
 /**
  * Instagram API client for fetching follower counts
@@ -37,9 +49,11 @@ export class InstagramApiClient {
       });
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosErrorLike;
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Unknown error';
       console.error('Error fetching Instagram Business Account:', error);
-      throw new Error(`Failed to fetch Instagram Business Account: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
+      throw new Error(`Failed to fetch Instagram Business Account: ${errorMessage}`);
     }
   }
 
@@ -75,9 +89,11 @@ export class InstagramApiClient {
       }
       
       throw new Error(`Instagram Business Account not found for username: ${username}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosErrorLike;
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Unknown error';
       console.error('Error finding Instagram Business Account by username:', error);
-      throw new Error(`Failed to find Instagram Business Account by username: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
+      throw new Error(`Failed to find Instagram Business Account by username: ${errorMessage}`);
     }
   }
 
@@ -95,9 +111,11 @@ export class InstagramApiClient {
       const accountData = await this.getBusinessAccount(businessId);
       
       return accountData.followers_count || 0;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const axiosError = error as AxiosErrorLike;
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Unknown error';
       console.error('Error fetching Instagram follower count:', error);
-      throw new Error(`Failed to fetch Instagram follower count: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
+      throw new Error(`Failed to fetch Instagram follower count: ${errorMessage}`);
     }
   }
 
@@ -119,8 +137,9 @@ export class InstagramApiClient {
       });
       
       return true;
-    } catch (error: any) {
-      console.error('Instagram API credentials validation failed:', error?.response?.data || error);
+    } catch (error: unknown) {
+      const axiosError = error as AxiosErrorLike;
+      console.error('Instagram API credentials validation failed:', axiosError.response?.data || axiosError);
       return false;
     }
   }
@@ -145,8 +164,9 @@ export class InstagramApiClient {
       }
       
       return null;
-    } catch (error: any) {
-      console.error('Error extracting Instagram username from URL:', error?.message || error);
+    } catch (error: unknown) {
+      const axiosError = error as AxiosErrorLike;
+      console.error('Error extracting Instagram username from URL:', axiosError.message || error);
       return null;
     }
   }

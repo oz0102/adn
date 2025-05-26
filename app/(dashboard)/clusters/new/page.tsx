@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useFieldArray } from "react-hook-form"
@@ -107,7 +107,7 @@ export default function NewClusterPage() {
   const [centers, setCenters] = useState<Array<{ _id: string; name: string }>>([])
   const [members, setMembers] = useState<Array<{ _id: string; firstName: string; lastName: string }>>([])
   const [isLoadingCenters, setIsLoadingCenters] = useState(true)
-  const [_isLoadingMembers, setIsLoadingMembers] = useState(true)
+  const [, setIsLoadingMembers] = useState(true)
 
   // Get centerId from URL if available
   const centerIdFromUrl = searchParams.get("centerId")
@@ -154,7 +154,7 @@ export default function NewClusterPage() {
   })
 
   // Fetch centers for dropdown
-  const fetchCenters = async () => {
+  const fetchCenters = useCallback(async () => {
     try {
       setIsLoadingCenters(true)
       const response = await fetch("/api/centers")
@@ -173,10 +173,10 @@ export default function NewClusterPage() {
     } finally {
       setIsLoadingCenters(false)
     }
-  }
+  }, [toast])
 
   // Fetch members for leader dropdown
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       setIsLoadingMembers(true)
       const response = await fetch("/api/members?limit=100") // Fetch more members for selection
@@ -195,7 +195,7 @@ export default function NewClusterPage() {
     } finally {
       setIsLoadingMembers(false)
     }
-  }
+  }, [toast])
 
   // Fetch data on component mount
   useEffect(() => {
@@ -410,7 +410,7 @@ export default function NewClusterPage() {
                       <Input placeholder="Enter location" {...field} />
                     </FormControl>
                     <FormDescription>
-                      The general location of the cluster (e.g., "Downtown", "North District").
+                      The general location of the cluster (e.g., &quot;Downtown&quot;, &quot;North District&quot;).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -273,7 +273,7 @@
 // components/members/spiritual-growth-tab.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Plus, CheckCircle } from "lucide-react"
@@ -330,7 +330,7 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
     fetchSpiritualGrowth()
   }, [memberId, fetchSpiritualGrowth])
 
-  const fetchSpiritualGrowth = async () => {
+  const fetchSpiritualGrowth = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -376,7 +376,7 @@ export function MemberSpiritualGrowthTab({ memberId }: { memberId: string }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [memberId, toast])
 
   const handleFormChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))

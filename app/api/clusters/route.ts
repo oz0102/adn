@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectToDB } from "@/lib/mongodb";
 import Cluster from "@/models/cluster";
+import { FilterQuery } from "mongoose";
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,11 +68,12 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Error creating cluster:", error);
     return NextResponse.json({ 
       error: "Failed to create cluster", 
-      message: error.message 
+      message: errorMessage
     }, { status: 500 });
   }
 }
@@ -95,7 +97,7 @@ export async function GET(request: NextRequest) {
     await connectToDB();
     
     // Build query
-    const query: any = {};
+    const query: FilterQuery<typeof Cluster> = {};
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -137,11 +139,12 @@ export async function GET(request: NextRequest) {
       },
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error("Error fetching clusters:", error);
     return NextResponse.json({ 
       error: "Failed to fetch clusters", 
-      message: error.message 
+      message: errorMessage 
     }, { status: 500 });
   }
 }

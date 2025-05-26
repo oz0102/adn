@@ -46,9 +46,10 @@ export async function GET(request: Request, { params }: Params) {
     }
     
     return NextResponse.json(account, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to retrieve social media account ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to retrieve social media account", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to retrieve social media account", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -87,12 +88,13 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Account not found or update failed" }, { status: 404 });
     }
     return NextResponse.json(updatedAccount, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update social media account ${params.id}:`, error);
-     if (error.message.includes("already exists")) {
-        return NextResponse.json({ message: error.message }, { status: 409 });
+     if (errorMessage.includes("already exists")) {
+        return NextResponse.json({ message: errorMessage }, { status: 409 });
     }
-    return NextResponse.json({ message: "Failed to update social media account", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update social media account", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -129,9 +131,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Account not found or delete failed" }, { status: 404 });
     }
     return NextResponse.json({ message: "Social Media Account deleted successfully" }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to delete social media account ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to delete social media account", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to delete social media account", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -163,9 +166,10 @@ export async function POST_UpdateFollowers(request: Request, { params }: Params)
     const updatedAccount = await socialMediaService.updateFollowerCount(accountId, mockFollowerCount);
     
     return NextResponse.json(updatedAccount, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to update follower count for account ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to update follower count", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to update follower count", error: errorMessage }, { status: 500 });
   }
 }
 
@@ -198,9 +202,10 @@ export async function GET_FollowerHistory(request: Request, { params }: Params) 
     }
     const history = await socialMediaService.getFollowerHistory(accountId, days); // Added days parameter
     return NextResponse.json(history, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     console.error(`Failed to get follower history for account ${params.id}:`, error);
-    return NextResponse.json({ message: "Failed to get follower history", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Failed to get follower history", error: errorMessage }, { status: 500 });
   }
 }
 
