@@ -17,6 +17,43 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useNotificationStore } from "@/lib/store"
 
+import { Session } from "next-auth"; // Import Session type
+
+// Define assignedRole type based on authConfig (can be imported if centralized)
+interface AssignedRole {
+  role: string;
+  centerId?: string;
+  clusterId?: string;
+  smallGroupId?: string;
+}
+
+// Helper function to get display role
+const getDisplayRole = (assignedRoles: AssignedRole[] | undefined): string => {
+  if (!assignedRoles || assignedRoles.length === 0) {
+    return "User";
+  }
+
+  const roles = assignedRoles.map(r => r.role);
+
+  if (roles.includes("HQ_ADMIN")) {
+    return "Headquarters Admin";
+  }
+  if (roles.includes("CENTER_ADMIN")) {
+    return "Center Admin";
+  }
+  if (roles.includes("CLUSTER_LEADER")) {
+    return "Cluster Leader";
+  }
+  if (roles.includes("SMALL_GROUP_LEADER")) {
+    return "Small Group Leader";
+  }
+  // Fallback to the first role name if not one of the above, or a generic term
+  const firstRoleName = assignedRoles[0].role;
+  // Capitalize first letter and replace underscores with spaces for better readability
+  return firstRoleName ? firstRoleName.replace(/_/g, ' ').replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : "User";
+};
+
+
 export function Header() {
   const { data: session } = useSession()
   const { unreadCount } = useNotificationStore()
@@ -27,6 +64,10 @@ export function Header() {
     await signOut({ callbackUrl: "/login" })
     setIsLoading(false)
   }
+
+  // Explicitly type session.user.assignedRoles for clarity if needed,
+  // though it should come from the Session type update in authConfig
+  const userAssignedRoles = session?.user?.assignedRoles as AssignedRole[] | undefined;
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
@@ -61,7 +102,7 @@ export function Header() {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{session?.user?.email}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {session?.user?.role}
+                    {getDisplayRole(userAssignedRoles)}
                   </p>
                 </div>
               </DropdownMenuLabel>

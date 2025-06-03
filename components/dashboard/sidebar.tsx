@@ -3,7 +3,7 @@
 
 // Removed unused import
 // import { useState } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useParams } from "next/navigation" // Added useParams
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useAuthStore, useSidebarStore } from "@/lib/store"
@@ -19,7 +19,9 @@ import {
   Settings,
   UserPlus,
   Target,
-  FileText
+  FileText,
+  Home, // Added Home
+  Building // Added Building
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -51,12 +53,68 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuthStore()
   const { isOpen, toggle } = useSidebarStore()
-  // Removed unused state variable
-  // const [openSection] = useState<string | null>("dashboard")
 
-  const isAdmin = user?.role === "Admin" || user?.role === "Pastor"
+  console.log("Sidebar user.assignedRoles:", JSON.stringify(user?.assignedRoles, null, 2));
 
-  // Removed unused toggleSection function
+  const defaultHqNavItems = [
+    { href: "/dashboard", icon: <Grid className="h-5 w-5" />, title: "Dashboard" },
+    { href: "/members", icon: <Users className="h-5 w-5" />, title: "Members" },
+    { href: "/clusters", icon: <Layers className="h-5 w-5" />, title: "Clusters" },
+    { href: "/small-groups", icon: <UserCheck className="h-5 w-5" />, title: "Small Groups" },
+    { href: "/events", icon: <Calendar className="h-5 w-5" />, title: "Events" },
+    { href: "/attendance", icon: <UserCheck className="h-5 w-5" />, title: "Attendance" },
+    { href: "/follow-ups", icon: <UserPlus className="h-5 w-5" />, title: "Follow-ups" },
+    { href: "/teams", icon: <Users className="h-5 w-5" />, title: "Teams" },
+    { href: "/flyers", icon: <FileText className="h-5 w-5" />, title: "Flyers" },
+    { href: "/discipleship-goals", icon: <Target className="h-5 w-5" />, title: "Goals" },
+    { href: "/notifications", icon: <Bell className="h-5 w-5" />, title: "Notifications" },
+    { href: "/reports", icon: <BarChart3 className="h-5 w-5" />, title: "Reports" },
+  ];
+
+  const getCenterNavItems = (centerId: string) => [
+    { href: `/dashboard/centers/${centerId}/dashboard`, icon: <Home className="h-5 w-5" />, title: "Center Dashboard" },
+    { href: `/dashboard/centers/${centerId}/members`, icon: <Users className="h-5 w-5" />, title: "Center Members" },
+    { href: `/dashboard/centers/${centerId}/clusters`, icon: <Building className="h-5 w-5" />, title: "Center Clusters" }, // Example
+    { href: `/dashboard/centers/${centerId}/events`, icon: <Calendar className="h-5 w-5" />, title: "Center Events" }, // Example
+    // Add other center-specific links here
+    // { href: `/dashboard/centers/${centerId}/settings`, icon: <Settings className="h-5 w-5" />, title: "Center Settings" },
+  ];
+
+  let navItemsToShow = [];
+  let centerIdFromPath: string | null = null;
+
+  if (pathname.startsWith("/dashboard/centers/")) {
+    const parts = pathname.split('/');
+    if (parts.length > 3 && parts[1] === 'dashboard' && parts[2] === 'centers') {
+      centerIdFromPath = parts[3];
+      console.log("Determined centerId from path:", centerIdFromPath);
+
+      const isHqAdminViewingCenter = user?.assignedRoles?.some(r => r.role === 'HQ_ADMIN');
+      const isCenterAdminForThisCenter = user?.assignedRoles?.some(r => r.role === 'CENTER_ADMIN' && r.centerId === centerIdFromPath);
+
+      if (isHqAdminViewingCenter || isCenterAdminForThisCenter) {
+        navItemsToShow = getCenterNavItems(centerIdFromPath);
+        console.log("Showing Center nav items for centerId:", centerIdFromPath);
+        // Optionally, add a "Back to HQ Dashboard" link if user is also HQ_ADMIN or if it's a Center Admin
+        if (isCenterAdminForThisCenter) {
+            navItemsToShow.unshift({ href: "/dashboard", icon: <Grid className="h-5 w-5" />, title: "HQ Dashboard" });
+        }
+      } else {
+        // User is on a center path but not authorized for this specific center's menu
+        console.log("User not authorized for this center's menu, showing HQ nav items.");
+        navItemsToShow = defaultHqNavItems;
+      }
+    } else {
+      // Path is like /dashboard/centers/ but malformed, show default
+      navItemsToShow = defaultHqNavItems;
+      console.log("Malformed center path, showing HQ nav items.");
+    }
+  } else {
+    navItemsToShow = defaultHqNavItems;
+    console.log("Not a center path, showing HQ nav items.");
+  }
+
+  const isHqAdmin = user?.assignedRoles?.some(r => r.role === 'HQ_ADMIN');
 
   return (
     <aside className={cn(
@@ -79,91 +137,17 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
-          <NavItem
-            href="/dashboard"
-            icon={<Grid className="h-5 w-5" />}
-            title="Dashboard"
-            isActive={pathname === "/dashboard"}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/members"
-            icon={<Users className="h-5 w-5" />}
-            title="Members"
-            isActive={pathname.startsWith("/members")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/clusters"
-            icon={<Layers className="h-5 w-5" />}
-            title="Clusters"
-            isActive={pathname.startsWith("/clusters")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/small-groups"
-            icon={<UserCheck className="h-5 w-5" />}
-            title="Small Groups"
-            isActive={pathname.startsWith("/small-groups")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/events"
-            icon={<Calendar className="h-5 w-5" />}
-            title="Events"
-            isActive={pathname.startsWith("/events")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/attendance"
-            icon={<UserCheck className="h-5 w-5" />}
-            title="Attendance"
-            isActive={pathname.startsWith("/attendance")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/follow-ups"
-            icon={<UserPlus className="h-5 w-5" />}
-            title="Follow-ups"
-            isActive={pathname.startsWith("/follow-ups")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/teams"
-            icon={<Users className="h-5 w-5" />}
-            title="Teams"
-            isActive={pathname.startsWith("/teams")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/flyers"
-            icon={<FileText className="h-5 w-5" />}
-            title="Flyers"
-            isActive={pathname.startsWith("/flyers")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/discipleship-goals"
-            icon={<Target className="h-5 w-5" />}
-            title="Goals"
-            isActive={pathname.startsWith("/discipleship-goals")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/notifications"
-            icon={<Bell className="h-5 w-5" />}
-            title="Notifications"
-            isActive={pathname.startsWith("/notifications")}
-            isCollapsed={!isOpen}
-          />
-          <NavItem
-            href="/reports"
-            icon={<BarChart3 className="h-5 w-5" />}
-            title="Reports"
-            isActive={pathname.startsWith("/reports")}
-            isCollapsed={!isOpen}
-          />
-          {isAdmin && (
+          {navItemsToShow.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              title={item.title}
+              isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
+              isCollapsed={!isOpen}
+            />
+          ))}
+          {isHqAdmin && ( // Settings link only for HQ_ADMIN
             <NavItem
               href="/settings"
               icon={<Settings className="h-5 w-5" />}
