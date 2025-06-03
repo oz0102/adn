@@ -19,20 +19,20 @@ export const authConfig: NextAuthConfig = {
     // JWT callback to handle adding custom fields to the JWT
     async jwt({ token, user }) {
       if (user) {
+        console.log("User object in JWT callback:", JSON.stringify(user, null, 2));
         token.id = user.id;
         token.email = user.email;
-        token.role = user.role;
-        token.permissions = user.permissions;
+        token.assignedRoles = user.assignedRoles;
       }
       return token;
     },
     // Session callback to add data to the session
     async session({ session, token }) {
+      console.log("Token object in session callback:", JSON.stringify(token, null, 2));
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
-        session.user.role = token.role as string;
-        session.user.permissions = token.permissions as string[];
+        session.user.assignedRoles = token.assignedRoles as any;
       }
       return session;
     },
@@ -44,6 +44,8 @@ export const authConfig: NextAuthConfig = {
       const isOnPublicRoute = ['/login', '/register'].includes(nextUrl.pathname) || 
                              nextUrl.pathname.startsWith('/api/auth');
       
+      console.log("Auth user in authorized callback:", JSON.stringify(auth?.user, null, 2));
+
       // If accessing dashboard or protected API, must be logged in
       if ((isOnDashboard || isOnProtectedApi) && !isLoggedIn) {
         return false; // Redirect to login page
@@ -52,6 +54,19 @@ export const authConfig: NextAuthConfig = {
       // If logged in and trying to access login/register page, redirect to dashboard
       if (isOnPublicRoute && isLoggedIn) {
         return Response.redirect(new URL('/dashboard', nextUrl.origin));
+      }
+
+      if (isLoggedIn && (nextUrl.pathname === '/dashboard' || nextUrl.pathname === '/dashboard/')) {
+        const userRoles = auth.user.assignedRoles;
+        if (userRoles && Array.isArray(userRoles)) {
+          for (const assignedRole of userRoles) {
+            if (assignedRole.role === "CENTER_ADMIN" && assignedRole.centerId) {
+              const redirectUrl = `/dashboard/centers/${assignedRole.centerId}/dashboard`;
+              console.log("Redirecting CENTER_ADMIN to:", redirectUrl);
+              return Response.redirect(new URL(redirectUrl, nextUrl.origin));
+            }
+          }
+        }
       }
 
       return true;
@@ -67,15 +82,13 @@ declare module "next-auth" {
     user: {
       id: string;
       email: string;
-      role: string;
-      permissions: string[];
+      assignedRoles: { role: string; centerId?: string; clusterId?: string; smallGroupId?: string; }[];
     }
   }
   interface User {
     id: string;
     email: string;
-    role: string;
-    permissions: string[];
+    assignedRoles: { role: string; centerId?: string; clusterId?: string; smallGroupId?: string; }[];
   }
 }
 
@@ -83,7 +96,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: string;
-    permissions: string[];
+    assignedRoles: { role: string; centerId?: string; clusterId?: string; smallGroupId?: string; }[];
   }
 }

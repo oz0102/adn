@@ -8,9 +8,13 @@ import { FilterQuery } from "mongoose";
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || !session.user) {
+    if (!session || !session.user || !session.user.assignedRoles) {
+      console.log("Unauthorized access attempt to GET /api/members: No session or assignedRoles");
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
+
+    const { assignedRoles } = session.user;
+    console.log("GET /api/members - User assignedRoles:", JSON.stringify(assignedRoles, null, 2));
 
     await connectToDB();
 
@@ -19,13 +23,44 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
-    const centerId = searchParams.get("centerId") || "";
+    let centerIdQueryParam = searchParams.get("centerId") || "";
     const clusterId = searchParams.get("clusterId") || "";
     const smallGroupId = searchParams.get("smallGroupId") || "";
     const gender = searchParams.get("gender") || "";
 
     // Build query
     const query: FilterQuery<typeof Member> = {};
+
+    const isHqAdmin = assignedRoles.some(role => role.role === 'HQ_ADMIN');
+    const centerAdminRoles = assignedRoles.filter(role => role.role === 'CENTER_ADMIN' && role.centerId);
+
+    console.log("GET /api/members - isHqAdmin:", isHqAdmin, "centerAdminRoles count:", centerAdminRoles.length);
+
+    if (isHqAdmin) {
+      console.log("GET /api/members - HQ_ADMIN access. Allowing query with centerId if provided.");
+      if (centerIdQueryParam) {
+        query.centerId = centerIdQueryParam;
+      }
+      // HQ_ADMIN can filter by any other param as well
+    } else if (centerAdminRoles.length > 0) {
+      const userCenterIds = centerAdminRoles.map(r => r.centerId);
+      console.log("GET /api/members - CENTER_ADMIN access. User center IDs:", userCenterIds);
+
+      if (centerIdQueryParam) {
+        if (!userCenterIds.includes(centerIdQueryParam)) {
+          console.log(`GET /api/members - CENTER_ADMIN forbidden access to centerId: ${centerIdQueryParam}. User is admin for: ${userCenterIds.join(', ')}`);
+          return NextResponse.json({ success: false, message: "Forbidden: You do not have access to this center." }, { status: 403 });
+        }
+        query.centerId = centerIdQueryParam; // User is asking for a specific center they have access to
+      } else {
+        // If no specific centerId is requested, filter by all centers they are admin of
+        query.centerId = { $in: userCenterIds };
+      }
+      console.log("GET /api/members - CENTER_ADMIN query for members in centers:", query.centerId);
+    } else {
+      console.log("GET /api/members - User is not HQ_ADMIN or CENTER_ADMIN. Forbidden.");
+      return NextResponse.json({ success: false, message: "Forbidden: Insufficient permissions." }, { status: 403 });
+    }
 
     if (search) {
       query.$or = [
@@ -36,7 +71,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (centerId) query.centerId = centerId;
+    // These filters are applied on top of the role-based centerId filter
     if (clusterId) query.clusterId = clusterId;
     if (smallGroupId) query.smallGroupId = smallGroupId;
     if (gender) query.gender = gender;
