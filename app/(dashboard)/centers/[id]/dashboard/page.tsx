@@ -156,19 +156,30 @@ export default function CenterDashboardPage() {
     ],
   };
 
-  // Check permission via API instead of direct model access
+  // Check permission for both CENTER_ADMIN and HQ_ADMIN roles
   const checkPermission = useCallback(async () => {
     if (!user || !centerId) return;
     
     try {
-      const response = await fetch(`/api/auth/check-permission?role=CENTER_ADMIN&centerId=${centerId}`);
-      if (!response.ok) {
+      // Check if user has HQ_ADMIN role (which has access to all centers)
+      const hqAdminResponse = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
+      if (hqAdminResponse.ok) {
+        const hqAdminData = await hqAdminResponse.json();
+        if (hqAdminData.hasPermission) {
+          setHasPermission(true);
+          return;
+        }
+      }
+      
+      // If not HQ_ADMIN, check for CENTER_ADMIN role for this specific center
+      const centerAdminResponse = await fetch(`/api/auth/check-permission?role=CENTER_ADMIN&centerId=${centerId}`);
+      if (!centerAdminResponse.ok) {
         setHasPermission(false);
         return;
       }
       
-      const data = await response.json();
-      setHasPermission(data.hasPermission);
+      const centerAdminData = await centerAdminResponse.json();
+      setHasPermission(centerAdminData.hasPermission);
     } catch (error) {
       console.error("Error checking permission:", error);
       setHasPermission(false);
@@ -207,11 +218,12 @@ export default function CenterDashboardPage() {
       const eventsData = await eventsResponse.json();
       setEvents(eventsData.events || []);
 
-    } catch (error: Error) {
+    } catch (error: unknown) {
       console.error("Error fetching center data:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load center data. Please try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to load center data. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       
@@ -603,29 +615,25 @@ export default function CenterDashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ChartCard 
-          title="Attendance Trends" 
-          description="Monthly attendance statistics"
+          title="Attendance Trends"
           type="line"
           data={attendanceData}
         />
         
         <ChartCard 
-          title="Member Growth" 
-          description="New members per month"
+          title="Member Growth"
           type="bar"
           data={memberGrowthData}
         />
         
         <ChartCard 
-          title="Cluster Performance" 
-          description="Member growth by cluster"
+          title="Cluster Performance"
           type="pie"
           data={clusterPerformanceData}
         />
         
         <ChartCard 
-          title="Spiritual Growth" 
-          description="Member spiritual journey stages"
+          title="Spiritual Growth"
           type="bar"
           data={spiritualGrowthData}
         />
@@ -635,8 +643,7 @@ export default function CenterDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <DataCard
           title="Upcoming Birthdays"
-          description="Members with birthdays this month"
-          items={[
+          data={[
             { title: "John Smith", description: "May 15", icon: "cake" },
             { title: "Mary Johnson", description: "May 18", icon: "cake" },
             { title: "Robert Brown", description: "May 22", icon: "cake" },
@@ -646,8 +653,7 @@ export default function CenterDashboardPage() {
         
         <DataCard
           title="Recent Follow-ups"
-          description="Latest follow-up activities"
-          items={[
+          data={[
             { title: "New Convert Follow-up", description: "James Wilson - 3 days ago", icon: "user-check" },
             { title: "First-time Visitor", description: "Sarah Johnson - 1 week ago", icon: "user-check" },
             { title: "Absentee Follow-up", description: "Michael Brown - 2 weeks ago", icon: "user-check" },
