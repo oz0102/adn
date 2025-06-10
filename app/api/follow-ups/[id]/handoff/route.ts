@@ -66,7 +66,7 @@ export async function POST(
     // Authorization check: Similar to the attempts route, adapt as needed
     const typedUser = session.user as SessionUserWithRoles;
     const userRoles = typedUser.assignedRoles?.map((r: AssignedRole) => r.role) || [];
-    const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("HQ_ADMIN") || userRoles.includes("CENTER_ADMIN");
+    const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("GLOBAL_ADMIN") || userRoles.includes("CENTER_ADMIN");
 
     if (!isAdminOrPastor && followUp.assignedTo?.toString() !== currentUserId) {
       return NextResponse.json(

@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
 
     // Check for specific role
     if (role) {
-      if (role === "HQ_ADMIN") {
-        const isHQAdmin = user.assignedRoles.some(ar => 
-          ar.role === "HQ_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
+      if (role === "GLOBAL_ADMIN") {
+        const isGlobalAdmin = user.assignedRoles.some(ar =>
+          ar.role === "GLOBAL_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
         );
-        return NextResponse.json({ hasPermission: isHQAdmin });
+        return NextResponse.json({ hasPermission: isGlobalAdmin });
       }
     }
 
@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
     if (roles) {
       const roleList = roles.split(',');
       const hasAnyRole = roleList.some(r => {
-        if (r === "HQ_ADMIN") {
+        if (r === "GLOBAL_ADMIN") {
           return user.assignedRoles.some(ar => 
-            ar.role === "HQ_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
+            ar.role === "GLOBAL_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
           );
         }
         if (r === "CENTER_ADMIN") {
@@ -58,12 +58,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hasPermission: hasAnyRole });
     }
 
-    // Check for HQ_ADMIN (has access to everything)
-    const isHQAdmin = user.assignedRoles.some(ar => 
-      ar.role === "HQ_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
+    // Check for GLOBAL_ADMIN (has access to everything)
+    const isGlobalAdmin = user.assignedRoles.some(ar =>
+      ar.role === "GLOBAL_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId
     );
     
-    if (isHQAdmin) {
+    if (isGlobalAdmin) {
       return NextResponse.json({ hasPermission: true });
     }
 

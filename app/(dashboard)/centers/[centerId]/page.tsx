@@ -9,9 +9,9 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Building, 
   MapPin, 
@@ -26,7 +26,7 @@ import {
   AlertTriangle,
   Calendar
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
@@ -69,7 +69,7 @@ export default function CenterDetailPage() {
   const { toast } = useToast()
   const { user, isAuthenticated } = useAuthStore()
   const { status } = useSession()
-  const centerIdFromParams = params.id as string
+  const centerIdFromParams = params.centerId as string // Changed from params.id
 
   const [center, setCenter] = useState<Center | null>(null)
   const [clusters, setClusters] = useState<Cluster[]>([]) 
@@ -83,8 +83,8 @@ export default function CenterDetailPage() {
     if (!user || !centerIdFromParams) return;
     
     try {
-      // Check if user can edit center (HQ_ADMIN or CENTER_ADMIN for this center)
-      const editResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN&centerId=${centerIdFromParams}`);
+      // Check if user can edit center (GLOBAL_ADMIN or CENTER_ADMIN for this center)
+      const editResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN&centerId=${centerIdFromParams}`);
       if (editResponse.ok) {
         const data = await editResponse.json();
         setCanEditCenter(data.hasPermission);
@@ -93,8 +93,8 @@ export default function CenterDetailPage() {
       // Check if user can create clusters (same permissions as edit)
       setCanCreateCluster(canEditCenter);
       
-      // Check view permission (HQ_ADMIN or CENTER_ADMIN)
-      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN`);
+      // Check view permission (GLOBAL_ADMIN or CENTER_ADMIN)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN`);
       if (viewResponse.ok) {
         const data = await viewResponse.json();
         setHasViewPermission(data.hasPermission);

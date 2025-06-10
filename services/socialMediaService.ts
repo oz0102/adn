@@ -9,7 +9,7 @@ export interface ICreateSocialMediaAccountPayload {
   platform: SocialMediaPlatform;
   username: string;
   link: string;
-  scope: "HQ" | "CENTER";
+  scope: "GLOBAL" | "CENTER";
   centerId?: Types.ObjectId | string;
   notes?: string;
   createdBy: Types.ObjectId | string;
@@ -23,7 +23,7 @@ export interface IUpdateSocialMediaAccountPayload {
 }
 
 export interface IGetSocialMediaAccountsFilters {
-  scope?: "HQ" | "CENTER";
+  scope?: "GLOBAL" | "CENTER";
   centerId?: Types.ObjectId | string;
   platform?: SocialMediaPlatform;
   page?: number;
@@ -47,7 +47,7 @@ const createSocialMediaAccount = async (data: ICreateSocialMediaAccountPayload):
     if (!centerExists) {
       throw new Error("Invalid Center ID: Center does not exist.");
     }
-  } else if (data.scope === "HQ") {
+  } else if (data.scope === "GLOBAL") {
     data.centerId = undefined;
   }
   try {
@@ -68,7 +68,7 @@ const getAllSocialMediaAccounts = async (filters: IGetSocialMediaAccountsFilters
   if (filters.scope) query.scope = filters.scope;
   if (filters.centerId) query.centerId = new Types.ObjectId(filters.centerId.toString());
   if (filters.platform) query.platform = filters.platform;
-  if (filters.scope === "HQ") {
+  if (filters.scope === "GLOBAL") {
     query.centerId = { $exists: false };
   }
   const accounts = await SocialMediaAccountModel.find(query)

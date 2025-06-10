@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
 import { SessionProvider } from "@/components/session-provider"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/lib/client/components/ui/toaster"
 import { AuthSync } from "@/components/auth-sync"
 
 export default function DashboardLayout({

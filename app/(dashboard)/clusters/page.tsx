@@ -10,11 +10,11 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Search, 
   Plus, 
@@ -26,7 +26,7 @@ import {
   Layers, // Icon for Clusters
   AlertTriangle // For permission errors
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
@@ -91,8 +91,8 @@ export default function ClustersPage() {
     if (!user) return;
     
     try {
-      // Check if user can create clusters (HQ_ADMIN or CENTER_ADMIN for the specific center)
-      let createPermissionUrl = `/api/auth/check-permission?roles=HQ_ADMIN`;
+      // Check if user can create clusters (GLOBAL_ADMIN or CENTER_ADMIN for the specific center)
+      let createPermissionUrl = `/api/auth/check-permission?roles=GLOBAL_ADMIN`;
       if (filterCenterId) {
         createPermissionUrl += `,CENTER_ADMIN&centerId=${filterCenterId}`;
       }
@@ -103,8 +103,8 @@ export default function ClustersPage() {
         setCanCreateCluster(data.hasPermission);
       }
       
-      // Check view permission (HQ_ADMIN, CENTER_ADMIN, or CLUSTER_LEADER)
-      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN,CLUSTER_LEADER`);
+      // Check view permission (GLOBAL_ADMIN, CENTER_ADMIN, or CLUSTER_LEADER)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN,CLUSTER_LEADER`);
       if (viewResponse.ok) {
         const data = await viewResponse.json();
         setHasViewPermission(data.hasPermission);

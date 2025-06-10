@@ -44,17 +44,17 @@ export async function POST(request: NextRequest) {
     const effectiveMemberId: Types.ObjectId | undefined = memberId ? new Types.ObjectId(memberId.toString()) : undefined;
 
     switch (level) {
-      case "HQ":
-        hasPermissionToCreate = userRoles.some(r => r.role === "HQ_ADMIN");
+      case "GLOBAL":
+        hasPermissionToCreate = userRoles.some(r => r.role === "GLOBAL_ADMIN");
         break;
       case "CENTER":
         if (!effectiveCenterId) return NextResponse.json({ message: "Center ID required for CENTER level goal" }, { status: 400 });
-        hasPermissionToCreate = userRoles.some(r => r.role === "HQ_ADMIN" || (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()));
+        hasPermissionToCreate = userRoles.some(r => r.role === "GLOBAL_ADMIN" || (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()));
         break;
       case "CLUSTER":
         if (!effectiveClusterId || !effectiveCenterId) return NextResponse.json({ message: "Cluster ID and Center ID required for CLUSTER level goal" }, { status: 400 });
         hasPermissionToCreate = userRoles.some(r => 
-            r.role === "HQ_ADMIN" || 
+            r.role === "GLOBAL_ADMIN" ||
             (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()) ||
             (r.role === "CLUSTER_LEADER" && r.scopeId === effectiveClusterId!.toString() && r.parentScopeId === effectiveCenterId!.toString())
         );
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       case "SMALL_GROUP":
         if (!effectiveSmallGroupId || !effectiveClusterId || !effectiveCenterId) return NextResponse.json({ message: "Small Group, Cluster, and Center IDs required for SMALL_GROUP level goal" }, { status: 400 });
         hasPermissionToCreate = userRoles.some(r => 
-            r.role === "HQ_ADMIN" || 
+            r.role === "GLOBAL_ADMIN" ||
             (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()) ||
             (r.role === "CLUSTER_LEADER" && r.scopeId === effectiveClusterId!.toString() && r.parentScopeId === effectiveCenterId!.toString()) ||
             (r.role === "SMALL_GROUP_LEADER" && r.scopeId === effectiveSmallGroupId!.toString() && r.parentScopeId === effectiveClusterId!.toString())
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         if (!effectiveCenterId) return NextResponse.json({ message: "Member must be associated with a Center for individual goal creation" }, { status: 400 });
 
         hasPermissionToCreate = userRoles.some(r => 
-            r.role === "HQ_ADMIN" || 
+            r.role === "GLOBAL_ADMIN" ||
             (r.role === "CENTER_ADMIN" && r.scopeId === effectiveCenterId!.toString()) || 
             (effectiveClusterId && r.role === "CLUSTER_LEADER" && r.scopeId === effectiveClusterId.toString() && r.parentScopeId === effectiveCenterId!.toString()) || 
             (effectiveSmallGroupId && effectiveClusterId && r.role === "SMALL_GROUP_LEADER" && r.scopeId === effectiveSmallGroupId.toString() && r.parentScopeId === effectiveClusterId.toString()) ||
@@ -151,9 +151,9 @@ export async function GET(request: NextRequest) {
 
     await connectToDB();
     let canView = false;
-    const isHQAdmin = userRoles.some(r => r.role === "HQ_ADMIN");
+    const isGlobalAdmin = userRoles.some(r => r.role === "GLOBAL_ADMIN");
 
-    if (isHQAdmin) {
+    if (isGlobalAdmin) {
         canView = true;
     } else {
         if (filters.centerId) {
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
         }
     }
 
-    if (!isHQAdmin && !canView && (filters.centerId || filters.clusterId || filters.smallGroupId || filters.memberId)) {
+    if (!isGlobalAdmin && !canView && (filters.centerId || filters.clusterId || filters.smallGroupId || filters.memberId)) {
          return NextResponse.json({ message: "Forbidden: Insufficient permissions to view goals for the specified scope." }, { status: 403 });
     }
 

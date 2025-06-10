@@ -1260,27 +1260,27 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
+} from "@/lib/client/components/ui/card"
 import { 
   Tabs, 
   TabsContent, 
   TabsList, 
   TabsTrigger 
-} from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
+} from "@/lib/client/components/ui/tabs"
+import { Button } from "@/lib/client/components/ui/button"
 import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+} from "@/lib/client/components/ui/select"
+import { Input } from "@/lib/client/components/ui/input"
+import { Textarea } from "@/lib/client/components/ui/textarea"
+import { Badge } from "@/lib/client/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { Label } from "@/lib/client/components/ui/label"
+import { Separator } from "@/lib/client/components/ui/separator"
 import { 
   ArrowLeft, Calendar, Mail, Phone, User, Clock, CheckCircle,
   XCircle, AlertCircle, Edit, Clipboard, Send, UserCheck, PlusCircle, X
@@ -1294,8 +1294,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "@/components/ui/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/lib/client/components/ui/dialog"
+import { Checkbox } from "@/lib/client/components/ui/checkbox"
 
 // WhatsApp Icon Component
 const WhatsAppIcon = ({ className = "h-4 w-4" }) => (

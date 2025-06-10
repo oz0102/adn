@@ -10,9 +10,9 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Layers, // Icon for Cluster
   MapPin, 
@@ -26,7 +26,7 @@ import {
   ArrowLeft,
   Calendar
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
@@ -91,7 +91,7 @@ export default function ClusterDetailPage() {
   const queryParams = useSearchParams();
   const { toast } = useToast()
   const { user } = useAuthStore()
-  const clusterIdFromParams = params.id as string
+  const clusterIdFromParams = params.clusterId as string // Changed from params.id
   const centerNameFromQuery = queryParams.get("centerName");
 
   const [cluster, setCluster] = useState<Cluster | null>(null)
@@ -99,9 +99,9 @@ export default function ClusterDetailPage() {
   const [members] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
-  const canEditCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
-  const canCreateSmallGroup = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
-  // const canAddMemberToCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  const canEditCluster = user && cluster ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  const canCreateSmallGroup = user && cluster ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  // const canAddMemberToCluster = user && cluster ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
 
   const fetchClusterDetails = useCallback(async () => {
     if (!user || !clusterIdFromParams) return;
@@ -175,7 +175,7 @@ export default function ClusterDetailPage() {
     );
   }
   
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
+  if (user && !checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
       return (
         <div className="text-center py-10">
             <Layers className="mx-auto h-12 w-12 text-red-400 mb-4" />
@@ -203,7 +203,7 @@ export default function ClusterDetailPage() {
         </div>
         {canEditCluster && (
           <Button asChild>
-            <Link href={`/dashboard/clusters/${cluster._id}/edit`}> 
+            <Link href={`/dashboard/clusters/${clusterIdFromParams}/edit`}>
               <Edit className="mr-2 h-4 w-4" /> Edit Cluster
             </Link>
           </Button>

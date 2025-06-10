@@ -11,15 +11,15 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+} from "@/lib/client/components/ui/card";
+import { Button } from "@/lib/client/components/ui/button";
+import { Badge } from "@/lib/client/components/ui/badge";
 import { 
   Users, 
   Building, 
   ArrowLeft
 } from 'lucide-react';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
@@ -43,7 +43,7 @@ interface Member {
 export default function CenterMembersPage() {
   const router = useRouter();
   const params = useParams();
-  const centerId = params.id as string;
+  const centerId = params.centerId as string; // Changed from params.id
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuthStore();
   const { status } = useSession();
@@ -188,7 +188,7 @@ export default function CenterMembersPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link href={`/centers/${centerId}/members/add`}>
+            <Link href={`/dashboard/members/new?centerId=${centerId}`}>
               Add New Member
             </Link>
           </Button>
@@ -208,7 +208,7 @@ export default function CenterMembersPage() {
               <h3 className="text-lg font-medium mb-2">No Members Found</h3>
               <p className="text-gray-500 mb-4">This center doesn&apos;t have any members yet.</p>
               <Button asChild>
-                <Link href={`/centers/${centerId}/members/add`}>
+                <Link href={`/dashboard/members/new?centerId=${centerId}`}>
                   Add First Member
                 </Link>
               </Button>
@@ -258,7 +258,7 @@ export default function CenterMembersPage() {
                   </CardContent>
                   <CardFooter className="pt-2">
                     <Button variant="outline" size="sm" className="w-full" asChild>
-                      <Link href={`/members/${member._id}`}>
+                      <Link href={`/dashboard/members/${member._id}?centerId=${centerId}`}>
                         View Profile
                       </Link>
                     </Button>

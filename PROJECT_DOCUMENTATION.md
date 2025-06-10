@@ -44,19 +44,19 @@ The project follows a typical Next.js project structure with some additions:
     *   **`shared/`**: Code shared between client and server (e.g. types).
     *   **`social-media/`**: Logic for interacting with social media platform APIs.
 *   **`middleware.ts`**: Next.js middleware for handling requests.
-*   **`models/`**: Mongoose schema definitions for database collections.
+*   **`models/`**: Mongoose schema definitions for database collections. (e.g. `center.ts` no longer contains `parentHQId` as it's obsolete).
 *   **`public/`**: Static assets like images and icons.
 *   **`services/`**: Business logic services that encapsulate interactions with external services (Email, SMS, AI, etc.) and core application functionalities.
 *   **`test/`**: Unit and integration tests.
 *   **`types/`**: TypeScript type definitions.
 *   **`workers/`**: Code for background workers that handle tasks like sending notifications or generating reports.
-*   **`CHANGES_SUMMARY.md`**: A summary of changes in the project.
+*   **`CHANGES_SUMMARY.md`**: A summary of changes in the project. (Note: This file may still contain outdated terminology. Refer to this documentation for current terms like Center and Global Admin).
 *   **`README.md`**: Project overview, setup, and deployment instructions.
 *   **`next.config.js` / `next.config.ts`**: Next.js configuration files.
 *   **`tsconfig.json`**: TypeScript configuration.
 *   **`package.json`**: Project dependencies and scripts.
 
-This structure helps in organizing the codebase logically, separating concerns, and making it easier for developers to navigate and understand the project.
+This structure helps in organizing the codebase logically, separating concerns, and making it easier for developers to navigate and understand the project. The hierarchical structure is now typically Global Admin overseeing Centers and Regional Clusters.
 
 ## 2. Authentication Flow
 
@@ -67,7 +67,7 @@ Authentication in this application is handled by NextAuth.js, providing a secure
 *   **NextAuth.js (`next-auth`)**: The core library used for authentication. It's configured in `auth/config.ts` and the API route `app/api/auth/[...nextauth]/route.ts`.
 *   **Credentials Provider**: The primary method for authentication is username (email) and password.
 *   **MongoDB Adapter**: NextAuth.js is configured to use MongoDB to store user accounts, sessions, and verification tokens. This is set up in `lib/server/auth/adapter.ts`.
-*   **User Model (`models/user.ts`)**: Defines the schema for user documents in MongoDB, including fields for email, password (hashed), roles, permissions, etc.
+*   **User Model (`models/user.ts`)**: Defines the schema for user documents in MongoDB, including fields for email, password (hashed), roles (e.g. `GLOBAL_ADMIN`, `CENTER_ADMIN`), permissions, etc.
 
 ### Registration:
 
@@ -114,7 +114,7 @@ Authentication in this application is handled by NextAuth.js, providing a secure
 
 ### Authorization and Permissions:
 
-*   The `User` model includes fields for `roles` and `permissions`.
+*   The `User` model includes fields for `roles` (e.g. `GLOBAL_ADMIN`, `CENTER_ADMIN`) and `permissions`.
 *   The application likely has a system to check these roles/permissions to control access to certain features or data. This might be implemented in:
     *   API route handlers (e.g., using middleware or decorators).
     *   Frontend components (to conditionally render UI elements).
@@ -241,7 +241,7 @@ This section details the functionality of the core modules within the Church Man
 
 ### 4.2 Centers Module
 
-**Purpose**: To manage information about different church centers or branches.
+**Purpose**: To manage information about different church centers or branches. (Note: The term "Center" now standardizes previous concepts like "Main Center" or "Branch Location" into a single entity type representing a church location/branch).
 
 **Data Model (`models/center.ts`)**:
 *   `name`: String - The name of the center.
@@ -253,6 +253,7 @@ This section details the functionality of the core modules within the Church Man
 *   `contactPhone`: String - Contact phone for the center.
 *   `meetingSchedule`: String - Details about meeting times and days.
 *   `capacity`: Number - Seating or member capacity.
+    (Note: `parentHQId` field is obsolete and has been removed from this model).
 
 **API Routes (`app/api/centers/`)**:
 *   **`GET /api/centers`**:
@@ -274,7 +275,7 @@ This section details the functionality of the core modules within the Church Man
 
 **Frontend Components**:
 *   **Main Page (`app/(dashboard)/centers/page.tsx`)**:
-    *   Displays a list or cards of centers (`components/ui/cluster-card.tsx` seems to be a typo and might be `center-card.tsx` or a generic card).
+    *   Displays a list or cards of centers (e.g., using a generic card or a specific `center-card.tsx`).
     *   Allows users to view, filter, and add new centers.
 *   **New Center Page (`app/(dashboard)/centers/new/page.tsx`)**:
     *   Form for creating a new center.
@@ -297,13 +298,14 @@ This section details the functionality of the core modules within the Church Man
 
 ### 4.3 Clusters Module
 
-**Purpose**: To group multiple centers into larger administrative or geographical units called clusters.
+**Purpose**: To group multiple centers into larger administrative or geographical units called clusters. A cluster might also exist as a regional grouping not directly parented by a single center.
 
 **Data Model (`models/cluster.ts`)**:
 *   `name`: String - The name of the cluster.
 *   `leaderId`: ObjectId (references `User` model) - The leader responsible for the cluster.
 *   `description`: String (optional) - A brief description of the cluster.
 *   `region`: String (optional) - Geographical region of the cluster.
+*   `centerId`: ObjectId (optional, references `Center` model) - If the cluster is directly associated with a parent Center. The comment for this field was updated to reflect its optional nature for regional groupings.
 
 **API Routes (`app/api/clusters/`)**:
 *   **`GET /api/clusters`**:
@@ -330,7 +332,7 @@ This section details the functionality of the core modules within the Church Man
     *   Displays a list or cards of clusters (e.g., using `components/ui/cluster-card.tsx`).
     *   Allows users to view, filter, and add new clusters.
 *   **New Cluster Page (`app/(dashboard)/clusters/new/page.tsx`)**:
-    *   Form for creating a new cluster.
+    *   Form for creating a new cluster. Logic for `assignToGlobal` (previously `assignToHQ`) has been updated.
 *   **Cluster Detail Page (`app/(dashboard)/clusters/[id]/page.tsx`)**:
     *   Shows details of a specific cluster.
     *   Allows editing or deleting the cluster.
@@ -342,18 +344,19 @@ This section details the functionality of the core modules within the Church Man
 **Functionality**:
 *   Administrators can define and manage clusters.
 *   Assign leaders to clusters.
-*   Organize centers by grouping them into clusters.
+*   Organize centers by grouping them into clusters, or manage regional clusters independently.
 *   View centers and generate reports at the cluster level.
 
 ---
 
 ### 4.4 Discipleship Goals Module
 
-**Purpose**: To define, track, and manage spiritual growth or discipleship goals for members or the church community.
+**Purpose**: To define, track, and manage spiritual growth or discipleship goals for members or the church community. Goals can be set at Global, Center, Cluster, Small Group, or Individual levels.
 
 **Data Model (`models/discipleshipGoal.ts`)**:
 *   `title`: String - The name or title of the goal.
 *   `description`: String - A detailed description of the goal.
+*   `level`: String (e.g. "GLOBAL", "CENTER") - Scope of the goal.
 *   `category`: String (e.g., "Prayer", "Study", "Service", "Evangelism") - The area of discipleship this goal falls under.
 *   `targetAudience`: String (e.g., "New Believers", "All Members", "Leaders").
 *   `measurableMetrics`: String - How progress towards the goal will be measured (e.g., "Books read", "Hours volunteered", "People shared with").
@@ -399,10 +402,12 @@ This section details the functionality of the core modules within the Church Man
 
 ### 4.5 Events Module
 
-**Purpose**: To manage church events, including creation, scheduling, promotion, and tracking.
+**Purpose**: To manage church events, including creation, scheduling, promotion, and tracking. Events can be scoped as "GLOBAL" or "CENTER" specific.
 
 **Data Model (`models/event.ts`)**:
 *   `name`: String - The name of the event.
+*   `scope`: String ("GLOBAL" or "CENTER") - Scope of the event.
+*   `centerId`: ObjectId (optional, if scope is "CENTER")
 *   `description`: String - Detailed information about the event.
 *   `startDate`: Date - Start date and time of the event.
 *   `endDate`: Date - End date and time of the event.
@@ -419,7 +424,7 @@ This section details the functionality of the core modules within the Church Man
 
 **API Routes (`app/api/events/`)**:
 *   **`GET /api/events`**:
-    *   Fetches a list of events. Supports filtering (e.g., by date, category).
+    *   Fetches a list of events. Supports filtering (e.g., by date, category, scope).
     *   Handler: `app/api/events/route.ts`
 *   **`POST /api/events`**:
     *   Creates a new event.
@@ -674,13 +679,14 @@ This section details the functionality of the core modules within the Church Man
 
 ### 4.10 Notifications Module
 
-**Purpose**: To manage and deliver notifications to users within the application or via external channels (email, SMS, WhatsApp).
+**Purpose**: To manage and deliver notifications to users within the application or via external channels (email, SMS, WhatsApp). Notifications can be targeted at different levels (Global, Center, Cluster, etc.).
 
 **Data Model (`models/notification.ts`)**:
 *   `userId`: ObjectId (references `User` model) - The recipient of the notification.
 *   `title`: String - The title of the notification.
 *   `message`: String - The content of the notification.
 *   `type`: String (e.g., "NewEvent", "FollowUpReminder", "SystemUpdate", "Birthday").
+*   `targetLevel`: String (e.g. "GLOBAL", "CENTER") - Scope of the notification.
 *   `status`: String (e.g., "Unread", "Read", "Archived").
 *   `link`: String (optional) - A URL to navigate to when the notification is clicked.
 *   `createdAt`: Date.
@@ -767,11 +773,13 @@ This section details the functionality of the core modules within the Church Man
 
 ### 4.12 Social Media Module
 
-**Purpose**: To integrate with various social media platforms for analytics, content posting (potentially), and tracking engagement.
+**Purpose**: To integrate with various social media platforms for analytics, content posting (potentially), and tracking engagement. Accounts can be scoped as "GLOBAL" (for the entire organization) or "CENTER" specific.
 
 **Data Models**:
 *   **`models/socialMediaAccount.ts`**:
     *   `platform`: String (e.g., "Facebook", "Instagram", "Twitter", "YouTube", "TikTok", "Telegram").
+    *   `scope`: String ("GLOBAL" or "CENTER") - Determines if the account is for the entire organization or a specific center.
+    *   `centerId`: ObjectId (optional, references `Center` model) - If scope is "CENTER".
     *   `accountId`: String - The ID of the account on the platform.
     *   `accountName`: String - The name or handle of the social media account.
     *   `accessToken`: String (encrypted) - Token for API access.
@@ -783,8 +791,8 @@ This section details the functionality of the core modules within the Church Man
 
 **API Routes (`app/api/social-media/`)**:
 *   **Account Management (`app/api/social-media/accounts/`)**:
-    *   `GET /api/social-media/accounts`: Lists connected social media accounts.
-    *   `POST /api/social-media/accounts`: Connects a new social media account (likely involves OAuth flow).
+    *   `GET /api/social-media/accounts`: Lists connected social media accounts (filters by scope may apply, e.g. Global or Center specific).
+    *   `POST /api/social-media/accounts`: Connects a new social media account (likely involves OAuth flow and defining the scope as Global or for a specific Center).
     *   `DELETE /api/social-media/accounts/[id]`: Disconnects a social media account.
 *   **Data Fetching Endpoints (various under `app/api/social-media/accounts/[id]/`)**:
     *   `analytics/route.ts`: Fetches analytics data (e.g., followers, engagement).
@@ -794,7 +802,7 @@ This section details the functionality of the core modules within the Church Man
 
 **Frontend Components**:
 *   **Main Page (`app/(dashboard)/social-media/page.tsx`)**:
-    *   Dashboard for viewing connected social media accounts and summary analytics.
+    *   Dashboard for viewing connected social media accounts and summary analytics (distinguishing between Global and Center accounts).
     *   Allows users to connect new accounts or manage existing ones.
 *   **Layout (`app/(dashboard)/social-media/layout.tsx`)**: Specific layout for the social media section, possibly with platform-specific navigation (`components/social-media/social-media-nav.tsx`).
 *   **Analytics Components (`app/(dashboard)/social-media/analytics/page.tsx`, `components/social-media/analytics-components.tsx`)**:
@@ -810,7 +818,7 @@ This section details the functionality of the core modules within the Church Man
 *   `workers/social-media-update.ts`: Background worker to periodically fetch new data from social media platforms.
 
 **Functionality**:
-*   Connect and authenticate multiple social media accounts from different platforms.
+*   Connect and authenticate multiple social media accounts from different platforms, scoped appropriately as Global or to a specific Center.
 *   Fetch and display analytics data (followers, engagement, reach, etc.).
 *   Track follower growth.
 *   View recent posts or content from connected accounts.
@@ -1002,7 +1010,7 @@ This subdirectory holds code specifically intended for use on the client-side (i
 
 ### 6.4 `lib/constants.ts`
 
-*   Defines application-wide constants, such as default values, configuration keys, event names, roles, permissions strings, or any other static values used across the codebase. This helps in avoiding magic strings/numbers and makes maintenance easier.
+*   Defines application-wide constants, such as default values, configuration keys, event names, roles (e.g. `GLOBAL_ADMIN`), permissions strings, or any other static values used across the codebase. This helps in avoiding magic strings/numbers and makes maintenance easier.
 
 ### 6.5 `lib/db.ts`
 
@@ -1025,7 +1033,7 @@ This subdirectory holds code specifically intended for use on the client-side (i
 *   Defines the permission system for the application. This could include:
     *   A list of available permissions (e.g., `CREATE_EVENT`, `DELETE_USER`).
     *   Functions to check if a user (based on their roles or direct permissions) has a specific permission.
-    *   Utilities to manage roles and their associated permissions.
+    *   Utilities to manage roles (like `GLOBAL_ADMIN`, `CENTER_ADMIN`) and their associated permissions.
 
 ### 6.9 `lib/queue.ts`
 
@@ -1054,7 +1062,7 @@ This subdirectory contains code that is exclusively for server-side execution.
 
 Code that can be shared between the client and server.
 *   **`lib/shared/types/`**:
-    *   **`user.ts`**: Contains TypeScript type definitions related to the User model or user data, intended for use on both client and server to ensure consistency. Other shared types would also reside here.
+    *   **`user.ts`**: Contains TypeScript type definitions related to the User model or user data (including roles like `GLOBAL_ADMIN`), intended for use on both client and server to ensure consistency. Other shared types would also reside here.
 
 ### 6.13 `lib/social-media/`
 
@@ -1106,12 +1114,12 @@ Each service file generally corresponds to a specific domain or resource.
     *   **Used By**: `app/api/centers/` routes.
 
 *   **`clusterService.ts`**:
-    *   **Purpose**: Manages business logic for clusters (groups of centers).
+    *   **Purpose**: Manages business logic for clusters (groups of centers or regional groupings).
     *   **Functionality**: Provides methods for CRUD operations on clusters, managing relationships with centers, and assigning cluster leaders.
     *   **Used By**: `app/api/clusters/` routes.
 
 *   **`discipleshipGoalService.ts`**:
-    *   **Purpose**: Handles logic related to discipleship goals.
+    *   **Purpose**: Handles logic related to discipleship goals (scoped at Global, Center, Cluster, etc.).
     *   **Functionality**: Methods for creating, managing, and tracking discipleship goals. May include logic for linking goals to members or tracking progress.
     *   **Used By**: `app/api/discipleship-goals/` routes, Member module (spiritual growth tab).
 
@@ -1122,7 +1130,7 @@ Each service file generally corresponds to a specific domain or resource.
     *   **External Integration**: Zoho Zeptomail.
 
 *   **`eventService.ts`**:
-    *   **Purpose**: Centralizes business logic for event management.
+    *   **Purpose**: Centralizes business logic for event management (scoped as Global or Center).
     *   **Functionality**: Includes methods for CRUD operations on events, managing event registration, linking events to attendance or flyers.
     *   **Used By**: `app/api/events/` routes, `app/(dashboard)/events/event-service.ts` (client-side counterpart).
 
@@ -1142,7 +1150,7 @@ Each service file generally corresponds to a specific domain or resource.
     *   **Used By**: `app/api/members/` routes.
 
 *   **`notificationService.ts`**:
-    *   **Purpose**: Central point for creating and managing notifications.
+    *   **Purpose**: Central point for creating and managing notifications (scoped at Global, Center, etc.).
     *   **Functionality**: Logic for creating notifications in the database, determining recipients, and potentially triggering the sending of notifications through various channels (in-app, email, SMS, WhatsApp) by coordinating with other services (`emailService`, `smsService`, `whatsappService`) or pushing jobs to `notificationWorker.ts`.
     *   **Used By**: Many modules when an action requires notifying a user (e.g., new event, follow-up assigned, birthday). `app/api/notifications/` routes. `app/(dashboard)/notifications/notification-service.ts`.
 
@@ -1164,7 +1172,7 @@ Each service file generally corresponds to a specific domain or resource.
 
 *   **`socialMediaService.ts`**:
     *   **Purpose**: Orchestrates interactions with various social media platforms.
-    *   **Functionality**: Likely acts as a facade or higher-level service that utilizes the specific platform API wrappers in `lib/social-media/`. It would manage connecting accounts, fetching analytics, posts, and coordinating updates, possibly with `social-media-update.ts` worker.
+    *   **Functionality**: Likely acts as a facade or higher-level service that utilizes the specific platform API wrappers in `lib/social-media/`. It would manage connecting accounts (scoped as Global or to a Center), fetching analytics, posts, and coordinating updates, possibly with `social-media-update.ts` worker.
     *   **Used By**: `app/api/social-media/` routes.
     *   **External Integration**: Facebook, Instagram, Twitter, YouTube, TikTok, Telegram APIs via `lib/social-media/`.
 

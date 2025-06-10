@@ -4,43 +4,48 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Network, 
+  Layers, 
   Users, 
   Calendar, 
   Settings, 
   ChevronRight,
   Home,
-  Layers
+  Network
 } from 'lucide-react';
 
-interface GroupLayoutProps {
+interface ClusterLayoutProps {
   children: React.ReactNode;
-  params: { id: string };
+  params: { clusterId: string }; // Changed id to clusterId
 }
 
-export default function GroupLayout({ children, params }: GroupLayoutProps) {
-  const groupId = params.id;
+export default function ClusterLayout({ children, params }: ClusterLayoutProps) {
+  const clusterId = params.clusterId; // Changed params.id to params.clusterId
   const pathname = usePathname();
   
   const menuItems = [
     {
       title: 'Dashboard',
-      href: `/groups/${groupId}/dashboard`,
+      href: `/clusters/${clusterId}/dashboard`, // This path is correct as (dashboard) is a route group
       icon: <Home className="h-5 w-5" />,
     },
     {
       title: 'Members',
-      href: `/groups/${groupId}/members`,
+      href: `/clusters/${clusterId}/dashboard/members`, // Added /dashboard segment
       icon: <Users className="h-5 w-5" />,
     },
     {
+      title: 'Small Groups',
+      href: `/clusters/${clusterId}/dashboard/small-groups`, // Corrected path
+      icon: <Network className="h-5 w-5" />,
+    },
+    {
       title: 'Events',
-      href: `/groups/${groupId}/events`,
+      href: `/clusters/${clusterId}/dashboard/events`, // Added /dashboard segment
       icon: <Calendar className="h-5 w-5" />,
     },
     {
       title: 'Settings',
-      href: `/groups/${groupId}/settings`,
+      href: `/clusters/${clusterId}/settings`,
       icon: <Settings className="h-5 w-5" />,
     },
   ];
@@ -51,10 +56,10 @@ export default function GroupLayout({ children, params }: GroupLayoutProps) {
       <div className="w-full md:w-64 bg-muted/30 border-r p-4">
         <div className="mb-6">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Network className="h-5 w-5 text-purple-600" />
-            <span>Small Group Navigation</span>
+            <Layers className="h-5 w-5 text-green-600" />
+            <span>Cluster Navigation</span>
           </h2>
-          <p className="text-sm text-muted-foreground">Manage this small group</p>
+          <p className="text-sm text-muted-foreground">Manage this cluster</p>
         </div>
         
         <nav className="space-y-1">
@@ -79,13 +84,6 @@ export default function GroupLayout({ children, params }: GroupLayoutProps) {
         </nav>
         
         <div className="mt-6 pt-6 border-t">
-          <Link
-            href="/groups"
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <Network className="h-5 w-5" />
-            <span>All Small Groups</span>
-          </Link>
           <Link
             href="/clusters"
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

@@ -29,13 +29,13 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     // Ensure IDs are strings for checkPermission if they are ObjectIds
     const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: smallGroup.centerId?.toString() });
     const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: smallGroup.clusterId?.toString(), centerId: smallGroup.centerId?.toString() });
     const isSmallGroupLeader = await checkPermission(userId, "SMALL_GROUP_LEADER", { smallGroupId: smallGroup._id.toString(), clusterId: smallGroup.clusterId?.toString(), centerId: smallGroup.centerId?.toString() });
 
-    if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader && !isSmallGroupLeader) {
+    if (!hasGlobalAdminPermission && !isCenterAdmin && !isClusterLeader && !isSmallGroupLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     
@@ -63,11 +63,11 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingSmallGroup.centerId?.toString() });
     const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: existingSmallGroup.clusterId?.toString(), centerId: existingSmallGroup.centerId?.toString() });
 
-    if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader) {
+    if (!hasGlobalAdminPermission && !isCenterAdmin && !isClusterLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for update" }, { status: 403 });
     }
 
@@ -108,11 +108,11 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Small Group not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingSmallGroup.centerId?.toString() });
     const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId: existingSmallGroup.clusterId?.toString(), centerId: existingSmallGroup.centerId?.toString() });
 
-    if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader) {
+    if (!hasGlobalAdminPermission && !isCenterAdmin && !isClusterLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for delete" }, { status: 403 });
     }
 

@@ -4,7 +4,7 @@ import React from 'react';
 interface CenterLayoutProps {
   children: React.ReactNode;
   // Params are still available if needed by child pages, but not used by this layout itself.
-  params: { id: string };
+  params: { centerId: string };
 }
 
 export default function CenterLayout({ children }: CenterLayoutProps) {

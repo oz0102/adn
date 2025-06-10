@@ -7,10 +7,10 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Badge } from "@/lib/client/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs"
 import { 
   Target,
   Plus,
@@ -22,14 +22,14 @@ import {
   UserCog
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { DiscipleshipGoalChart } from "@/components/discipleship-goals/goal-chart"
+import { DiscipleshipGoalChart } from "./goal-chart"
 import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/lib/client/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -37,9 +37,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/lib/client/components/ui/dialog"
+import { Input } from "@/lib/client/components/ui/input"
+import { Label } from "@/lib/client/components/ui/label"
 
 interface DiscipleshipGoal {
   _id: string

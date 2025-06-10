@@ -23,11 +23,11 @@ export default function TemporaryPlaceholder() {
 //   TableHead, 
 //   TableHeader, 
 //   TableRow 
-// } from "@/components/ui/table"
-// import { Button } from "@/components/ui/button"
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-// import { Badge } from "@/components/ui/badge"
+// } from "@/lib/client/components/ui/table"
+// import { Button } from "@/lib/client/components/ui/button"
+// import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+// import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+// import { Badge } from "@/lib/client/components/ui/badge"
 // import { 
 //   ArrowLeft, 
 //   Calendar, 
@@ -39,14 +39,14 @@ export default function TemporaryPlaceholder() {
 //   Search,
 //   Download
 // } from "lucide-react"
-// import { Input } from "@/components/ui/input"
+// import { Input } from "@/lib/client/components/ui/input"
 // import { 
 //   Select,
 //   SelectContent,
 //   SelectItem,
 //   SelectTrigger,
 //   SelectValue,
-// } from "@/components/ui/select"
+// } from "@/lib/client/components/ui/select"
 // import { useToast } from "@/hooks/use-toast"
 // import { formatDate, formatDateTime, getInitials } from "@/lib/utils"
 // import { 
@@ -59,7 +59,7 @@ export default function TemporaryPlaceholder() {
 //   AlertDialogHeader,
 //   AlertDialogTitle,
 //   AlertDialogTrigger,
-// } from "@/components/ui/alert-dialog"
+// } from "@/lib/client/components/ui/alert-dialog"
 
 // interface AttendanceMember {
 //   _id: string;

@@ -10,11 +10,11 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Search, 
   Plus, 
@@ -26,7 +26,7 @@ import {
   Network, // Icon for Clusters count
   AlertTriangle
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
@@ -82,15 +82,15 @@ export default function CentersPage() {
     if (!user) return;
     
     try {
-      // Check HQ_ADMIN permission for creating centers
-      const createResponse = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
+      // Check GLOBAL_ADMIN permission for creating centers
+      const createResponse = await fetch(`/api/auth/check-permission?role=GLOBAL_ADMIN`);
       if (createResponse.ok) {
         const data = await createResponse.json();
         setCanCreateCenter(data.hasPermission);
       }
       
-      // Check view permission (HQ_ADMIN or CENTER_ADMIN)
-      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN`);
+      // Check view permission (GLOBAL_ADMIN or CENTER_ADMIN)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN`);
       if (viewResponse.ok) {
         const data = await viewResponse.json();
         setHasViewPermission(data.hasPermission);

@@ -9,7 +9,7 @@ export enum NotificationType {
 }
 
 export enum NotificationLevel {
-  HQ = 'HQ',
+  GLOBAL = 'GLOBAL',
   CENTER = 'CENTER',
   CLUSTER = 'CLUSTER',
   SMALL_GROUP = 'SMALL_GROUP',
@@ -176,7 +176,7 @@ NotificationSchema.path('recipient').validate(function(value: any): boolean {
 NotificationSchema.path('targetId').validate(function(value: any): boolean {
   // Use double type assertion for safety
   const doc = this as unknown as INotification;
-  if (doc.targetLevel !== NotificationLevel.HQ && !value) {
+  if (doc.targetLevel !== NotificationLevel.GLOBAL && !value) {
     return false; 
   }
   return true;
