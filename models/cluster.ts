@@ -24,7 +24,7 @@ export interface ICluster extends Document {
     time: string;
     frequency: string;
   }>;
-  centerId?: mongoose.Types.ObjectId; // Made optional for HQ clusters
+  centerId?: mongoose.Types.ObjectId; // Optional: Allows a cluster to be a regional grouping not directly parented by a single center.
   createdAt: Date;
   updatedAt: Date;
 }
@@ -113,7 +113,7 @@ const ClusterSchema: Schema = new Schema(
     centerId: { 
       type: Schema.Types.ObjectId, 
       ref: 'Center',
-      required: false  // Made optional for HQ clusters
+      required: false  // Optional: Allows a cluster to be a regional grouping not directly parented by a single center.
     }
   },
   { 

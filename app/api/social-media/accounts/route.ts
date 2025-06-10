@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     await connectToDB();
-    let hasPermissionToCreate = await checkPermission(userId, "HQ_ADMIN");
+    let hasPermissionToCreate = await checkPermission(userId, "GLOBAL_ADMIN");
 
     if (!hasPermissionToCreate && scope === "CENTER") {
       hasPermissionToCreate = await checkPermission(userId, "CENTER_ADMIN", { centerId });
@@ -80,14 +80,14 @@ export async function GET(request: Request) {
     if (platform) filters.platform = platform;
 
     await connectToDB();
-    let canView = await checkPermission(userId, "HQ_ADMIN");
+    let canView = await checkPermission(userId, "GLOBAL_ADMIN");
 
     if (!canView && scope === "CENTER" && centerId) {
       canView = await checkPermission(userId, "CENTER_ADMIN", { centerId });
-    } else if (!canView && scope === "HQ") {
+    } else if (!canView && scope === "GLOBAL") {
       canView = true; 
     } else if (!canView && !scope && !centerId) {
-        return NextResponse.json({ message: "Forbidden: Please specify a scope (HQ or CENTER with centerId) you have access to, or have HQ Admin role." }, { status: 403 });
+        return NextResponse.json({ message: "Forbidden: Please specify a scope (GLOBAL or CENTER with centerId) you have access to, or have Global Admin role." }, { status: 403 });
     }
 
     if (!canView) {

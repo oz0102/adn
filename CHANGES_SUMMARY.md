@@ -9,7 +9,7 @@ Key modifications include:
     *   `Cluster.ts`: Updated to link to `Center` and manage clusters within a center.
     *   `SmallGroup.ts`: Updated to link to `Cluster` and `Center`.
     *   `Member.ts`: Updated with `centerId`, `clusterId`, `smallGroupId` and compound unique indexes scoped by `centerId`.
-    *   `User.ts`: Updated with `assignedRoles` array to support multi-scope role assignments (e.g., HQ_ADMIN, CENTER_ADMIN for a specific centerId).
+    *   `User.ts`: Updated with `assignedRoles` array to support multi-scope role assignments (e.g., GLOBAL_ADMIN, CENTER_ADMIN for a specific centerId).
     *   `Event.ts`: Updated with `scope` (HQ/CENTER) and `centerId`.
     *   `DiscipleshipGoal.ts`: Updated with `level` (HQ/CENTER/CLUSTER/SMALL_GROUP/INDIVIDUAL) and corresponding scope IDs (`centerId`, `clusterId`, `smallGroupId`, `memberId`).
     *   `Notification.ts`: Updated with `targetLevel`, `targetId`, and `originatorCenterId` for scoped notifications.
@@ -26,8 +26,8 @@ Key modifications include:
     *   `notificationService.ts`: Updated to handle creation and retrieval of scoped notifications.
 
 3.  **API Routes Updated/Created:**
-    *   `/api/centers/**`: New routes for Center CRUD operations with HQ_ADMIN and CENTER_ADMIN permission checks.
-    *   `/api/clusters/**`: Updated routes for Cluster CRUD, scoped by Center, with relevant permission checks (HQ_ADMIN, CENTER_ADMIN, CLUSTER_LEADER).
+    *   `/api/centers/**`: New routes for Center CRUD operations with GLOBAL_ADMIN and CENTER_ADMIN permission checks.
+    *   `/api/clusters/**`: Updated routes for Cluster CRUD, scoped by Center, with relevant permission checks (GLOBAL_ADMIN, CENTER_ADMIN, CLUSTER_LEADER).
     *   `/api/small-groups/**`: Updated routes for Small Group CRUD, scoped by Cluster/Center, with relevant permission checks.
     *   `/api/members/**`: Updated routes for Member CRUD, scoped by Center/Cluster/Small Group, with relevant permission checks.
     *   `/api/social-media/accounts/**`: Updated routes for Social Media Account CRUD, scoped by HQ/Center, with permission checks. Includes routes for follower updates and history (conceptualized).

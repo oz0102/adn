@@ -70,7 +70,7 @@ const clusterFormSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  assignToHQ: z.boolean().default(false),
+  assignToGlobal: z.boolean().default(false),
   centerId: z.string().optional(),
   leaderId: z.string().optional(), // Made optional
   meetingSchedules: z.array(
@@ -89,10 +89,10 @@ const clusterFormSchema = z.object({
     message: "At least one meeting schedule is required.",
   }),
 }).refine(data => {
-  // If not assigned to HQ, centerId is required
-  return data.assignToHQ || !!data.centerId;
+  // If not assigned to Global, centerId is required
+  return data.assignToGlobal || !!data.centerId;
 }, {
-  message: "Please select a center or assign to HQ directly",
+  message: "Please select a center or assign to Global directly",
   path: ["centerId"],
 });
 
@@ -127,7 +127,7 @@ export default function NewClusterPage() {
     contactEmail: "",
     contactPhone: "",
     description: "",
-    assignToHQ: !centerIdFromUrl, // Default to HQ if no center ID provided
+    assignToGlobal: !centerIdFromUrl, // Default to Global if no center ID provided
     centerId: centerIdFromUrl || "",
     leaderId: "", // Optional
     meetingSchedules: [
@@ -144,8 +144,8 @@ export default function NewClusterPage() {
     defaultValues,
   })
 
-  // Watch assignToHQ to update UI
-  const assignToHQ = form.watch("assignToHQ")
+  // Watch assignToGlobal to update UI
+  const assignToGlobal = form.watch("assignToGlobal")
 
   // Use field array for meeting schedules
   const { fields, append, remove } = useFieldArray({
@@ -207,9 +207,9 @@ export default function NewClusterPage() {
 
   // Handle assignment toggle
   const handleAssignmentToggle = (value: boolean) => {
-    form.setValue("assignToHQ", value);
+    form.setValue("assignToGlobal", value);
     if (value) {
-      // If assigning to HQ, clear centerId
+      // If assigning to Global, clear centerId
       form.setValue("centerId", "");
     }
   };
@@ -217,10 +217,10 @@ export default function NewClusterPage() {
   async function onSubmit(data: ClusterFormValues) {
     setIsSubmitting(true)
     try {
-      // Prepare data for API - if assignToHQ is true, ensure centerId is null/undefined
+      // Prepare data for API - if assignToGlobal is true, ensure centerId is null/undefined
       const submitData = {
         ...data,
-        centerId: data.assignToHQ ? null : data.centerId,
+        centerId: data.assignToGlobal ? null : data.centerId,
         // If leaderId is empty string or "@none", set to null
         leaderId: data.leaderId && data.leaderId.trim() !== "" && data.leaderId !== "@none" ? data.leaderId : null
       };
@@ -306,29 +306,29 @@ export default function NewClusterPage() {
                 <div className="flex flex-col gap-2">
                   <h3 className="text-lg font-medium">Cluster Assignment</h3>
                   <p className="text-sm text-muted-foreground">
-                    Choose whether this cluster belongs to a specific center or directly to HQ.
+                    Choose whether this cluster belongs to a specific center or directly to Global.
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between p-4 border rounded-md">
                   <div className="flex items-center gap-2">
-                    {assignToHQ ? (
+                    {assignToGlobal ? (
                       <Home className="h-5 w-5 text-primary" />
                     ) : (
                       <Building className="h-5 w-5 text-primary" />
                     )}
                     <div>
-                      <p className="font-medium">{assignToHQ ? "Assign to HQ Directly" : "Assign to a Center"}</p>
+                      <p className="font-medium">{assignToGlobal ? "Assign to Global Directly" : "Assign to a Center"}</p>
                       <p className="text-sm text-muted-foreground">
-                        {assignToHQ 
-                          ? "This cluster will be managed directly by HQ" 
+                        {assignToGlobal
+                          ? "This cluster will be managed directly by Global"
                           : "This cluster will be managed by a specific center"}
                       </p>
                     </div>
                   </div>
                   <FormField
                     control={form.control}
-                    name="assignToHQ"
+                    name="assignToGlobal"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
@@ -346,7 +346,7 @@ export default function NewClusterPage() {
                   />
                 </div>
 
-                {!assignToHQ && (
+                {!assignToGlobal && (
                   <FormField
                     control={form.control}
                     name="centerId"

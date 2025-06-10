@@ -31,17 +31,17 @@ export async function GET(request: NextRequest) {
     // Build query
     const query: FilterQuery<typeof Member> = {};
 
-    const isHqAdmin = assignedRoles.some(role => role.role === 'HQ_ADMIN');
+    const isGlobalAdmin = assignedRoles.some(role => role.role === 'GLOBAL_ADMIN');
     const centerAdminRoles = assignedRoles.filter(role => role.role === 'CENTER_ADMIN' && role.centerId);
 
-    console.log("GET /api/members - isHqAdmin:", isHqAdmin, "centerAdminRoles count:", centerAdminRoles.length);
+    console.log("GET /api/members - isGlobalAdmin:", isGlobalAdmin, "centerAdminRoles count:", centerAdminRoles.length);
 
-    if (isHqAdmin) {
-      console.log("GET /api/members - HQ_ADMIN access. Allowing query with centerId if provided.");
+    if (isGlobalAdmin) {
+      console.log("GET /api/members - GLOBAL_ADMIN access. Allowing query with centerId if provided.");
       if (centerIdQueryParam) {
         query.centerId = centerIdQueryParam;
       }
-      // HQ_ADMIN can filter by any other param as well
+      // GLOBAL_ADMIN can filter by any other param as well
     } else if (centerAdminRoles.length > 0) {
       const userCenterIds = centerAdminRoles.map(r => r.centerId);
       console.log("GET /api/members - CENTER_ADMIN access. User center IDs:", userCenterIds);
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       }
       console.log("GET /api/members - CENTER_ADMIN query for members in centers:", query.centerId);
     } else {
-      console.log("GET /api/members - User is not HQ_ADMIN or CENTER_ADMIN. Forbidden.");
+      console.log("GET /api/members - User is not GLOBAL_ADMIN or CENTER_ADMIN. Forbidden.");
       return NextResponse.json({ success: false, message: "Forbidden: Insufficient permissions." }, { status: 403 });
     }
 

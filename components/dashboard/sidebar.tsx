@@ -21,7 +21,8 @@ import {
   Target,
   FileText,
   Home, // Added Home
-  Building // Added Building
+  Building, // Added Building
+  ClipboardUser // Added for Attendees
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -69,52 +70,77 @@ export function Sidebar() {
     { href: "/discipleship-goals", icon: <Target className="h-5 w-5" />, title: "Goals" },
     { href: "/notifications", icon: <Bell className="h-5 w-5" />, title: "Notifications" },
     { href: "/reports", icon: <BarChart3 className="h-5 w-5" />, title: "Reports" },
+    { href: "/dashboard/attendees", icon: <ClipboardUser className="h-5 w-5" />, title: "Attendees" },
   ];
 
   const getCenterNavItems = (centerId: string) => [
-    { href: `/dashboard/centers/${centerId}/dashboard`, icon: <Home className="h-5 w-5" />, title: "Center Dashboard" },
-    { href: `/dashboard/centers/${centerId}/members`, icon: <Users className="h-5 w-5" />, title: "Center Members" },
-    { href: `/dashboard/centers/${centerId}/clusters`, icon: <Building className="h-5 w-5" />, title: "Center Clusters" }, // Example
-    { href: `/dashboard/centers/${centerId}/events`, icon: <Calendar className="h-5 w-5" />, title: "Center Events" }, // Example
-    // Add other center-specific links here
-    // { href: `/dashboard/centers/${centerId}/settings`, icon: <Settings className="h-5 w-5" />, title: "Center Settings" },
+    { href: `/centers/${centerId}/dashboard`, icon: <Home className="h-5 w-5" />, title: "Center Dashboard" },
+    // Example: Adjust other links as they are implemented for the new path structure
+    { href: `/centers/${centerId}/dashboard/members`, icon: <Users className="h-5 w-5" />, title: "Members" }, // Placeholder for actual members page for center
+    { href: `/centers/${centerId}/dashboard/clusters`, icon: <Building className="h-5 w-5" />, title: "Clusters" },
+    { href: `/centers/${centerId}/dashboard/events`, icon: <Calendar className="h-5 w-5" />, title: "Events" },
+    { href: `/centers/${centerId}/dashboard/attendees`, icon: <ClipboardUser className="h-5 w-5" />, title: "Attendees" },
+    // { href: `/centers/${centerId}/dashboard/settings`, icon: <Settings className="h-5 w-5" />, title: "Settings" },
+  ];
+
+  const getClusterNavItems = (clusterId: string) => [
+    { href: `/clusters/${clusterId}/dashboard`, icon: <Home className="h-5 w-5" />, title: "Cluster Dashboard" },
+    { href: `/clusters/${clusterId}/dashboard/members`, icon: <Users className="h-5 w-5" />, title: "Members" },
+    { href: `/clusters/${clusterId}/dashboard/small-groups`, icon: <UserCheck className="h-5 w-5" />, title: "Small Groups" },
+    { href: `/clusters/${clusterId}/dashboard/events`, icon: <Calendar className="h-5 w-5" />, title: "Events" },
+    // Add other cluster-specific links here
   ];
 
   let navItemsToShow = [];
-  let centerIdFromPath: string | null = null;
+  const params = useParams(); // Use useParams to get route parameters
 
-  if (pathname.startsWith("/dashboard/centers/")) {
-    const parts = pathname.split('/');
-    if (parts.length > 3 && parts[1] === 'dashboard' && parts[2] === 'centers') {
-      centerIdFromPath = parts[3];
-      console.log("Determined centerId from path:", centerIdFromPath);
+  if (pathname.startsWith("/centers/") && params.centerId) {
+    const centerIdFromPath = params.centerId as string;
+    console.log("Determined centerId from path (new structure):", centerIdFromPath);
 
-      const isHqAdminViewingCenter = user?.assignedRoles?.some(r => r.role === 'HQ_ADMIN');
-      const isCenterAdminForThisCenter = user?.assignedRoles?.some(r => r.role === 'CENTER_ADMIN' && r.centerId === centerIdFromPath);
+    const isGlobalAdminViewingCenter = user?.assignedRoles?.some(r => r.role === 'GLOBAL_ADMIN');
+    const isCenterAdminForThisCenter = user?.assignedRoles?.some(r => r.role === 'CENTER_ADMIN' && r.centerId === centerIdFromPath);
 
-      if (isHqAdminViewingCenter || isCenterAdminForThisCenter) {
-        navItemsToShow = getCenterNavItems(centerIdFromPath);
-        console.log("Showing Center nav items for centerId:", centerIdFromPath);
-        // Optionally, add a "Back to HQ Dashboard" link if user is also HQ_ADMIN or if it's a Center Admin
-        if (isCenterAdminForThisCenter) {
-            navItemsToShow.unshift({ href: "/dashboard", icon: <Grid className="h-5 w-5" />, title: "HQ Dashboard" });
-        }
-      } else {
-        // User is on a center path but not authorized for this specific center's menu
-        console.log("User not authorized for this center's menu, showing HQ nav items.");
-        navItemsToShow = defaultHqNavItems;
+    if (isGlobalAdminViewingCenter || isCenterAdminForThisCenter) {
+      navItemsToShow = getCenterNavItems(centerIdFromPath);
+      if (isGlobalAdminViewingCenter || isCenterAdminForThisCenter) {
+           navItemsToShow.unshift({ href: "/dashboard", icon: <Grid className="h-5 w-5" />, title: "Global Dashboard" });
       }
     } else {
-      // Path is like /dashboard/centers/ but malformed, show default
+      console.log("User not authorized for this center's menu, showing Global nav items.");
       navItemsToShow = defaultHqNavItems;
-      console.log("Malformed center path, showing HQ nav items.");
     }
-  } else {
+  } else if (pathname.startsWith("/clusters/") && params.clusterId) {
+    const clusterIdFromPath = params.clusterId as string;
+    console.log("Determined clusterId from path:", clusterIdFromPath);
+
+    const isGlobalAdminViewingCluster = user?.assignedRoles?.some(r => r.role === 'GLOBAL_ADMIN');
+    // For CLUSTER_LEADER, the checkPermission utility should verify against the user's assignedRoles.
+    // This might involve fetching cluster details if centerId is needed and not directly in assignedRole for cluster.
+    // For simplicity here, we assume direct clusterId match or GLOBAL_ADMIN.
+    // A more robust check might be:
+    // const isClusterLeaderForThis = await checkPermission(user, "CLUSTER_LEADER", { clusterId: clusterIdFromPath, centerId: clusterData.centerId /* fetched */ });
+    const isClusterLeaderForThis = user?.assignedRoles?.some(r => r.role === 'CLUSTER_LEADER' && r.clusterId === clusterIdFromPath);
+    // Also, a CENTER_ADMIN of the parent center should be able to see this cluster's dashboard.
+    // This requires fetching cluster details to find its parent centerId if not available directly.
+    // This part is simplified for now and can be enhanced if cluster data is readily available here or checkPermission handles it.
+    // const parentCenterId = getParentCenterForCluster(clusterIdFromPath); // Placeholder
+    // const isCenterAdminForParent = parentCenterId && user?.assignedRoles?.some(r => r.role === 'CENTER_ADMIN' && r.centerId === parentCenterId);
+
+    if (isGlobalAdminViewingCluster || isClusterLeaderForThis /* || isCenterAdminForParent */) {
+      navItemsToShow = getClusterNavItems(clusterIdFromPath);
+      navItemsToShow.unshift({ href: "/dashboard", icon: <Grid className="h-5 w-5" />, title: "Global Dashboard" });
+      // Potentially add "Back to Center Dashboard" if applicable and easy to determine parent center
+    } else {
+      console.log("User not authorized for this cluster's menu, showing Global nav items.");
+      navItemsToShow = defaultHqNavItems;
+    }
+  } else { // For global dashboard pages or other non-center/non-cluster specific paths
     navItemsToShow = defaultHqNavItems;
-    console.log("Not a center path, showing HQ nav items.");
+    console.log("Not a center-specific or cluster-specific path, showing Global nav items.");
   }
 
-  const isHqAdmin = user?.assignedRoles?.some(r => r.role === 'HQ_ADMIN');
+  const isGlobalAdmin = user?.assignedRoles?.some(r => r.role === 'GLOBAL_ADMIN');
 
   return (
     <aside className={cn(
@@ -147,7 +173,7 @@ export function Sidebar() {
               isCollapsed={!isOpen}
             />
           ))}
-          {isHqAdmin && ( // Settings link only for HQ_ADMIN
+          {isGlobalAdmin && ( // Settings link only for GLOBAL_ADMIN
             <NavItem
               href="/settings"
               icon={<Settings className="h-5 w-5" />}

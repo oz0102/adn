@@ -212,9 +212,10 @@ export interface IHandoffDetails {
 }
 
 export interface IFollowUp extends Document {
-  personType: string; // 'New Convert' or 'New Attendee'
-  personId?: mongoose.Types.ObjectId;
-  newAttendee?: INewAttendee;
+  personType: string; // 'Member', 'Attendee', 'Unregistered Guest', 'New Convert'
+  personId?: mongoose.Types.ObjectId; // For 'Member' type
+  attendeeId?: mongoose.Types.ObjectId; // For 'Attendee' type
+  newAttendee?: INewAttendee; // For 'Unregistered Guest' type
   missedEvent?: IMissedEvent;
   status: string; // 'Pending', 'In Progress', 'Completed', 'Failed'
   responseCategory: string; // 'Promising', 'Undecided', 'Cold' (corresponds to Green, Yellow, Red in spreadsheet)
@@ -347,14 +348,20 @@ const FollowUpSchema: Schema = new Schema(
     personType: { 
       type: String, 
       required: true,
-      enum: ['New Convert', 'New Attendee', 'Member']
+      enum: ['Member', 'Attendee', 'Unregistered Guest', 'New Convert']
     },
     personId: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Member'
+      ref: 'Member', // Link to Member if personType is 'Member'
+      optional: true
+    },
+    attendeeId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Attendee', // Link to Attendee if personType is 'Attendee'
+      optional: true
     },
     newAttendee: { 
-      type: NewAttendeeSchema
+      type: NewAttendeeSchema // For 'Unregistered Guest'
     },
     missedEvent: { 
       type: MissedEventSchema
@@ -411,6 +418,7 @@ FollowUpSchema.index({ personId: 1 });
 FollowUpSchema.index({ status: 1 });
 FollowUpSchema.index({ nextFollowUpDate: 1 });
 FollowUpSchema.index({ assignedTo: 1 });
+FollowUpSchema.index({ attendeeId: 1 });
 FollowUpSchema.index({ responseCategory: 1 });
 FollowUpSchema.index({ 'handedOffToCluster.clusterId': 1 });
 

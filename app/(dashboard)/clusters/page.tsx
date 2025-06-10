@@ -91,8 +91,8 @@ export default function ClustersPage() {
     if (!user) return;
     
     try {
-      // Check if user can create clusters (HQ_ADMIN or CENTER_ADMIN for the specific center)
-      let createPermissionUrl = `/api/auth/check-permission?roles=HQ_ADMIN`;
+      // Check if user can create clusters (GLOBAL_ADMIN or CENTER_ADMIN for the specific center)
+      let createPermissionUrl = `/api/auth/check-permission?roles=GLOBAL_ADMIN`;
       if (filterCenterId) {
         createPermissionUrl += `,CENTER_ADMIN&centerId=${filterCenterId}`;
       }
@@ -103,8 +103,8 @@ export default function ClustersPage() {
         setCanCreateCluster(data.hasPermission);
       }
       
-      // Check view permission (HQ_ADMIN, CENTER_ADMIN, or CLUSTER_LEADER)
-      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN,CLUSTER_LEADER`);
+      // Check view permission (GLOBAL_ADMIN, CENTER_ADMIN, or CLUSTER_LEADER)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN,CLUSTER_LEADER`);
       if (viewResponse.ok) {
         const data = await viewResponse.json();
         setHasViewPermission(data.hasPermission);

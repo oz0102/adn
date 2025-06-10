@@ -1,7 +1,7 @@
 # Project Todos
 
 # Restructure the project
-All Apostolic Centers are now Centers. No need to tag any Headquarters
+Terminology Update: 'Apostolic Center' and 'HQ' have been standardized to 'Center'. The concept of a separate 'Headquarters' entity has been removed.
 
 app/
 /dashboard - Global Admin

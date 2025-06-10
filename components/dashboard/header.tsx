@@ -35,8 +35,8 @@ const getDisplayRole = (assignedRoles: AssignedRole[] | undefined): string => {
 
   const roles = assignedRoles.map(r => r.role);
 
-  if (roles.includes("HQ_ADMIN")) {
-    return "Headquarters Admin";
+  if (roles.includes("GLOBAL_ADMIN")) {
+    return "Global Admin";
   }
   if (roles.includes("CENTER_ADMIN")) {
     return "Center Admin";

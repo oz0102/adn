@@ -1,605 +1,320 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Save } from "lucide-react";
+// Removed Tabs imports as they are not used in the final version of this form.
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthStore } from "@/lib/store";
+import { checkPermission } from "@/lib/permissions";
+import { apiClient } from "@/lib/api-client";
+import { IMember } from "@/models/member";
+import { IAttendee } from "@/models/attendee";
+import { IUser } from "@/models/user";
 
 
-// app/(dashboard)/follow-ups/new/page.tsx - Page for creating new follow-ups
-"use client"
+const followUpFormSchema = z.object({ // Renamed from newPersonSchema for clarity
+  personType: z.enum(['Unregistered Guest', 'New Convert', 'Attendee', 'Member']),
+  newAttendee_firstName: z.string().optional(),
+  newAttendee_lastName: z.string().optional(),
+  newAttendee_email: z.string().email().optional().or(z.literal('')),
+  newAttendee_phoneNumber: z.string().optional(),
+  newAttendee_whatsappNumber: z.string().optional(),
+  newAttendee_address: z.string().optional(),
+  newAttendee_visitDate: z.string().optional(),
+  newAttendee_invitedFor: z.string().optional(),
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, Save } from "lucide-react"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from "@/components/ui/tabs"
+  memberId: z.string().optional(),
+  attendeeId: z.string().optional(),
 
-// Form schema for new attendee follow-up
-const newAttendeeSchema = z.object({
-  firstName: z.string().min(2, {
-    message: "First name must be at least 2 characters.",
-  }),
-  lastName: z.string().min(2, {
-    message: "Last name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }).optional().or(z.literal('')),
-  phoneNumber: z.string().min(5, {
-    message: "Phone number must be at least 5 characters.",
-  }),
-  whatsappNumber: z.string().optional().or(z.literal('')),
-  address: z.string().optional().or(z.literal('')),
-  visitDate: z.string({
-    required_error: "Visit date is required",
-  }),
-  personType: z.string({
-    required_error: "Person type is required",
-  }),
-  invitedFor: z.string().optional().or(z.literal('')),
-  notes: z.string().optional().or(z.literal('')),
-  assignedToId: z.string({
-    required_error: "Assigned to is required",
-  }),
+  eventId: z.string().optional(),
+  notes: z.string().optional(),
+  assignedToId: z.string().min(1,"Assigned to is required"),
+  centerId: z.string().optional(),
+  clusterId: z.string().optional(), // Added clusterId for context
+}).superRefine((data, ctx) => {
+  if (data.personType === 'Unregistered Guest' || (data.personType === 'New Convert' && !data.memberId && !data.attendeeId)) {
+    if (!data.newAttendee_firstName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "First name is required for new person.", path: ["newAttendee_firstName"] });
+    if (!data.newAttendee_lastName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Last name is required for new person.", path: ["newAttendee_lastName"] });
+    if (!data.newAttendee_phoneNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Phone number is required for new person.", path: ["newAttendee_phoneNumber"] });
+    if (!data.newAttendee_visitDate) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Visit date is required for new person.", path: ["newAttendee_visitDate"] });
+  }
+  if (data.personType === 'Member' && !data.memberId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Member selection is required.", path: ["memberId"] });
+  }
+  if (data.personType === 'Attendee' && !data.attendeeId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Attendee selection is required.", path: ["attendeeId"] });
+  }
 });
 
-// Form schema for existing member follow-up
-const memberSchema = z.object({
-  memberId: z.string({
-    required_error: "Member ID is required",
-  }),
-  eventId: z.string({
-    required_error: "Event ID is required",
-  }),
-  notes: z.string().optional().or(z.literal('')),
-  assignedToId: z.string({
-    required_error: "Assigned to is required",
-  }),
-});
+type FollowUpFormValues = z.infer<typeof followUpFormSchema>;
 
-// Mock data for dropdowns
-const users = [
-  { id: 'user1', name: 'Pastor John' },
-  { id: 'user2', name: 'Minister Sarah' },
-  { id: 'user3', name: 'Deacon Michael' },
-];
-
-const events = [
-  { id: 'event1', name: 'Sunday Service (2023-01-15)' },
-  { id: 'event2', name: 'Prayer Meeting (2023-01-18)' },
-  { id: 'event3', name: 'Bible Study (2023-01-20)' },
-];
-
-const members = [
-  { id: 'member1', name: 'Alice Johnson' },
-  { id: 'member2', name: 'Bob Miller' },
-  { id: 'member3', name: 'Carol Williams' },
-];
+interface SelectOption { _id: string; name: string; }
 
 export default function NewFollowUpPage() {
   const router = useRouter();
+  const searchParamsHook = useSearchParams();
+  const centerIdFromQuery = searchParamsHook.get("centerId");
+  const clusterIdFromQuery = searchParamsHook.get("clusterId"); // Read clusterId
   const { toast } = useToast();
+  const { user } = useAuthStore();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [followUpType, setFollowUpType] = useState<'newAttendee' | 'member'>('newAttendee');
+  const [isLoadingData, setIsLoadingData] = useState(true);
   
-  // Form for new attendee
-  const newAttendeeForm = useForm<z.infer<typeof newAttendeeSchema>>({
-    resolver: zodResolver(newAttendeeSchema),
+  const [assignableUsers, setAssignableUsers] = useState<SelectOption[]>([]);
+  const [events, setEvents] = useState<SelectOption[]>([]);
+  const [members, setMembers] = useState<IMember[]>([]);
+  const [attendees, setAttendees] = useState<IAttendee[]>([]);
+
+  const [canCreateFollowUp, setCanCreateFollowUp] = useState(false);
+  // const [isGlobalAdmin, setIsGlobalAdmin] = useState(false); // Keep if needed for other logic
+
+  const form = useForm<FollowUpFormValues>({
+    resolver: zodResolver(followUpFormSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phoneNumber: "",
-      whatsappNumber: "",
-      address: "",
-      visitDate: new Date().toISOString().split('T')[0],
-      personType: "New Attendee",
-      invitedFor: "",
-      notes: "",
-      assignedToId: "",
+      personType: 'Unregistered Guest',
+      newAttendee_visitDate: new Date().toISOString().split('T')[0],
+      centerId: centerIdFromQuery || undefined,
+      clusterId: clusterIdFromQuery || undefined, // Pre-fill clusterId
     },
   });
   
-  // Form for existing member
-  const memberForm = useForm<z.infer<typeof memberSchema>>({
-    resolver: zodResolver(memberSchema),
-    defaultValues: {
-      memberId: "",
-      eventId: "",
-      notes: "",
-      assignedToId: "",
-    },
-  });
-  
-  async function onSubmitNewAttendee() {
+  const watchedPersonType = form.watch("personType");
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (!user) return;
+      setIsLoadingData(true);
+
+      const globalAdmin = await checkPermission(user, "GLOBAL_ADMIN");
+      // setIsGlobalAdmin(globalAdmin); // Set if needed elsewhere
+      let hasCreatePerm = globalAdmin;
+
+      let effectiveCenterId = centerIdFromQuery;
+      let effectiveClusterId = clusterIdFromQuery;
+
+      if (!globalAdmin) {
+        if (effectiveClusterId) { // If cluster is in query, check against it
+          const clusterLeader = await checkPermission(user, "CLUSTER_LEADER", { clusterId: effectiveClusterId });
+          if (clusterLeader) hasCreatePerm = true;
+          // If not cluster leader, check if center admin for the cluster's center
+          if (!hasCreatePerm && !effectiveCenterId) { // Fetch cluster to get its center if not provided
+            try {
+                const clusterDetails = await apiClient.get<{cluster: {centerId: string}}>(`/clusters/${effectiveClusterId}?fields=centerId`);
+                effectiveCenterId = clusterDetails.cluster.centerId;
+                form.setValue('centerId', effectiveCenterId); // Set derived centerId in form
+            } catch (e) { console.error("Failed to fetch parent center for cluster", e); }
+          }
+        }
+        if (effectiveCenterId && !hasCreatePerm) { // Check center admin if not already permitted
+             const centerAdmin = await checkPermission(user, "CENTER_ADMIN", {centerId: effectiveCenterId});
+             if(centerAdmin) hasCreatePerm = true;
+        }
+        if (!effectiveCenterId && !effectiveClusterId) { // No specific scope, check if they are any center admin
+            hasCreatePerm = await checkPermission(user, "CENTER_ADMIN");
+        }
+      }
+      
+      setCanCreateFollowUp(hasCreatePerm);
+      if (!hasCreatePerm) {
+        toast({ title: "Access Denied", description: "You don't have permission to create follow-ups.", variant: "destructive" });
+        router.back();
+        setIsLoadingData(false);
+        return;
+      }
+
+      try {
+        // Fetch users for "Assigned To" dropdown
+        const usersRes = await apiClient.get<{ users: IUser[] }>("/users?limit=200");
+        setAssignableUsers(usersRes.users?.map(u => ({ _id: u._id, name: `${u.firstName} ${u.lastName}` })) || []);
+
+        // Fetch events
+        const eventsRes = await apiClient.get<{ events: any[] }>(`/events?limit=200${effectiveCenterId ? `&centerId=${effectiveCenterId}` : ''}${effectiveClusterId ? `&clusterId=${effectiveClusterId}` : ''}`);
+        setEvents(eventsRes.events?.map(e => ({ _id: e._id, name: `${e.title} (${formatDate(new Date(e.startDate))})` })) || []);
+
+        // Fetch members and attendees - filter by clusterId if present, then centerId
+        let personFilter = "limit=500";
+        if (effectiveClusterId) personFilter = `clusterId=${effectiveClusterId}&limit=500`;
+        else if (effectiveCenterId) personFilter = `centerId=${effectiveCenterId}&limit=500`;
+
+        const membersRes = await apiClient.get<{ data?: { members: IMember[] }, members?: IMember[] }>(`/members?${personFilter}`);
+        setMembers(membersRes.data?.members || membersRes.members || []);
+
+        const attendeesRes = await apiClient.get<{ attendees: IAttendee[] }>(`/attendees?${personFilter}`);
+        setAttendees(attendeesRes.attendees || []);
+
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load necessary data.", variant: "destructive" });
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    loadInitialData();
+  }, [user, centerIdFromQuery, clusterIdFromQuery, toast, router, form]);
+
+
+  async function onSubmit(values: FollowUpFormValues) {
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      const payload: any = {
+        personType: values.personType,
+        notes: values.notes,
+        assignedTo: values.assignedToId,
+        centerId: values.centerId || centerIdFromQuery,
+        clusterId: values.clusterId || clusterIdFromQuery,
+      };
+
+      if (values.personType === 'Unregistered Guest' || (values.personType === 'New Convert' && !values.memberId && !values.attendeeId)) {
+        payload.newAttendee = {
+          firstName: values.newAttendee_firstName,
+          lastName: values.newAttendee_lastName,
+          email: values.newAttendee_email,
+          phoneNumber: values.newAttendee_phoneNumber,
+          whatsappNumber: values.newAttendee_whatsappNumber,
+          address: values.newAttendee_address,
+          visitDate: values.newAttendee_visitDate,
+          invitedFor: values.newAttendee_invitedFor,
+          centerId: values.centerId || centerIdFromQuery,
+          clusterId: values.clusterId || clusterIdFromQuery, // Pass clusterId for new Attendee
+        };
+      } else if (values.personType === 'Member') {
+        payload.personId = values.memberId;
+      } else if (values.personType === 'Attendee') {
+        payload.attendeeId = values.attendeeId;
+      }
       
-      // In a real implementation, you would send this data to your API
-      // const response = await fetch('/api/follow-ups', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     personType: values.personType,
-      //     newAttendee: {
-      //       firstName: values.firstName,
-      //       lastName: values.lastName,
-      //       email: values.email,
-      //       phoneNumber: values.phoneNumber,
-      //       whatsappNumber: values.whatsappNumber,
-      //       address: values.address,
-      //       visitDate: values.visitDate,
-      //       invitedFor: values.invitedFor
-      //     },
-      //     notes: values.notes,
-      //     assignedTo: values.assignedToId
-      //   })
-      // });
-      // const data = await response.json();
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Follow-up created",
-        description: "The follow-up has been created successfully.",
-      });
-      
-      // Redirect to follow-ups list
-      router.push("/follow-ups");
-    } catch (error) {
-      console.error("Error creating follow-up:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create follow-up. Please try again.",
-        variant: "destructive",
-      });
+      if (values.eventId && values.eventId !== "none") {
+        payload.missedEvent = { eventId: values.eventId, eventDate: new Date(), eventType: "Event" };
+      }
+
+      await apiClient.post('/follow-ups', payload);
+      toast({ title: "Follow-up created", description: "The follow-up has been created successfully." });
+      if (clusterIdFromQuery) router.push(`/clusters/${clusterIdFromQuery}/dashboard/follow-ups`);
+      else if (centerIdFromQuery) router.push(`/centers/${centerIdFromQuery}/dashboard/follow-ups`);
+      else router.push("/dashboard/follow-ups");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to create follow-up.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   }
   
-  async function onSubmitMember() {
-    try {
-      setIsSubmitting(true);
-      
-      // In a real implementation, you would send this data to your API
-      // const response = await fetch('/api/follow-ups', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     personType: 'Member',
-      //     personId: values.memberId,
-      //     missedEvent: {
-      //       eventId: values.eventId
-      //     },
-      //     notes: values.notes,
-      //     assignedTo: values.assignedToId
-      //   })
-      // });
-      // const data = await response.json();
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Follow-up created",
-        description: "The follow-up has been created successfully.",
-      });
-      
-      // Redirect to follow-ups list
-      router.push("/follow-ups");
-    } catch (error) {
-      console.error("Error creating follow-up:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create follow-up. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  if (isLoadingData || (!canCreateFollowUp && !isSubmitting)) {
+    return <div className="container mx-auto py-6 text-center"><p>Loading or Access Denied...</p></div>;
   }
   
+  // Determine if center/cluster context should make fields read-only
+  const disableCenterSelection = !!centerIdFromQuery && !isGlobalAdmin; // Simplified
+  const disableClusterSelection = !!clusterIdFromQuery && !isGlobalAdmin; // Simplified
+
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container mx-auto py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">New Follow-up</h1>
         <Button variant="outline" asChild>
-          <Link href="/follow-ups">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Follow-ups
+          <Link href={clusterIdFromQuery ? `/clusters/${clusterIdFromQuery}/dashboard/follow-ups` : (centerIdFromQuery ? `/centers/${centerIdFromQuery}/dashboard/follow-ups` : "/dashboard/follow-ups")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Link>
         </Button>
       </div>
       
       <Card>
-        <CardHeader>
-          <CardTitle>Create Follow-up</CardTitle>
-          <CardDescription>
-            Set up a new follow-up for a new attendee or existing member
-          </CardDescription>
-        </CardHeader>
+        <CardHeader><CardTitle>Create Follow-up</CardTitle><CardDescription>Set up a new follow-up.</CardDescription></CardHeader>
         <CardContent>
-          <Tabs 
-            defaultValue="newAttendee" 
-            value={followUpType}
-            onValueChange={(value) => setFollowUpType(value as 'newAttendee' | 'member')}
-            className="space-y-4"
-          >
-            <TabsList className="grid grid-cols-2 w-full max-w-md">
-              <TabsTrigger value="newAttendee">New Attendee</TabsTrigger>
-              <TabsTrigger value="member">Existing Member</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="newAttendee">
-              <Form {...newAttendeeForm}>
-                <form onSubmit={newAttendeeForm.handleSubmit(onSubmitNewAttendee)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter first name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter last name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter email" type="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="phoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter phone number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="whatsappNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>WhatsApp Number (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter WhatsApp number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="visitDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Visit Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="personType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Person Type</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select person type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="New Attendee">New Attendee</SelectItem>
-                              <SelectItem value="New Convert">New Convert</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={newAttendeeForm.control}
-                      name="assignedToId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assigned To</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select user" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {users.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="md:col-span-2">
-                      <FormField
-                        control={newAttendeeForm.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Address (Optional)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Enter address" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <FormField
-                        control={newAttendeeForm.control}
-                        name="invitedFor"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Invited For (Optional)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="e.g., Sunday Service, Special Event" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <FormField
-                        control={newAttendeeForm.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notes (Optional)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Any additional notes about this person" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Center and Cluster hidden fields or read-only if pre-selected */}
+              {centerIdFromQuery && <input type="hidden" {...form.register("centerId")} value={centerIdFromQuery} />}
+              {clusterIdFromQuery && <input type="hidden" {...form.register("clusterId")} value={clusterIdFromQuery} />}
+
+              <FormField control={form.control} name="personType" render={({ field }) => (
+                <FormItem><FormLabel>Person Type *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select person type" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="Unregistered Guest">Unregistered Guest (New person)</SelectItem>
+                      <SelectItem value="Attendee">Existing Attendee</SelectItem>
+                      <SelectItem value="Member">Existing Member</SelectItem>
+                      <SelectItem value="New Convert">New Convert</SelectItem>
+                    </SelectContent>
+                  </Select><FormMessage />
+                </FormItem>
+              )}/>
+
+              {watchedPersonType === 'Unregistered Guest' || (watchedPersonType === 'New Convert' && !form.getValues('memberId') && !form.getValues('attendeeId')) ? (
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h3 className="font-medium">New Person Details:</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="newAttendee_firstName" render={({ field }) => (<FormItem><FormLabel>First Name *</FormLabel><FormControl><Input placeholder="First name" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_lastName" render={({ field }) => (<FormItem><FormLabel>Last Name *</FormLabel><FormControl><Input placeholder="Last name" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="Email (optional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_phoneNumber" render={({ field }) => (<FormItem><FormLabel>Phone Number *</FormLabel><FormControl><Input placeholder="Phone number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_whatsappNumber" render={({ field }) => (<FormItem><FormLabel>WhatsApp</FormLabel><FormControl><Input placeholder="WhatsApp (optional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_visitDate" render={({ field }) => (<FormItem><FormLabel>Visit Date *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_address" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Address (optional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="newAttendee_invitedFor" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Invited For</FormLabel><FormControl><Input placeholder="e.g. Sunday Service (optional)" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   </div>
-                  
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      "Creating..."
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" /> Create Follow-up
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-            
-            <TabsContent value="member">
-              <Form {...memberForm}>
-                <form onSubmit={memberForm.handleSubmit(onSubmitMember)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={memberForm.control}
-                      name="memberId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Member</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select member" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {members.map((member) => (
-                                <SelectItem key={member.id} value={member.id}>
-                                  {member.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Select the member to follow up with
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={memberForm.control}
-                      name="eventId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Missed Event</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select event" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {events.map((event) => (
-                                <SelectItem key={event.id} value={event.id}>
-                                  {event.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Select the event they missed
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={memberForm.control}
-                      name="assignedToId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assigned To</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select user" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {users.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="md:col-span-2">
-                      <FormField
-                        control={memberForm.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notes (Optional)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Any additional notes about this follow-up" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                  
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      "Creating..."
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" /> Create Follow-up
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
+                </div>
+              ) : null}
+
+              {watchedPersonType === 'Member' || (watchedPersonType === 'New Convert' && !!form.getValues('memberId')) ? (
+                <FormField control={form.control} name="memberId" render={({ field }) => (
+                  <FormItem><FormLabel>Select Member *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger></FormControl>
+                      <SelectContent>{members.map(m => (<SelectItem key={m._id} value={m._id}>{m.firstName} {m.lastName} ({m.email || m.phoneNumber})</SelectItem>))}</SelectContent>
+                    </Select><FormMessage />
+                  </FormItem>
+                )}/>
+              ) : null}
+
+              {watchedPersonType === 'Attendee' || (watchedPersonType === 'New Convert' && !!form.getValues('attendeeId')) ? (
+                <FormField control={form.control} name="attendeeId" render={({ field }) => (
+                  <FormItem><FormLabel>Select Attendee *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select attendee" /></SelectTrigger></FormControl>
+                      <SelectContent>{attendees.map(a => (<SelectItem key={a._id} value={a._id}>{a.firstName} {a.lastName} ({a.phoneNumber})</SelectItem>))}</SelectContent>
+                    </Select><FormMessage />
+                  </FormItem>
+                )}/>
+              ) : null}
+
+              <FormField control={form.control} name="eventId" render={({ field }) => (
+                <FormItem><FormLabel>Related Event (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select event if related" /></SelectTrigger></FormControl>
+                    <SelectContent><SelectItem value="none">None</SelectItem>{events.map(e => (<SelectItem key={e._id} value={e._id}>{e.name}</SelectItem>))}</SelectContent>
+                  </Select><FormMessage />
+                </FormItem>
+              )}/>
+
+              <FormField control={form.control} name="assignedToId" render={({ field }) => (
+                <FormItem><FormLabel>Assigned To *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select user to assign" /></SelectTrigger></FormControl>
+                    <SelectContent>{assignableUsers.map(u => (<SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>))}</SelectContent>
+                  </Select><FormMessage />
+                </FormItem>
+              )}/>
+
+              <FormField control={form.control} name="notes" render={({ field }) => (<FormItem><FormLabel>Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Initial notes for the follow-up" {...field} /></FormControl><FormMessage /></FormItem>)} />
+
+              <div className="flex justify-end"><Button type="submit" disabled={isSubmitting || isLoadingData || !canCreateFollowUp}>{isSubmitting ? "Creating..." : <><Save className="mr-2 h-4 w-4" /> Create Follow-up</>}</Button></div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

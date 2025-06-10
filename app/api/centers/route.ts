@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user has HQ_ADMIN permission
-    const permissionResponse = await fetch(`${request.nextUrl.origin}/api/auth/check-permission?role=HQ_ADMIN`, {
+    // Check if user has GLOBAL_ADMIN permission
+    const permissionResponse = await fetch(`${request.nextUrl.origin}/api/auth/check-permission?role=GLOBAL_ADMIN`, {
       headers: {
         cookie: request.headers.get("cookie") || "",
       },

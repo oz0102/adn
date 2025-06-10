@@ -13,7 +13,7 @@ export interface IDiscipleshipGoalCreationPayload extends Omit<Partial<IDisciple
   targetNumber?: number; // Made optional as not all goals might have a numeric target
   startDate?: Date;
   endDate?: Date;
-  level: "HQ" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "INDIVIDUAL";
+  level: "GLOBAL" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "INDIVIDUAL";
   centerId?: string | mongoose.Types.ObjectId;
   clusterId?: string | mongoose.Types.ObjectId;
   smallGroupId?: string | mongoose.Types.ObjectId;
@@ -66,7 +66,7 @@ const createDiscipleshipGoal = async (data: IDiscipleshipGoalCreationPayload): P
     }
   }
   
-  if (data.level === "HQ") {
+  if (data.level === "GLOBAL") {
       data.centerId = undefined;
       data.clusterId = undefined;
       data.smallGroupId = undefined;
@@ -94,7 +94,7 @@ const createDiscipleshipGoal = async (data: IDiscipleshipGoalCreationPayload): P
 };
 
 export interface IDiscipleshipGoalFilters {
-  level?: "HQ" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "INDIVIDUAL";
+  level?: "GLOBAL" | "CENTER" | "CLUSTER" | "SMALL_GROUP" | "INDIVIDUAL";
   centerId?: string | mongoose.Types.ObjectId;
   clusterId?: string | mongoose.Types.ObjectId;
   smallGroupId?: string | mongoose.Types.ObjectId;
@@ -120,7 +120,7 @@ const getAllDiscipleshipGoals = async (filters: IDiscipleshipGoalFilters, userRo
   if (category) query.category = category;
   if (createdBy) query.createdBy = createdBy;
   
-  if (level === "HQ") {
+  if (level === "GLOBAL") {
     query.centerId = { $exists: false };
     query.clusterId = { $exists: false };
     query.smallGroupId = { $exists: false };
@@ -129,11 +129,11 @@ const getAllDiscipleshipGoals = async (filters: IDiscipleshipGoalFilters, userRo
 
   // Basic role-based scoping (can be expanded)
   // This is a simplified version; actual scoping might be more complex and involve checking userRoles against query parameters.
-  const isHQAdmin = userRoles.some(role => role.role === "HQ_ADMIN");
-  if (!isHQAdmin) {
-    // Non-HQ admins might be restricted to their scope or entities they created.
+  const isGlobalAdmin = userRoles.some(role => role.role === "GLOBAL_ADMIN");
+  if (!isGlobalAdmin) {
+    // Non-GLOBAL admins might be restricted to their scope or entities they created.
     // This part needs careful design based on exact requirements.
-    // Example: if not HQ admin and no specific scope filters, only show goals created by them.
+    // Example: if not GLOBAL admin and no specific scope filters, only show goals created by them.
     if (!centerId && !clusterId && !smallGroupId && !memberId && currentUserId) {
         query.createdBy = currentUserId;
     }

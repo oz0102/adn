@@ -156,22 +156,22 @@ export default function CenterDashboardPage() {
     ],
   };
 
-  // Check permission for both CENTER_ADMIN and HQ_ADMIN roles
+  // Check permission for both CENTER_ADMIN and GLOBAL_ADMIN roles
   const checkPermission = useCallback(async () => {
     if (!user || !centerId) return;
     
     try {
-      // Check if user has HQ_ADMIN role (which has access to all centers)
-      const hqAdminResponse = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
-      if (hqAdminResponse.ok) {
-        const hqAdminData = await hqAdminResponse.json();
-        if (hqAdminData.hasPermission) {
+      // Check if user has GLOBAL_ADMIN role (which has access to all centers)
+      const globalAdminResponse = await fetch(`/api/auth/check-permission?role=GLOBAL_ADMIN`);
+      if (globalAdminResponse.ok) {
+        const globalAdminData = await globalAdminResponse.json();
+        if (globalAdminData.hasPermission) {
           setHasPermission(true);
           return;
         }
       }
       
-      // If not HQ_ADMIN, check for CENTER_ADMIN role for this specific center
+      // If not GLOBAL_ADMIN, check for CENTER_ADMIN role for this specific center
       const centerAdminResponse = await fetch(`/api/auth/check-permission?role=CENTER_ADMIN&centerId=${centerId}`);
       if (!centerAdminResponse.ok) {
         setHasPermission(false);

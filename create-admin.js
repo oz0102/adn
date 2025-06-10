@@ -253,7 +253,7 @@ mongoose.connect(MONGODB_URI)
           type: String,
           required: true,
           // Enum values should match those in your User.ts IAssignedRole definition
-          enum: ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER", "MEMBER_ADMIN", "REGULAR_MEMBER"]
+          enum: ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER", "MEMBER_ADMIN", "REGULAR_MEMBER"]
         },
         centerId: { type: mongoose.Schema.Types.ObjectId, ref: "Center" },
         clusterId: { type: mongoose.Schema.Types.ObjectId, ref: "Cluster" },
@@ -307,34 +307,34 @@ mongoose.connect(MONGODB_URI)
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      console.log(`User with email ${email} already exists. Updating password and ensuring HQ_ADMIN role...`);
+      console.log(`User with email ${email} already exists. Updating password and ensuring GLOBAL_ADMIN role...`);
 
       // Set plain password; pre-save hook (from User.ts or this script's fallback) will hash it.
       existingUser.passwordHash = password;
-      // Set/overwrite assignedRoles to make this user an HQ_ADMIN
-      existingUser.assignedRoles = [{ role: 'HQ_ADMIN' }];
-      // Any other fields like centerId, clusterId, smallGroupId default to undefined for HQ_ADMIN if not specified.
+      // Set/overwrite assignedRoles to make this user an GLOBAL_ADMIN
+      existingUser.assignedRoles = [{ role: 'GLOBAL_ADMIN' }];
+      // Any other fields like centerId, clusterId, smallGroupId default to undefined for GLOBAL_ADMIN if not specified.
 
       // Mongoose's `isModified` check in the pre-save hook will detect the change to passwordHash
       // (since plain password will differ from a stored hash, or from an old plain password if that was the case).
       await existingUser.save();
-      console.log('User password updated and role set to HQ_ADMIN successfully!');
+      console.log('User password updated and role set to GLOBAL_ADMIN successfully!');
     } else {
       // Create new user
       const newUser = new User({
         email,
         passwordHash: password, // Set plain password; pre-save hook will hash it.
-        assignedRoles: [{ role: 'HQ_ADMIN' }]
+        assignedRoles: [{ role: 'GLOBAL_ADMIN' }]
       });
 
       await newUser.save();
-      console.log('New HQ_ADMIN user created successfully!');
+      console.log('New GLOBAL_ADMIN user created successfully!');
     }
 
     console.log('\n--- Admin User Details ---');
     console.log('Email:', email);
     console.log('Password (as provided to script):', password); // This is the input password, not the stored hash
-    console.log('Assigned Role: HQ_ADMIN');
+    console.log('Assigned Role: GLOBAL_ADMIN');
     console.log('--------------------------');
 
     // Close the connection

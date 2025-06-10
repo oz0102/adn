@@ -10,7 +10,7 @@ import mongoose, { Schema, Document } from "mongoose";
 import { hash } from "bcryptjs";
 
 export interface IAssignedRole {
-  role: string; // e.g., HQ_ADMIN, CENTER_ADMIN, CLUSTER_LEADER, SMALL_GROUP_LEADER, MEMBER_ADMIN, REGULAR_MEMBER
+  role: string; // e.g., GLOBAL_ADMIN, CENTER_ADMIN, CLUSTER_LEADER, SMALL_GROUP_LEADER, MEMBER_ADMIN, REGULAR_MEMBER
   centerId?: mongoose.Types.ObjectId;
   clusterId?: mongoose.Types.ObjectId;
   smallGroupId?: mongoose.Types.ObjectId;
@@ -29,7 +29,7 @@ const AssignedRoleSchema: Schema = new Schema({
   role: { 
     type: String, 
     required: true,
-    enum: ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER", "MEMBER_ADMIN", "REGULAR_MEMBER"] // Define comprehensive roles
+    enum: ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER", "MEMBER_ADMIN", "REGULAR_MEMBER"] // Define comprehensive roles
   },
   centerId: { type: Schema.Types.ObjectId, ref: "Center" },
   clusterId: { type: Schema.Types.ObjectId, ref: "Cluster" },

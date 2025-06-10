@@ -6,7 +6,7 @@ import mongoose from "mongoose";
  * Checks if a user has a specific role, optionally within a given scope.
  *
  * @param userId The ID of the user.
- * @param requiredRole The role to check for (e.g., "HQ_ADMIN", "CENTER_ADMIN").
+ * @param requiredRole The role to check for (e.g., "GLOBAL_ADMIN", "CENTER_ADMIN").
  * @param scope (Optional) An object defining the scope, e.g., { centerId: "..." }.
  * @returns True if the user has the role within the scope, false otherwise.
  */
@@ -30,9 +30,9 @@ export const checkPermission = async (
       return false;
     }
 
-    // Global roles like HQ_ADMIN should not have specific scope IDs in their role assignment
-    if (requiredRole === "HQ_ADMIN") {
-      return !ar.centerId && !ar.clusterId && !ar.smallGroupId;
+    // Global roles like GLOBAL_ADMIN should not have specific scope IDs in their role assignment
+    if (requiredRole === "GLOBAL_ADMIN") {
+      return ar.role === "GLOBAL_ADMIN" && !ar.centerId && !ar.clusterId && !ar.smallGroupId;
     }
 
     // Scoped roles require matching scope IDs

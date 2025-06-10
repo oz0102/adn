@@ -14,11 +14,11 @@ export async function POST(request: NextRequest) {
     // Get cluster data from request
     const data = await request.json();
     
-    // Check if user has permission (HQ_ADMIN can create clusters anywhere)
+    // Check if user has permission (GLOBAL_ADMIN can create clusters anywhere)
     // For CENTER_ADMIN, they need permission for the specific center
     const permissionUrl = data.centerId 
-      ? `${request.nextUrl.origin}/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN&centerId=${data.centerId}`
-      : `${request.nextUrl.origin}/api/auth/check-permission?role=HQ_ADMIN`; // Only HQ_ADMIN can create HQ clusters
+      ? `${request.nextUrl.origin}/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN&centerId=${data.centerId}`
+      : `${request.nextUrl.origin}/api/auth/check-permission?role=GLOBAL_ADMIN`; // Only GLOBAL_ADMIN can create Global clusters
     
     const permissionResponse = await fetch(permissionUrl, {
       headers: {
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     if (centerId) {
       query.centerId = centerId;
     } else if (includeHQ) {
-      // If includeHQ is true and no centerId specified, include clusters with null centerId
+      // If includeHQ is true and no centerId specified, include clusters with null centerId (Global clusters)
       query.$or = query.$or || [];
       query.$or.push({ centerId: null });
     }

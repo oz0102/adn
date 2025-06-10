@@ -74,7 +74,7 @@ const EventSchema: Schema = new Schema(
     },
     scope: {
       type: String,
-      enum: ['HQ', 'CENTER'],
+      enum: ['GLOBAL', 'CENTER'],
       required: true
     }, // Added field
     centerId: {

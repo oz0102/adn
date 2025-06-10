@@ -191,6 +191,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import connectToDatabase from '@/lib/db';
 import FollowUp from '@/models/followUp';
+import Attendee from '@/models/attendee'; // Added Attendee import
 
 export async function GET(
   req: NextRequest,
@@ -216,6 +217,7 @@ export async function GET(
     // Get follow-up details
     const followUp = await FollowUp.findById(params.id)
       .populate('personId', 'firstName lastName email phoneNumber whatsappNumber')
+      .populate('attendeeId', 'firstName lastName email phoneNumber whatsappNumber') // Added attendeeId populate
       .populate('assignedTo', 'email')
       .populate('handedOffToCluster.clusterId', 'name')
       .populate('missedEvent.eventId', 'title startDate');
@@ -237,15 +239,27 @@ export async function GET(
     }
     
     // Transform data for frontend
-    const personName = followUp.personId ? 
-      `${followUp.personId.firstName} ${followUp.personId.lastName}` : 
-      followUp.newAttendee ? 
-        `${followUp.newAttendee.firstName} ${followUp.newAttendee.lastName}` : 
-        'Unknown';
-        
-    const personEmail = followUp.personId?.email || followUp.newAttendee?.email;
-    const personPhone = followUp.personId?.phoneNumber || followUp.newAttendee?.phoneNumber;
-    const personWhatsApp = followUp.personId?.whatsappNumber || followUp.newAttendee?.whatsappNumber;
+    let personName = 'Unknown';
+    let personEmail: string | undefined;
+    let personPhone: string | undefined;
+    let personWhatsApp: string | undefined;
+
+    if (followUp.personType === 'Member' && followUp.personId) {
+        personName = `${followUp.personId.firstName} ${followUp.personId.lastName}`;
+        personEmail = followUp.personId.email;
+        personPhone = followUp.personId.phoneNumber;
+        personWhatsApp = followUp.personId.whatsappNumber;
+    } else if (followUp.personType === 'Attendee' && followUp.attendeeId) {
+        personName = `${followUp.attendeeId.firstName} ${followUp.attendeeId.lastName}`;
+        personEmail = followUp.attendeeId.email;
+        personPhone = followUp.attendeeId.phoneNumber;
+        personWhatsApp = followUp.attendeeId.whatsappNumber;
+    } else if (followUp.personType === 'Unregistered Guest' && followUp.newAttendee) {
+        personName = `${followUp.newAttendee.firstName} ${followUp.newAttendee.lastName}`;
+        personEmail = followUp.newAttendee.email;
+        personPhone = followUp.newAttendee.phoneNumber;
+        personWhatsApp = followUp.newAttendee.whatsappNumber;
+    }
     
     // Get event details if available
     let eventDetails;

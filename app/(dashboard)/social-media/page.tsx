@@ -59,8 +59,8 @@
 //   const [activeTab, setActiveTab] = useState("dashboard");
 //   const { toast } = useToast();
 
-//   const canManageSocialMedia = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"]) : false;
-//   const canViewSocialMedia = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]) : false;
+//   const canManageSocialMedia = user ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN"]) : false;
+//   const canViewSocialMedia = user ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]) : false;
 
 //   const fetchAccounts = useCallback(async () => {
 //     if (!user) return;
@@ -74,13 +74,13 @@
 //           filters.scope = "CENTER";
 //           filters.centerId = centerAdminRole.scopeId;
 //         } else {
-//           // Center admin without specific centerId, might mean they can see all center accounts or none if not HQ
+//           // Center admin without specific centerId, might mean they can see all center accounts or none if not GLOBAL
 //           // This case needs clarification based on business logic. For now, assume they see accounts for their center(s).
 //           // If a center admin can be assigned to multiple centers, this logic needs adjustment.
-//           // Fallback to HQ if no specific center, or throw error, or show no accounts.
+//           // Fallback to GLOBAL if no specific center, or throw error, or show no accounts.
 //         }
-//       } else if (checkPermission(user, ["HQ_ADMIN"])) {
-//         // HQ_ADMIN can see all accounts, or filter by scope=HQ or specific centerId if they choose
+//       } else if (checkPermission(user, ["GLOBAL_ADMIN"])) {
+//         // GLOBAL_ADMIN can see all accounts, or filter by scope=GLOBAL or specific centerId if they choose
 //         // For now, let's assume they see all by default, or you can add UI filters for them
 //       }
 
@@ -410,7 +410,7 @@ export interface PopulatedSocialMediaAccount {
       date: string; // Dates in history might also be strings
       count: number;
   }[];
-  scope: "HQ" | "CENTER";
+  scope: "GLOBAL" | "CENTER";
   centerId?: { _id: string; name: string; } | null; // Populate structure
   notes?: string;
   createdAt: string;
@@ -470,8 +470,8 @@ export default function SocialMediaTrackerPage() {
   useEffect(() => {
       const checkPermissions = async () => {
           if (user) {
-              setCanManageSocialMedia(await checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN"]));
-              setCanViewSocialMedia(await checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]));
+              setCanManageSocialMedia(await checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN"]));
+              setCanViewSocialMedia(await checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]));
           } else {
               setCanManageSocialMedia(false);
               setCanViewSocialMedia(false);

@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
     await connectToDB();
 
     // Check permissions
-    const isHQAdmin = session.user.assignedRoles?.some(
-      (role) => role.role === "HQ_ADMIN"
+    const isGlobalAdmin = session.user.assignedRoles?.some(
+      (role) => role.role === "GLOBAL_ADMIN"
     );
-    let hasPermissionToCreate = isHQAdmin;
+    let hasPermissionToCreate = isGlobalAdmin;
 
     if (!hasPermissionToCreate && targetLevel === "CENTER" && targetId) {
       const targetCenterId = new mongoose.Types.ObjectId(targetId.toString());
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
 
     // Prepare roles and scopes
     const userRolesAndScopes = {
-      isHQAdmin: dbUser.assignedRoles?.some((r) => r.role === "HQ_ADMIN") ?? false,
+      isGlobalAdmin: dbUser.assignedRoles?.some((r) => r.role === "GLOBAL_ADMIN") ?? false,
       adminCenterIds: dbUser.assignedRoles
         ?.filter((r) => r.role === "CENTER_ADMIN" && r.scopeId)
         .map((r) => new mongoose.Types.ObjectId(r.scopeId!)),

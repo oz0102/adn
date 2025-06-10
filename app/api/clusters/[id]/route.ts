@@ -30,7 +30,7 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     // Ensure cluster.centerId is correctly typed if it's an ObjectId from the service
     const centerIdString = cluster.centerId?.toString();
     const clusterIdString = cluster._id?.toString();
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: Params) {
     const isCenterAdminForCluster = centerIdString ? await checkPermission(userId, "CENTER_ADMIN", { centerId: new mongoose.Types.ObjectId(centerIdString) }) : false;
     const isClusterLeaderForThisCluster = (clusterIdString && centerIdString) ? await checkPermission(userId, "CLUSTER_LEADER", { clusterId: new mongoose.Types.ObjectId(clusterIdString), centerId: new mongoose.Types.ObjectId(centerIdString) }) : false;
 
-    if (!hasHQAdminPermission && !isCenterAdminForCluster && !isClusterLeaderForThisCluster) {
+    if (!hasGlobalAdminPermission && !isCenterAdminForCluster && !isClusterLeaderForThisCluster) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     
@@ -69,10 +69,10 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     const isCenterAdminForCluster = existingCluster.centerId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId }) : false;
 
-    if (!hasHQAdminPermission && !isCenterAdminForCluster) {
+    if (!hasGlobalAdminPermission && !isCenterAdminForCluster) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for update" }, { status: 403 });
     }
 
@@ -109,10 +109,10 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Cluster not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     const isCenterAdminForCluster = existingCluster.centerId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingCluster.centerId }) : false;
 
-    if (!hasHQAdminPermission && !isCenterAdminForCluster) {
+    if (!hasGlobalAdminPermission && !isCenterAdminForCluster) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions for delete" }, { status: 403 });
     }
 

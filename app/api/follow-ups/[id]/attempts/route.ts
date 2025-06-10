@@ -70,7 +70,7 @@ export async function POST(
     // This logic might need to be more sophisticated based on your permission system (e.g., using checkPermission utility)
     const typedUser = session.user as SessionUserWithRoles;
     const userRoles = typedUser.assignedRoles?.map((r: AssignedRole) => r.role) || [];
-    const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("HQ_ADMIN") || userRoles.includes("CENTER_ADMIN");
+    const isAdminOrPastor = userRoles.includes("Admin") || userRoles.includes("Pastor") || userRoles.includes("GLOBAL_ADMIN") || userRoles.includes("CENTER_ADMIN");
 
     if (!isAdminOrPastor && followUp.assignedTo?.toString() !== currentUserId) {
       return NextResponse.json(

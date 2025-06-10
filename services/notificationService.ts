@@ -36,7 +36,7 @@ export interface INotificationFilters {
 }
 
 export interface IUserRolesAndScopesForNotifications {
-  isHQAdmin: boolean;
+  isGlobalAdmin: boolean;
   adminCenterIds: Types.ObjectId[];
   leaderClusterIds: Types.ObjectId[];
   leaderSmallGroupIds: Types.ObjectId[];
@@ -64,8 +64,8 @@ const addNotification = async (data: INotificationCreationPayload): Promise<INot
   if (data.targetLevel === NotificationLevel.MEMBER && !data.targetId && (!data.recipient || !data.recipient.memberId)) {
     throw new Error("For MEMBER level notifications, targetId (member's ID) or recipient.memberId is required.");
   }
-  if (data.targetLevel !== NotificationLevel.HQ && data.targetLevel !== NotificationLevel.MEMBER && !data.targetId) {
-    throw new Error(`Target ID is required for ${data.targetLevel} level notifications.`);
+  if (data.targetLevel !== NotificationLevel.GLOBAL && data.targetLevel !== NotificationLevel.MEMBER && !data.targetId) {
+    throw new Error("Target ID is required for non-GLOBAL/non-Member notifications.");
   }
 
   if (data.targetLevel === NotificationLevel.CENTER && data.targetId) {
@@ -121,7 +121,7 @@ const getAllNotificationsForUser = async (
     queryOrConditions.push({ targetLevel: NotificationLevel.MEMBER, targetId: memberObjId });
   }
 
-  queryOrConditions.push({ targetLevel: NotificationLevel.HQ });
+  queryOrConditions.push({ targetLevel: NotificationLevel.GLOBAL });
 
   if (userRolesAndScopes.memberOfCenterId) {
     queryOrConditions.push({ targetLevel: NotificationLevel.CENTER, targetId: userRolesAndScopes.memberOfCenterId });
