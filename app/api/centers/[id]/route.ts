@@ -24,13 +24,13 @@ export async function GET(request: Request, { params }: Params) {
     const requestedCenterId = params.id;
     console.log(`GET /api/centers/${requestedCenterId} - User assignedRoles:`, JSON.stringify(assignedRoles, null, 2));
 
-    const isHqAdmin = assignedRoles.some(role => role.role === 'HQ_ADMIN');
+    const isGlobalAdmin = assignedRoles.some(role => role.role === 'GLOBAL_ADMIN');
     const isCenterAdminForThisCenter = assignedRoles.some(role => role.role === 'CENTER_ADMIN' && role.centerId === requestedCenterId);
 
     console.log(`GET /api/centers/${requestedCenterId} - isHqAdmin: ${isHqAdmin}, isCenterAdminForThisCenter: ${isCenterAdminForThisCenter}`);
 
     if (!isHqAdmin && !isCenterAdminForThisCenter) {
-      console.log(`GET /api/centers/${requestedCenterId} - Forbidden: User is not HQ_ADMIN and not CENTER_ADMIN for this center.`);
+      console.log(`GET /api/centers/${requestedCenterId} - Forbidden: User is not GLOBAL_ADMIN and not CENTER_ADMIN for this center.`);
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
 
@@ -64,13 +64,13 @@ export async function PUT(request: Request, { params }: Params) {
     const requestedCenterId = params.id;
     console.log(`PUT /api/centers/${requestedCenterId} - User assignedRoles:`, JSON.stringify(assignedRoles, null, 2));
 
-    const isHqAdmin = assignedRoles.some(role => role.role === 'HQ_ADMIN');
+    const isGlobalAdmin = assignedRoles.some(role => role.role === 'GLOBAL_ADMIN');
     const isCenterAdminForThisCenter = assignedRoles.some(role => role.role === 'CENTER_ADMIN' && role.centerId === requestedCenterId);
 
     console.log(`PUT /api/centers/${requestedCenterId} - isHqAdmin: ${isHqAdmin}, isCenterAdminForThisCenter: ${isCenterAdminForThisCenter}`);
 
     if (!isHqAdmin && !isCenterAdminForThisCenter) {
-      console.log(`PUT /api/centers/${requestedCenterId} - Forbidden: User is not HQ_ADMIN and not CENTER_ADMIN for this center.`);
+      console.log(`PUT /api/centers/${requestedCenterId} - Forbidden: User is not GLOBAL_ADMIN and not CENTER_ADMIN for this center.`);
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
 
@@ -92,12 +92,12 @@ export async function PUT(request: Request, { params }: Params) {
 
 /**
  * Handles DELETE requests to delete a specific Center by ID.
- * Requires HQ_ADMIN privileges.
+ * Requires GLOBAL_ADMIN privileges.
  */
 export async function DELETE(request: Request, { params }: Params) {
   try {
     const session = await auth();
-    // For DELETE, we will still use assignedRoles but simplify to check for HQ_ADMIN directly
+    // For DELETE, we will still use assignedRoles but simplify to check for GLOBAL_ADMIN directly
     // as per common practice for destructive operations, and to keep this part of the diff smaller.
     // The subtask focuses on GET/PUT for the detailed assignedRoles check.
     if (!session || !session.user || !session.user.id || !session.user.assignedRoles) {
@@ -109,7 +109,7 @@ export async function DELETE(request: Request, { params }: Params) {
     const requestedCenterId = params.id;
     console.log(`DELETE /api/centers/${requestedCenterId} - User assignedRoles:`, JSON.stringify(assignedRoles, null, 2));
 
-    const isHqAdmin = assignedRoles.some(role => role.role === 'HQ_ADMIN');
+    const isGlobalAdmin = assignedRoles.some(role => role.role === 'GLOBAL_ADMIN');
 
     if (!isHqAdmin) {
       console.log(`DELETE /api/centers/${requestedCenterId} - Forbidden: User is not HQ_ADMIN.`);

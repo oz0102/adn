@@ -15,7 +15,7 @@ export interface ICenter extends Document {
   location?: string; // Or a structured address object
   address?: IAddress; // Re-use from member.ts if suitable
   centerAdmins: mongoose.Types.ObjectId[]; // Ref to Users
-  // parentHQId: mongoose.Types.ObjectId; // If multiple HQs, else implicit
+  // parentHQId: mongoose.Types.ObjectId; // Obsolete: Previously for relating to a parent HQ. Concept removed.
   createdAt: Date;
   updatedAt: Date;
 
@@ -37,7 +37,7 @@ const CenterSchema: Schema = new Schema(
     location: { type: String, trim: true },
     // address: { type: AddressSchema }, // If using structured address, ensure AddressSchema is defined and imported
     centerAdmins: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    // parentHQId: { type: Schema.Types.ObjectId, ref: 'HQ' }, // If HQ is a collection
+    // parentHQId: { type: Schema.Types.ObjectId, ref: 'HQ' }, // Obsolete: Previously for relating to a parent HQ. Concept removed.
 
     useCenterSpecificSms: { type: Boolean, default: false },
     centerSmsApiToken: { type: String, trim: true },

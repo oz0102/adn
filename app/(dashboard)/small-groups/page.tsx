@@ -85,8 +85,8 @@ export default function SmallGroupsPage() {
   const [parentClusterName, setParentClusterName] = useState<string | null>(searchParams.get("clusterName"))
   const [parentCenterName, setParentCenterName] = useState<string | null>(searchParams.get("centerName")) // For breadcrumbs/links
 
-  const canViewAnySmallGroup = user ? checkPermission(user, ["HQ_ADMIN"]) : false;
-  const canCreateSmallGroup = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], undefined, filterClusterId || undefined) : false;
+  const canViewAnySmallGroup = user ? checkPermission(user, ["GLOBAL_ADMIN"]) : false;
+  const canCreateSmallGroup = user ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], undefined, filterClusterId || undefined) : false;
 
   const fetchSmallGroups = useCallback(async (page: number, search: string, clusterIdForFilter?: string | null) => {
     if (!user) return;
@@ -207,7 +207,7 @@ export default function SmallGroupsPage() {
     return <p>Loading user data or user not authenticated...</p>;
   }
 
-  const canViewPage = user ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]) : false;
+  const canViewPage = user ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"]) : false;
   if (user && !canViewPage) {
       return (
           <div className="text-center py-10">

@@ -82,15 +82,15 @@ export default function CentersPage() {
     if (!user) return;
     
     try {
-      // Check HQ_ADMIN permission for creating centers
-      const createResponse = await fetch(`/api/auth/check-permission?role=HQ_ADMIN`);
+      // Check GLOBAL_ADMIN permission for creating centers
+      const createResponse = await fetch(`/api/auth/check-permission?role=GLOBAL_ADMIN`);
       if (createResponse.ok) {
         const data = await createResponse.json();
         setCanCreateCenter(data.hasPermission);
       }
       
-      // Check view permission (HQ_ADMIN or CENTER_ADMIN)
-      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN`);
+      // Check view permission (GLOBAL_ADMIN or CENTER_ADMIN)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN`);
       if (viewResponse.ok) {
         const data = await viewResponse.json();
         setHasViewPermission(data.hasPermission);

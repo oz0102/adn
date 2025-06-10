@@ -92,8 +92,8 @@ export default function SmallGroupDetailPage() {
   const [members, setMembers] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
-  const canEditSmallGroup = user && smallGroup ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id) : false;
-  const canAddMember = user && smallGroup ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id) : false;
+  const canEditSmallGroup = user && smallGroup ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id) : false;
+  const canAddMember = user && smallGroup ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id) : false;
 
   const fetchSmallGroupDetails = useCallback(async () => {
     if (!user || !smallGroupIdFromParams) return;
@@ -157,7 +157,7 @@ export default function SmallGroupDetailPage() {
     );
   }
   
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id)) {
+  if (user && !checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER", "SMALL_GROUP_LEADER"], smallGroup.clusterId?.centerId?._id, smallGroup.clusterId?._id, smallGroup._id)) {
       return (
         <div className="text-center py-10">
             <Users className="mx-auto h-12 w-12 text-red-400 mb-4" />

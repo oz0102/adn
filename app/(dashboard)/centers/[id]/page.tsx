@@ -83,8 +83,8 @@ export default function CenterDetailPage() {
     if (!user || !centerIdFromParams) return;
     
     try {
-      // Check if user can edit center (HQ_ADMIN or CENTER_ADMIN for this center)
-      const editResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN&centerId=${centerIdFromParams}`);
+      // Check if user can edit center (GLOBAL_ADMIN or CENTER_ADMIN for this center)
+      const editResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN&centerId=${centerIdFromParams}`);
       if (editResponse.ok) {
         const data = await editResponse.json();
         setCanEditCenter(data.hasPermission);
@@ -93,8 +93,8 @@ export default function CenterDetailPage() {
       // Check if user can create clusters (same permissions as edit)
       setCanCreateCluster(canEditCenter);
       
-      // Check view permission (HQ_ADMIN or CENTER_ADMIN)
-      const viewResponse = await fetch(`/api/auth/check-permission?roles=HQ_ADMIN,CENTER_ADMIN`);
+      // Check view permission (GLOBAL_ADMIN or CENTER_ADMIN)
+      const viewResponse = await fetch(`/api/auth/check-permission?roles=GLOBAL_ADMIN,CENTER_ADMIN`);
       if (viewResponse.ok) {
         const data = await viewResponse.json();
         setHasViewPermission(data.hasPermission);

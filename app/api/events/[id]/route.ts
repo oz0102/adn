@@ -29,10 +29,10 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    let canView = await checkPermission(userId, "HQ_ADMIN");
+    let canView = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canView && event.scope === "CENTER" && event.centerId) {
       canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: event.centerId.toString() }); // Ensure centerId is string for checkPermission
-    } else if (!canView && event.scope === "HQ") {
+    } else if (!canView && event.scope === "GLOBAL") {
       canView = true; 
     }
 
@@ -64,7 +64,7 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    let canUpdate = await checkPermission(userId, "HQ_ADMIN");
+    let canUpdate = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canUpdate && existingEvent.scope === "CENTER" && existingEvent.centerId) {
       canUpdate = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId.toString() });
     }
@@ -110,7 +110,7 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    let canDelete = await checkPermission(userId, "HQ_ADMIN");
+    let canDelete = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canDelete && existingEvent.scope === "CENTER" && existingEvent.centerId) {
       canDelete = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingEvent.centerId.toString() });
     }

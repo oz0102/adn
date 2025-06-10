@@ -33,8 +33,8 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    let canAccessMemberData = hasHQAdminPermission;
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
+    let canAccessMemberData = hasGlobalAdminPermission;
 
     if (!canAccessMemberData) {
         const memberCenterId = member.centerId?._id?.toString();
@@ -83,8 +83,8 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Member not found" }, { status: 404 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    let canUpdateMemberData = hasHQAdminPermission;
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
+    let canUpdateMemberData = hasGlobalAdminPermission;
     const existingMemberCenterId = existingMember.centerId?.toString();
 
     if(!canUpdateMemberData){
@@ -105,10 +105,10 @@ export async function PUT(request: Request, { params }: Params) {
 
     const body = await request.json();
     
-    if (!hasHQAdminPermission && !(userMemberId && userMemberId === memberIdToUpdate)) {
+    if (!hasGlobalAdminPermission && !(userMemberId && userMemberId === memberIdToUpdate)) {
         delete body.role; // Deprecated, use assignedRoles
         delete body.permissions; // Deprecated, use assignedRoles
-        delete body.assignedRoles; // Only HQ_ADMIN or specific role admins should change roles
+        delete body.assignedRoles; // Only GLOBAL_ADMIN or specific role admins should change roles
         delete body.centerId; 
         delete body.clusterId; // Cluster/SG assignment might be handled by specific functions or roles
         delete body.smallGroupId;
@@ -151,12 +151,12 @@ export async function DELETE(request: Request, { params }: Params) {
     }
     const existingMemberCenterId = existingMember.centerId?.toString();
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
-    let canDeleteMember = hasHQAdminPermission;
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
+    let canDeleteMember = hasGlobalAdminPermission;
 
     if(!canDeleteMember){
         const isCenterAdmin = existingMemberCenterId ? await checkPermission(userId, "CENTER_ADMIN", { centerId: existingMemberCenterId }) : false;
-        // MEMBER_ADMIN might be too broad for delete, typically CENTER_ADMIN or HQ_ADMIN
+        // MEMBER_ADMIN might be too broad for delete, typically CENTER_ADMIN or GLOBAL_ADMIN
         canDeleteMember = isCenterAdmin;
     }
 

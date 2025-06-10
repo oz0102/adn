@@ -13,7 +13,7 @@ interface CreateEventData extends Omit<Partial<IEvent>, "scope" | "centerId" | "
   location: string;
   address: IEvent["address"];
   organizer: mongoose.Types.ObjectId; 
-  scope: "HQ" | "CENTER";
+  scope: "GLOBAL" | "CENTER";
   centerId?: string | mongoose.Types.ObjectId; 
   createdBy: string | mongoose.Types.ObjectId;
 }
@@ -32,7 +32,7 @@ const createEvent = async (data: CreateEventData): Promise<IEvent> => {
     if (!centerExists) {
       throw new Error("Invalid Center ID: Center does not exist.");
     }
-  } else if (data.scope === "HQ") {
+  } else if (data.scope === "GLOBAL") {
     data.centerId = undefined; 
   }
 
@@ -46,7 +46,7 @@ const createEvent = async (data: CreateEventData): Promise<IEvent> => {
 };
 
 interface GetEventsFilters {
-  scope?: "HQ" | "CENTER";
+  scope?: "GLOBAL" | "CENTER";
   centerId?: string | mongoose.Types.ObjectId | { $in: Types.ObjectId[] }; // Allow $in for centerId
   eventType?: string;
   startDateBefore?: Date;
@@ -85,7 +85,7 @@ const getAllEvents = async (filters: GetEventsFilters, userPermissions?: UserPer
     }
     if (eventType) query.eventType = eventType;
     
-    if (scope === "HQ") {
+    if (scope === "GLOBAL") {
       query.centerId = { $exists: false };
     }
   }

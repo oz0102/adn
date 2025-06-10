@@ -32,12 +32,12 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
 
-    let canView = await checkPermission(userId, "HQ_ADMIN");
+    let canView = await checkPermission(userId, "GLOBAL_ADMIN");
     const centerIdString = account.centerId?._id?.toString(); 
 
     if (!canView && account.scope === "CENTER" && centerIdString) {
       canView = await checkPermission(userId, "CENTER_ADMIN", { centerId: new mongoose.Types.ObjectId(centerIdString) });
-    } else if (!canView && account.scope === "HQ") {
+    } else if (!canView && account.scope === "GLOBAL") {
       canView = true; 
     }
 
@@ -72,7 +72,7 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
 
-    let canUpdate = await checkPermission(userId, "HQ_ADMIN");
+    let canUpdate = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canUpdate && existingAccount.scope === "CENTER" && existingAccount.centerId) {
       canUpdate = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingAccount.centerId });
     }
@@ -117,7 +117,7 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
 
-    let canDelete = await checkPermission(userId, "HQ_ADMIN");
+    let canDelete = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canDelete && existingAccount.scope === "CENTER" && existingAccount.centerId) {
       canDelete = await checkPermission(userId, "CENTER_ADMIN", { centerId: existingAccount.centerId });
     }
@@ -153,7 +153,7 @@ export async function POST_UpdateFollowers(request: Request, { params }: Params)
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
 
-    let canTriggerUpdate = await checkPermission(userId, "HQ_ADMIN");
+    let canTriggerUpdate = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canTriggerUpdate && accountToUpdate.scope === "CENTER" && accountToUpdate.centerId) {
       canTriggerUpdate = await checkPermission(userId, "CENTER_ADMIN", { centerId: accountToUpdate.centerId });
     }
@@ -190,10 +190,10 @@ export async function GET_FollowerHistory(request: Request, { params }: Params) 
       return NextResponse.json({ message: "Social Media Account not found" }, { status: 404 });
     }
 
-    let canViewHistory = await checkPermission(userId, "HQ_ADMIN");
+    let canViewHistory = await checkPermission(userId, "GLOBAL_ADMIN");
     if (!canViewHistory && account.scope === "CENTER" && account.centerId) {
       canViewHistory = await checkPermission(userId, "CENTER_ADMIN", { centerId: account.centerId });
-    } else if (!canViewHistory && account.scope === "HQ") {
+    } else if (!canViewHistory && account.scope === "GLOBAL") {
       canViewHistory = true; 
     }
 

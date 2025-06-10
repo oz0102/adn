@@ -30,7 +30,7 @@ export interface ISocialMediaAccount extends Document {
   followerCount: number;
   lastFollowerUpdate?: Date;
   followerHistory: IFollowerHistoryEntry[];
-  scope: "HQ" | "CENTER";
+  scope: "GLOBAL" | "CENTER";
   centerId?: mongoose.Types.ObjectId;
   notes?: string;
   createdAt: Date;
@@ -69,9 +69,9 @@ const SocialMediaAccountSchema: Schema = new Schema(
     followerHistory: [{ type: FollowerHistorySchema }],
     scope: {
       type: String,
-      enum: ["HQ", "CENTER"],
+      enum: ["GLOBAL", "CENTER"],
       required: true,
-      default: "HQ"
+      default: "GLOBAL"
     },
     centerId: {
       type: Schema.Types.ObjectId,
@@ -87,7 +87,7 @@ const SocialMediaAccountSchema: Schema = new Schema(
 );
 
 SocialMediaAccountSchema.index({ platform: 1, username: 1, centerId: 1 }, { unique: true, partialFilterExpression: { centerId: { $exists: true } } });
-SocialMediaAccountSchema.index({ platform: 1, username: 1, scope: 1 }, { unique: true, partialFilterExpression: { centerId: { $exists: false }, scope: "HQ" } });
+SocialMediaAccountSchema.index({ platform: 1, username: 1, scope: 1 }, { unique: true, partialFilterExpression: { centerId: { $exists: false }, scope: "GLOBAL" } });
 SocialMediaAccountSchema.index({ scope: 1 });
 SocialMediaAccountSchema.index({ centerId: 1 });
 

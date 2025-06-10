@@ -99,9 +99,9 @@ export default function ClusterDetailPage() {
   const [members] = useState<Member[]>([]) 
   const [isLoading, setIsLoading] = useState(true)
 
-  const canEditCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
-  const canCreateSmallGroup = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
-  // const canAddMemberToCluster = user && cluster ? checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  const canEditCluster = user && cluster ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  const canCreateSmallGroup = user && cluster ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
+  // const canAddMemberToCluster = user && cluster ? checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id) : false;
 
   const fetchClusterDetails = useCallback(async () => {
     if (!user || !clusterIdFromParams) return;
@@ -175,7 +175,7 @@ export default function ClusterDetailPage() {
     );
   }
   
-  if (user && !checkPermission(user, ["HQ_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
+  if (user && !checkPermission(user, ["GLOBAL_ADMIN", "CENTER_ADMIN", "CLUSTER_LEADER"], cluster.centerId?._id, cluster._id)) {
       return (
         <div className="text-center py-10">
             <Layers className="mx-auto h-12 w-12 text-red-400 mb-4" />

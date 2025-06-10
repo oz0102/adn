@@ -30,11 +30,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Cluster does not belong to the specified center" }, { status: 400 });
     }
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
     const isCenterAdmin = await checkPermission(userId, "CENTER_ADMIN", { centerId });
     const isClusterLeader = await checkPermission(userId, "CLUSTER_LEADER", { clusterId, centerId });
 
-    if (!hasHQAdminPermission && !isCenterAdmin && !isClusterLeader) {
+    if (!hasGlobalAdminPermission && !isCenterAdmin && !isClusterLeader) {
       return NextResponse.json({ message: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
     // Add createdBy to the body for the service function
@@ -63,9 +63,9 @@ export async function GET(request: Request) {
     await connectToDB();
     let smallGroups;
 
-    const hasHQAdminPermission = await checkPermission(userId, "HQ_ADMIN");
+    const hasGlobalAdminPermission = await checkPermission(userId, "GLOBAL_ADMIN");
 
-    if (hasHQAdminPermission) {
+    if (hasGlobalAdminPermission) {
       smallGroups = await smallGroupService.getAllSmallGroups(clusterIdQuery || undefined, centerIdQuery || undefined);
     } else {
       if (clusterIdQuery) {
@@ -87,11 +87,11 @@ export async function GET(request: Request) {
           return NextResponse.json({ message: "Forbidden: Insufficient permissions for this center" }, { status: 403 });
         }
       } else {
-        // If not HQ_ADMIN and no specific scope, decide what to return.
+        // If not GLOBAL_ADMIN and no specific scope, decide what to return.
         // Option 1: Return empty array or error.
         // Option 2: Fetch all small groups from all centers/clusters the user has access to (more complex query).
-        // For now, returning an error if no specific scope is provided by non-HQ_ADMIN.
-        return NextResponse.json({ message: "Forbidden: Please specify a clusterId or centerId, or have HQ Admin role to view all small groups." }, { status: 403 });
+        // For now, returning an error if no specific scope is provided by non-GLOBAL_ADMIN.
+        return NextResponse.json({ message: "Forbidden: Please specify a clusterId or centerId, or have Global Admin role to view all small groups." }, { status: 403 });
       }
     }
     
