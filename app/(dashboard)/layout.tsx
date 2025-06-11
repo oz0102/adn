@@ -1,11 +1,11 @@
 "use client"
 
-import { Sidebar } from "@/components/dashboard/sidebar"
-import { Header } from "@/components/dashboard/header"
-import { SessionProvider } from "@/components/session-provider"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { AuthSync } from "@/components/auth-sync"
+import { Sidebar } from "@/lib/client/components/dashboard/sidebar"
+import { Header } from "@/lib/client/components/dashboard/header"
+import { SessionProvider } from "@/lib/client/components/session-provider"
+import { ThemeProvider } from "@/lib/client/components/theme-provider"
+import { Toaster } from "@/lib/client/components/ui/toaster"
+import { AuthSync } from "@/lib/client/components/auth-sync"
 
 export default function DashboardLayout({
   children,

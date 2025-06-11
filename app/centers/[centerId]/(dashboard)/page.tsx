@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // useRouter for navigation
-import { DashboardStats } from '@/components/dashboard/dashboard-stats'; // Assuming this can be adapted or is already flexible
-import { ActivityFeed } from '@/components/dashboard/activity-feed'; // Assuming this can be adapted
-import { UpcomingEventsCard } from '@/components/dashboard/upcoming-events-card'; // Assuming this can be adapted
-import { ChartCard } from '@/components/ui/chart-card';
-import { DataCard } from '@/components/ui/data-card';
+import { DashboardStats } from '@/lib/client/components/dashboard/dashboard-stats'; // Assuming this can be adapted or is already flexible
+import { ActivityFeed } from '@/lib/client/components/dashboard/activity-feed'; // Assuming this can be adapted
+import { UpcomingEventsCard } from '@/lib/client/components/dashboard/upcoming-events-card'; // Assuming this can be adapted
+import { ChartCard } from '@/lib/client/components/ui/chart-card';
+import { DataCard } from '@/lib/client/components/ui/data-card';
 import { Users, UserCheck, Calendar, AlertTriangleIcon } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
-import { useToast } from '@/components/ui/use-toast';
+import { apiClient } from '@/lib/client/api/api-client';
+import { useToast } from '@/lib/client/components/ui/use-toast';
 import { useAuthStore } from '@/lib/store';
 import { checkPermission } from '@/lib/permissions';
 import { ICenter } from '@/models/center'; // For Center type

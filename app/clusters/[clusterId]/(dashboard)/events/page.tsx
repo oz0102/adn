@@ -5,23 +5,25 @@ import Link from "next/link"
 import { useRouter, useSearchParams, useParams } from "next/navigation"
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/select"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import {
   Search, Plus, Calendar, ChevronRight, X, Clock, MapPin, CalendarDays, AlertTriangleIcon, ArrowLeft
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+
+import { useToast } from "@/lib/client/hooks/use-toast"
+
 import { formatDate } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
 import { ICluster } from "@/models/cluster"
-import { apiClient } from "@/lib/api-client"
+import { apiClient } from "@/lib/client/api/api-client"
 
 interface Event {
   _id: string; title: string; description: string; eventType: string;

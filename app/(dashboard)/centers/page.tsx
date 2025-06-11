@@ -10,11 +10,11 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Search, 
   Plus, 
@@ -26,8 +26,8 @@ import {
   Network, // Icon for Clusters count
   AlertTriangle
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { useToast } from "@/hooks/use-toast"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { useSession } from "next-auth/react"
@@ -309,7 +309,7 @@ export default function CentersPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/centers/${center._id}`}>
+                    <Link href={`/centers/${center._id}/dashboard`}>
                       <span>View Center</span>
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>

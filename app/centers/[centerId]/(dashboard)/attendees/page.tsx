@@ -3,15 +3,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/lib/client/components/ui/button';
+import { Input } from '@/lib/client/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Pagination } from '@/components/ui/pagination';
-import { useToast } from '@/components/ui/use-toast';
+import { Pagination } from '@/lib/client/components/ui/pagination';
+import { useToast } from '@/lib/client/components/ui/use-toast';
 import { useAuthStore } from '@/lib/store';
 import { checkPermission } from '@/lib/permissions';
 import { PlusCircle, Search, Users, AlertTriangleIcon, ArrowLeft } from 'lucide-react'; // Added ArrowLeft
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/client/api/api-client';
 import { IAttendee } from '@/models/attendee';
 import { ICenter } from '@/models/center'; // For center name
 

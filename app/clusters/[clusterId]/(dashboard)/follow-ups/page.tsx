@@ -5,26 +5,27 @@ import Link from "next/link";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@/lib/client/components/ui/table";
+import { Button } from "@/lib/client/components/ui/button";
+import { Input } from "@/lib/client/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Pagination } from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
+} from "@/lib/client/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card";
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar";
+import { Pagination } from "@/lib/client/components/ui/pagination";
+import { Badge } from "@/lib/client/components/ui/badge";
 import {
   Search, Plus, ChevronRight, X, Mail, Phone,
   Calendar, AlertCircle, CheckCircle, XCircle, Clock, AlertTriangleIcon, ArrowLeft
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+
+import { useToast } from "@/lib/client/hooks/use-toast";
 import { formatDate, getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
 import { checkPermission } from "@/lib/permissions";
 import { ICluster } from "@/models/cluster";
-import { apiClient } from "@/lib/api-client";
+import { apiClient } from "@/lib/client/api/api-client";
 
 // WhatsApp Icon Component
 const WhatsAppIcon = ({ className = "h-4 w-4" }) => ( <svg className={className} viewBox="0 0 24 24" fill="currentColor"> <path d="M17.498 14.382c-.301-.15-1.767-.867-2.04-.966-.273-.101-.473-.15-.673.15-.197.295-.771.964-.944 1.162-.175.195-.349.21-.646.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.019-.465.13-.615.136-.135.301-.345.451-.523.146-.181.194-.301.297-.496.1-.21.049-.375-.025-.524-.075-.15-.672-1.62-.922-2.206-.24-.584-.487-.51-.672-.51-.172-.015-.371-.015-.571-.015-.2 0-.523.074-.797.359-.273.3-1.045 1.02-1.045 2.475s1.07 2.865 1.219 3.075c.149.195 2.105 3.195 5.1 4.485.714.3 1.27.48 1.704.629.714.227 1.365.195 1.88.121.574-.091 1.767-.721 2.016-1.426.255-.705.255-1.29.18-1.425-.074-.135-.27-.21-.57-.345z" /> <path d="M20.52 3.449C12.831-3.984.106 1.407.101 11.893c0 2.096.549 4.14 1.595 5.945L0 24l6.335-1.652c1.746.943 3.71 1.444 5.695 1.447h.005c9.975 0 16.944-9.95 13.467-17.949-1.382-3.254-4.363-5.505-8.453-6.146C9.337-.329 3.708 2.868 1.364 8.93.359 11.177-.22 13.697.12 16.205c.124.895.33 1.77.572 2.625.493 1.73 2.283 1.03 2.773-.857.087-.334.167-.67.248-1.015.344-1.437-.24-1.68-1.223-2.647-.655-.642-.908-1.678-.543-2.647 2.611-6.9 12.25-7.836 17.622-2.399 2.91 2.94 2.84 9.042-.15 11.79-1.54 1.432-3.962.574-4.258-1.334-.203-1.297.27-2.588.774-3.906.283-.686.159-1.695-.15-2.094-.437-.462-1.13-.284-1.72-.076a10.8 10.8 0 0 0-2.935 1.574c-.947.673-1.946 1.324-2.698 2.229-.732.872-1.162 2.063-1.947 2.96-.49.559-1.248 1.348-1.986 1.613-.12.043-.21.074-.3.114-.82.403-1.27.36-1.402.24-.625-.547-.748-2.364-.748-2.364.943-5.309 8-4.27 10.949-2.341.217.145.447.313.68.495 1.088.856 2.13 1.77 2.419 3.136.275 1.296.26 2.612.065 3.038.977 1.605 1.55 2.708 1.55 4.35 0 5.356-5.244 9.78-11.663 9.78-2.068 0-4.077-.54-5.848-1.557L0 23.956l3.92-1.018a12.027 12.027 0 0 1-1.386-1.7c-3.858-6.144 1.006-13.324 3.205-15.36 1.222-1.128 5.907-4.197 10.463-2.913 5.75 1.62 7.88 5.04 8.015 9.992.184 6.637-5.394 9.548-5.758 9.777-.364.228-1.105.254-1.83-.35-1.069-1.496-1.878-3.294-2.412-5.072-.331-1.101-.391-2.165.047-3.197.33-.781.89-1.356 1.427-1.93.334-.36.61-.739.903-1.1.156-.226.322-.434.49-.627a.31.31 0 0 0 .088-.063c.192-.195.345-.362.463-.506.128-.155.23-.315.302-.488-.24.068-.483.14-.731.215-.474.147-1.095.284-1.471.284-.75 0-1.26-.436-1.743-.436a1.396 1.396 0 0 0-.513.101c-.147.054-.29.135-.437.214a7.796 7.796 0 0 0-1.81 1.367c-.138.155-.295.329-.442.49-.31.317-.607.65-.877 1.002-.121.195-.238.389-.346.588-.079.151-.156.304-.225.456a3.92 3.92 0 0 0-.155.378 4.7 4.7 0 0 0-.152.532c-.044.2-.07.402-.093.605a4.277 4.277 0 0 0-.031.534c.004.13.02.26.032.389.018.192.042.383.08.571.066.328.161.647.266.955.161.475.355.948.532 1.403.107.274.218.552.29.846.064.263.11.534.14.813.017.184.028.368.028.554 0 .071-.007.144-.01.216a7.764 7.764 0 0 1-.042.493c-.028.205-.069.406-.113.607-.055.24-.121.476-.2.708-.075.223-.16.44-.25.66-.105.249-.221.494-.345.735-.102.195-.207.387-.319.574-.11.184-.226.362-.345.54-.259.39-.544.758-.833 1.118-.196.245-.387.493-.591.733-.16.189-.313.383-.48.568-.354.391-.706.776-1.072 1.144-.64.64-1.331 1.224-2.079 1.735-.372.254-.754.491-1.145.717-.37.213-.747.414-1.132.599-.32.154-.645.301-.976.427-.153.059-.309.111-.464.166"   fill-rule="evenodd" clip-rule="evenodd"/></svg> );

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useFieldArray } from "react-hook-form"
 import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/lib/client/components/ui/button"
 import {
   Form,
   FormControl,
@@ -14,29 +14,29 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/lib/client/components/ui/form"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/lib/client/components/ui/card"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
+} from "@/lib/client/components/ui/select"
+import { Input } from "@/lib/client/components/ui/input"
+import { Textarea } from "@/lib/client/components/ui/textarea"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { Layers, ArrowLeft, Plus, Trash2, Calendar, Building, Home, MapPin } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/lib/client/components/ui/badge"
+import { Separator } from "@/lib/client/components/ui/separator"
+import { Switch } from "@/lib/client/components/ui/switch"
 
 // Form schema with multiple meeting schedules, optional leader, and address
 const clusterFormSchema = z.object({

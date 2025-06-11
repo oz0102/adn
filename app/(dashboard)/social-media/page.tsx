@@ -372,10 +372,10 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { SocialMediaAccountCard } from "@/components/social-media/social-media-card";
-import { SocialMediaDialog } from "@/components/social-media/social-media-dialog";
-import { DeleteAccountDialog } from "@/components/social-media/delete-account-dialog";
-import { Button } from "@/components/ui/button";
+import { SocialMediaAccountCard } from "@/lib/client/components/social-media/social-media-card";
+import { SocialMediaDialog } from "@/lib/client/components/social-media/social-media-dialog";
+import { DeleteAccountDialog } from "@/lib/client/components/social-media/delete-account-dialog";
+import { Button } from "@/lib/client/components/ui/button";
 import {
   PlusIcon,
   RefreshCwIcon,
@@ -388,12 +388,12 @@ import {
 } from "lucide-react";
 // REMOVE socialMediaService import here!
 // import { socialMediaService } from "@/services/socialMediaService";
-import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/lib/client/components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs";
 // Import only the types/interfaces needed on the client
 import { SocialMediaPlatform } from "@/models/socialMediaAccount";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { GrowthSummary } from "@/components/social-media/analytics-components";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/lib/client/components/ui/card";
+import { GrowthSummary } from "@/lib/client/components/social-media/analytics-components";
 import { useAuthStore } from "@/lib/store";
 import { checkPermission } from "@/lib/permissions"; // Assuming this checkPermission is okay on client for UI rendering
 

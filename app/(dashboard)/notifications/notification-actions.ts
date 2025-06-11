@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/lib/client/hooks/use-toast";
 import { sendNotification, sendBatchNotification, NotificationRequest } from "./notification-service";
 
 export function useNotificationActions() {

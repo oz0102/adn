@@ -19,21 +19,23 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import {
   Search, Plus, ChevronRight, X, Mail, Phone,
   Calendar, AlertCircle, CheckCircle, XCircle, Clock, AlertTriangleIcon, ArrowLeft
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+
+import { useToast } from "@/lib/client/hooks/use-toast"
+
 import { formatDate, getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
 import { ICenter } from "@/models/center"
-import { apiClient } from "@/lib/api-client"
+import { apiClient } from "@/lib/client/api/api-client"
 
 
 // WhatsApp Icon Component (assuming it's defined elsewhere or not strictly needed for this adaptation)

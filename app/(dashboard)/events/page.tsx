@@ -11,18 +11,18 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
 import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/select"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Search, 
   Plus, 
@@ -33,7 +33,7 @@ import {
   MapPin,
   CalendarDays
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 
 interface Event {

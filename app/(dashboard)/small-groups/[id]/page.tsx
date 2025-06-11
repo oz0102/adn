@@ -10,9 +10,9 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Users, 
   MapPin, 
@@ -25,8 +25,8 @@ import {
   Users2, // Icon for members
   Plus
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { useToast } from "@/hooks/use-toast"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"

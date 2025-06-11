@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/lib/client/components/ui/button"
 import {
   Form,
   FormControl,
@@ -14,17 +14,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/lib/client/components/ui/form"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
+} from "@/lib/client/components/ui/card"
+import { Input } from "@/lib/client/components/ui/input"
+import { Textarea } from "@/lib/client/components/ui/textarea"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { Building, ArrowLeft } from "lucide-react"
 import { useSession } from "next-auth/react"
 

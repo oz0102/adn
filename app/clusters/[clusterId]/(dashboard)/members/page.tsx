@@ -5,23 +5,25 @@ import Link from "next/link"
 import { useRouter, useSearchParams, useParams } from "next/navigation"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/lib/client/components/ui/table"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+
+import { Badge } from "@/lib/client/components/ui/badge"
 import { Search, Plus, ChevronRight, X, AlertTriangleIcon, ArrowLeft } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
+
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
 import { ICluster } from "@/models/cluster"
-import { apiClient } from "@/lib/api-client"
+import { apiClient } from "@/lib/client/api/api-client"
 
 interface Member {
   _id: string; memberId: string; firstName: string; lastName: string; email: string;

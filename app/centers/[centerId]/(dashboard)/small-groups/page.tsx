@@ -10,11 +10,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Input } from "@/lib/client/components/ui/input"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import {
   Search,
   Plus,
@@ -26,8 +26,13 @@ import {
   AlertTriangle,
   ArrowLeft
 } from "lucide-react"
+<<<<<<< HEAD
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
+=======
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { useToast } from "@/lib/client/hooks/use-toast"
+>>>>>>> feature/comprehensive-restructure-and-attendees
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"

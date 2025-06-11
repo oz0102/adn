@@ -5,18 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/lib/client/components/ui/form"
+import { Input } from "@/lib/client/components/ui/input"
+import { Textarea } from "@/lib/client/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/lib/client/components/ui/select"
+import { useToast } from "@/lib/client/hooks/use-toast"
+
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"
-import { apiClient } from "@/lib/api-client"
+import { apiClient } from "@/lib/client/api/api-client"
 
 const formSchema = z.object({
   firstName: z.string().min(2, { message: "First name must be at least 2 characters." }),

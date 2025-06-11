@@ -5,15 +5,17 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+
+import { Button } from '@/lib/client/components/ui/button';
+import { Input } from '@/lib/client/components/ui/input';
+import { Textarea } from '@/lib/client/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/lib/client/components/ui/select';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/lib/client/components/ui/form';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/lib/client/components/ui/card';
+import { useToast } from '@/lib/client/components/ui/use-toast';
+
 import { ArrowLeft, UserPlus, Save } from 'lucide-react'; // Added Save icon
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/client/api/api-client';
 import { useAuthStore } from '@/lib/store';
 import { checkPermission } from '@/lib/permissions';
 import { IAttendee } from '@/models/attendee'; // Import Attendee model type

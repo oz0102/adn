@@ -9,9 +9,9 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs"
 import { 
   BarChart3,
   ChevronRight,
@@ -22,13 +22,13 @@ import {
   Download,
   Plus
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import {
   MembershipReport,
   AttendanceReport,
   ClusterReport,
   SpiritualGrowthReport
-} from "@/components/reports"
+} from "@/lib/client/components/reports"
 
 export default function ReportsPage() {
   const { toast } = useToast()
