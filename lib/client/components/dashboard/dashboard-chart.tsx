@@ -1,7 +1,7 @@
 // components/dashboard/dashboard-chart.tsx
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
 import { 
   LineChart, 
   Line, 

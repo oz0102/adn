@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { StatsCard } from '@/components/ui/stats-card';
+import { StatsCard } from '@/lib/client/components/ui/stats-card';
 import { Users, Calendar, UserCheck, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

@@ -4,10 +4,10 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import {} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+import {} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Pagination } from "@/lib/client/components/ui/pagination"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   Bell,
   Info,
@@ -25,8 +25,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
+} from "@/lib/client/components/ui/select"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 import {
   Dialog,
@@ -35,16 +35,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+} from "@/lib/client/components/ui/dialog"
+import { Textarea } from "@/lib/client/components/ui/textarea"
+import { Label } from "@/lib/client/components/ui/label"
+import { Input } from "@/lib/client/components/ui/input"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger
-} from "@/components/ui/tabs"
+} from "@/lib/client/components/ui/tabs"
 
 interface Notification {
   _id: string;

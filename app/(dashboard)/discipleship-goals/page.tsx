@@ -21,8 +21,8 @@ import {
   School,
   UserCog
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { DiscipleshipGoalChart } from "./goal-chart"
+import { useToast } from "@/lib/client/hooks/use-toast"
+import { DiscipleshipGoalChart } from "@/lib/client/components/discipleship-goals/goal-chart"
 import { 
   Select,
   SelectContent,

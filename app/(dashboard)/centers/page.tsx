@@ -27,7 +27,7 @@ import {
   AlertTriangle
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { useSession } from "next-auth/react"

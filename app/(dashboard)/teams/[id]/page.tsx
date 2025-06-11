@@ -4,11 +4,11 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs"
+import { Button } from "@/lib/client/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   ArrowLeft, 
   Edit, 
@@ -29,10 +29,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { TeamMembersTab } from "@/components/teams/members-tab"
-import { TeamEventsTab } from "@/components/teams/events-tab"
-import { TeamResponsibilitiesTab } from "@/components/teams/responsibilities-tab"
+} from "@/lib/client/components/ui/alert-dialog"
+import { TeamMembersTab } from "@/lib/client/components/teams/members-tab"
+import { TeamEventsTab } from "@/lib/client/components/teams/events-tab"
+import { TeamResponsibilitiesTab } from "@/lib/client/components/teams/responsibilities-tab"
 
 interface TeamMember {
   _id: string;

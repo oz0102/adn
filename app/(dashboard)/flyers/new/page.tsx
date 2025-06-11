@@ -13,8 +13,8 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
 import {
   Form,
   FormControl,
@@ -23,17 +23,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/lib/client/components/ui/form"
+import { Input } from "@/lib/client/components/ui/input"
+import { Textarea } from "@/lib/client/components/ui/textarea"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
+} from "@/lib/client/components/ui/select"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { ArrowLeft, Save, Upload } from "lucide-react"
 import Link from "next/link"
 

@@ -2,8 +2,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { formatDate } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 

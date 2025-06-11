@@ -6,10 +6,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SocialMediaPlatform } from '@/models/socialMediaAccount';
 import { socialMediaAccountSchema, SocialMediaAccountFormValues } from '@/lib/validations/social-media';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/lib/client/components/ui/button';
+import { Input } from '@/lib/client/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/lib/client/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/lib/client/components/ui/select';
 import { PlatformIcon } from './social-media-card';
 
 interface SocialMediaFormProps {

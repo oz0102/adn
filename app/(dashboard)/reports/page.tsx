@@ -9,9 +9,9 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs"
 import { 
   BarChart3,
   ChevronRight,
@@ -28,7 +28,7 @@ import {
   AttendanceReport,
   ClusterReport,
   SpiritualGrowthReport
-} from "@/components/reports"
+} from "@/lib/client/components/reports"
 
 export default function ReportsPage() {
   const { toast } = useToast()

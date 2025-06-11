@@ -1,44 +1,44 @@
-// components/members/teams-tab.tsx
+// components/members/training-tab.tsx
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
 
-interface MemberTeamsTabProps {
+interface MemberTrainingTabProps {
   memberId: string; // Prop is now actively used or expected by the component structure
 }
 
-export function MemberTeamsTab({ memberId }: MemberTeamsTabProps) {
+export function MemberTrainingTab({ memberId }: MemberTrainingTabProps) {
   // Using array destructuring to only get the first element (the state value)
-  const [teams] = useState([]) // This should ideally fetch teams based on memberId
+  const [trainings] = useState([]) // This should ideally fetch trainings based on memberId
   // Removed unused state variables
   // const [isLoading, setIsLoading] = useState(false)
 
   // Example of how memberId might be used (even if just for logging for now)
-  console.log("Rendering teams for memberId:", memberId);
+  console.log("Rendering trainings for memberId:", memberId);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
-          <CardTitle>Teams</CardTitle>
+          <CardTitle>Training</CardTitle>
           <CardDescription>
-            Teams this member belongs to
+            Training courses completed by this member
           </CardDescription>
         </div>
         <Button variant="outline" size="sm">
-          Add to Team
+          Add Training
         </Button>
       </CardHeader>
       <CardContent>
-        {teams.length === 0 ? (
+        {trainings.length === 0 ? (
           <p className="text-center text-muted-foreground py-4">
-            This member is not part of any teams yet
+            No training records found for this member
           </p>
         ) : (
           <div className="space-y-2">
-            {/* Team list will be displayed here */}
+            {/* Training list will be displayed here */}
           </div>
         )}
       </CardContent>

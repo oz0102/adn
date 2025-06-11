@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Pagination } from '@/components/ui/pagination'; // Assuming this is the correct import
-import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/lib/client/components/ui/button';
+import { Input } from '@/lib/client/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/lib/client/components/ui/card';
+import { Pagination } from '@/lib/client/components/ui/pagination'; // Assuming this is the correct import
+import { useToast } from '@/lib/client/components/ui/use-toast';
 import { useAuthStore } from '@/lib/store';
 import { checkPermission } from '@/lib/permissions'; // Assuming client-side check is okay or adapted
 import { PlusCircle, Search, Users, AlertTriangleIcon } from 'lucide-react';

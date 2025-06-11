@@ -43,10 +43,10 @@
 //   AlertDialogTrigger,
 // } from "@/components/ui/alert-dialog"
 // import { MemberSpiritualGrowthTab } from "@/components/members/spiritual-growth-tab"
-// import { MemberTeamsTab } from "@/components/members/teams-tab"
-// import { MemberTrainingTab } from "@/components/members/training-tab"
-// import { MemberFollowUpsTab } from "@/components/members/follow-ups-tab"
-// import { MemberAttendanceTab } from "@/components/members/attendance-tab"
+// import { MemberTeamsTab } from "@/lib/client/components/members/teams-tab"
+// import { MemberTrainingTab } from "@/lib/client/components/members/training-tab"
+// import { MemberFollowUpsTab } from "@/lib/client/components/members/follow-ups-tab"
+// import { MemberAttendanceTab } from "@/lib/client/components/members/attendance-tab"
 
 // interface MemberDetails {
 //   _id: string
@@ -384,11 +384,11 @@ import {
   TabsContent, 
   TabsList, 
   TabsTrigger 
-} from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+} from "@/lib/client/components/ui/tabs"
+import { Button } from "@/lib/client/components/ui/button"
+import { Card, CardContent } from "@/lib/client/components/ui/card"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { 
   ArrowLeft, 
   Phone, 
@@ -404,7 +404,7 @@ import {
   Award,
   Users
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate, getInitials } from "@/lib/utils"
 import { 
   AlertDialog,
@@ -416,12 +416,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { MemberSpiritualGrowthTab } from "@/components/members/spiritual-growth-tab"
-import { MemberTeamsTab } from "@/components/members/teams-tab"
-import { MemberTrainingTab } from "@/components/members/training-tab"
-import { MemberFollowUpsTab } from "@/components/members/follow-ups-tab"
-import { MemberAttendanceTab } from "@/components/members/attendance-tab"
+} from "@/lib/client/components/ui/alert-dialog"
+import { MemberSpiritualGrowthTab } from "@/lib/client/components/members/spiritual-growth-tab"
+import { MemberTeamsTab } from "@/lib/client/components/members/teams-tab"
+import { MemberTrainingTab } from "@/lib/client/components/members/training-tab"
+import { MemberFollowUpsTab } from "@/lib/client/components/members/follow-ups-tab"
+import { MemberAttendanceTab } from "@/lib/client/components/members/attendance-tab"
 
 interface Address {
   street: string;

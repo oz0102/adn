@@ -2,8 +2,8 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
 
 // interface MemberAttendanceTabProps {
 //   // This prop is defined for future implementation but not currently used
@@ -45,4 +45,3 @@ export function MemberAttendanceTab(/*{ memberId }: MemberAttendanceTabProps*/) 
     </Card>
   )
 }
-

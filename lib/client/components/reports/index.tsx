@@ -79,11 +79,11 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/lib/client/components/ui/card"
 // Removed unused imports
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs"
+import { Button } from "@/lib/client/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/lib/client/components/ui/select"
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { CalendarDays, Users, UserCheck, Calendar, Award, Download } from "lucide-react"
 // Removed unused imports
@@ -824,3 +824,4 @@ export function ScheduledReportsList() {
     </div>
   )
 }
+[end of components/reports/index.tsx]

@@ -33,7 +33,7 @@ import {
   Check, 
   UserX
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 
 interface Attendance {

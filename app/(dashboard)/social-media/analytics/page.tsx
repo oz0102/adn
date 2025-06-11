@@ -2,11 +2,11 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { GrowthSummary, PlatformDistribution, FollowerHistoryChart } from '@/components/social-media/analytics-components';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/lib/client/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/lib/client/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/lib/client/components/ui/tabs';
 import { socialMediaService } from '@/services/socialMediaService';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/lib/client/components/ui/use-toast';
 import { RefreshCwIcon } from 'lucide-react';
 
 interface SocialMediaAccountAnalyticsEntry {

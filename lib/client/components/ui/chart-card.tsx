@@ -14,7 +14,7 @@ import {
   ChartData,
   ChartOptions
 } from 'chart.js';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { cn } from "@/lib/utils";
 
 // Register ChartJS components

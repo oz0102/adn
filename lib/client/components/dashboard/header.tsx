@@ -12,9 +12,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+} from "@/lib/client/components/ui/dropdown-menu"
+import { Button } from "@/lib/client/components/ui/button"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { useNotificationStore } from "@/lib/store"
 
 import { Session } from "next-auth"; // Import Session type

@@ -2,13 +2,13 @@
 "use client"
 
 import React from "react"; // Added React import
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-// import { Badge } from "@/components/ui/badge"; // Removed unused import
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/lib/client/components/ui/card";
+import { Button } from "@/lib/client/components/ui/button";
+// import { Badge } from "@/lib/client/components/ui/badge"; // Removed unused import
 import { ArrowUpIcon, ArrowDownIcon, RefreshCwIcon, ExternalLinkIcon, MoreVerticalIcon, EditIcon, Trash2Icon } from "lucide-react";
 import { SocialMediaPlatform } from "@/models/socialMediaAccount"; // Removed IFollowerHistoryEntry as it's not used here
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/lib/client/components/ui/dropdown-menu";
+import { Skeleton } from "@/lib/client/components/ui/skeleton";
 import { PopulatedSocialMediaAccount } from "@/app/(dashboard)/social-media/page"; // Import the type from the page
 
 // Platform icon mapping
@@ -221,4 +221,3 @@ export const SocialMediaAccountCard = ({
     </Card>
   );
 };
-

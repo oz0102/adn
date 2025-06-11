@@ -9,7 +9,7 @@ import { Input } from "@/lib/client/components/ui/input"
 import { Label } from "@/lib/client/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
 import { Alert, AlertDescription } from "@/lib/client/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 
 export default function RegisterPage() {
   const router = useRouter()

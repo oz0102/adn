@@ -2,11 +2,11 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/lib/client/components/ui/dialog';
 import { SocialMediaForm } from './social-media-form';
 import { SocialMediaAccountFormValues, SocialMediaPlatform } from '@/lib/validations/social-media'; // Added SocialMediaPlatform
 import { socialMediaService } from '@/services/socialMediaService';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/lib/client/components/ui/use-toast';
 
 // Define a more specific type for initialData, matching expected structure
 interface InitialSocialMediaData {

@@ -50,8 +50,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Button } from "@/lib/client/components/ui/button"
 import { AlertCircle, Plus, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
@@ -63,17 +63,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/lib/client/components/ui/dialog"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+} from "@/lib/client/components/ui/select"
+import { Input } from "@/lib/client/components/ui/input"
+import { Textarea } from "@/lib/client/components/ui/textarea"
+import { Label } from "@/lib/client/components/ui/label"
 
 interface SpiritualGrowthStage {
   stage: string

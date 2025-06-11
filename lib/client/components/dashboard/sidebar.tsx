@@ -7,13 +7,13 @@ import { usePathname, useParams } from "next/navigation" // Added useParams
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useAuthStore, useSidebarStore } from "@/lib/store"
-import { 
-  Users, 
-  ChevronDown, 
-  Grid, 
-  UserCheck, 
-  Calendar, 
-  Layers, 
+import {
+  Users,
+  ChevronDown,
+  Grid,
+  UserCheck,
+  Calendar,
+  Layers,
   Bell,
   BarChart3,
   Settings,
@@ -24,7 +24,7 @@ import {
   Building, // Added Building
   ClipboardUser // Added for Attendees
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/lib/client/components/ui/button"
 
 interface NavItemProps {
   href: string

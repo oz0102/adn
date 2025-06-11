@@ -1,7 +1,7 @@
 // Analytics components for displaying social media growth metrics
 'use client'
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/lib/client/components/ui/card';
 import { 
   LineChart, 
   Line, 

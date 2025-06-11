@@ -31,7 +31,7 @@ import {
 } from "@/lib/client/components/ui/select"
 import { Input } from "@/lib/client/components/ui/input"
 import { Textarea } from "@/lib/client/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { Layers, ArrowLeft, Plus, Trash2, Calendar, Building, Home, MapPin } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { Badge } from "@/lib/client/components/ui/badge"

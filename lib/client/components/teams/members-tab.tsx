@@ -10,12 +10,12 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+} from "@/lib/client/components/ui/table"
+import { Button } from "@/lib/client/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
+import { Badge } from "@/lib/client/components/ui/badge"
+import { Input } from "@/lib/client/components/ui/input"
 import { Search, UserPlus, X } from "lucide-react"
 import { 
   Dialog,
@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/lib/client/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 

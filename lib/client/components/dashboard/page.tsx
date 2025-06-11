@@ -2,13 +2,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs"
 import { Clock, Users, Star, UserCheck, Calendar as CalendarIcon } from "lucide-react"
-import { DashboardChart } from "@/components/dashboard/dashboard-chart"
-import { RecentActivity } from "@/components/dashboard/recent-activity"
-import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
-import { useToast } from "@/hooks/use-toast"
+import { DashboardChart } from "./dashboard-chart"
+import { RecentActivity } from "./recent-activity"
+import { UpcomingEvents } from "./upcoming-events"
+import { useToast } from "@/lib/client/hooks/use-toast"
 
 export default function Dashboard() {
   const [stats, setStats] = useState({

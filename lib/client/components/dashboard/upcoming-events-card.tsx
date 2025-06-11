@@ -44,21 +44,21 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
     const fetchUpcomingEvents = async () => {
       try {
         setIsLoading(true);
-        
+
         // Get current date
         const now = new Date();
-        
+
         // Get date 30 days from now
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        
+
         // Fetch upcoming events
         const response = await fetch(
           `/api/events?startDate=${now.toISOString()}&endDate=${thirtyDaysFromNow.toISOString()}&sortBy=startDate&sortOrder=asc&limit=${limit}`
         );
-        
+
         const data = await response.json();
-        
+
         if (data.success && data.data.events) {
           // Transform the data
           const transformedEvents: EventItem[] = data.data.events.map((event: ApiEventData) => ({
@@ -69,7 +69,7 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
             endDate: event.endDate,
             location: event.location || 'TBD'
           }));
-          
+
           setEvents(transformedEvents);
         } else {
           throw new Error('Failed to fetch events');
@@ -81,7 +81,7 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
           description: 'Failed to load upcoming events',
           variant: 'destructive',
         });
-        
+
         // Fallback to sample data if API call fails
         setEvents([
           {
@@ -113,7 +113,7 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
         setIsLoading(false);
       }
     };
-    
+
     fetchUpcomingEvents();
   }, [toast, limit]);
 
@@ -131,8 +131,8 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
   };
 
   return (
-    <DataCard 
-      title="Upcoming Events" 
+    <DataCard
+      title="Upcoming Events"
       icon={<Calendar className="h-4 w-4" />}
       className={className}
       action={{
@@ -144,8 +144,8 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
       {events.length === 0 && !isLoading ? (
         <div className="text-center py-6 text-muted-foreground">
           <p>No upcoming events scheduled</p>
-          <Button 
-            variant="link" 
+          <Button
+            variant="link"
             onClick={() => router.push('/events/new')}
             className="mt-2"
           >
@@ -166,16 +166,16 @@ export function UpcomingEventsCard({ className, limit = 3 }: UpcomingEventsCardP
                 <p>{event.location}</p>
               </div>
               <div className="mt-3 flex space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="flex-1"
                   onClick={() => handleViewDetails(event.id)}
                 >
                   Details
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   className="flex-1"
                   onClick={() => handleRegister(event.id)}
                 >

@@ -2,12 +2,12 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { DataCard } from '@/components/ui/data-card';
+import { DataCard } from '@/lib/client/components/ui/data-card';
 import { Activity, User, Calendar, MessageSquare } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/lib/client/components/ui/badge';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/lib/client/components/ui/skeleton';
 
 interface ActivityItem {
   id: string;

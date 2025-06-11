@@ -5,11 +5,11 @@ import Link from 'next/link'; // Import Link
 import { DashboardStats } from '@/components/dashboard/dashboard-stats';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { UpcomingEventsCard } from '@/components/dashboard/upcoming-events-card';
-import { ChartCard } from '@/components/ui/chart-card';
-import { DataCard } from '@/components/ui/data-card';
+import { ChartCard } from '@/lib/client/components/ui/chart-card';
+import { DataCard } from '@/lib/client/components/ui/data-card';
 import { Users, UserCheck, Calendar } from 'lucide-react';
 import { apiClient } from '@/lib/api-client'; // Assuming apiClient is set up
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/lib/client/components/ui/use-toast';
 import { IMember } from '@/models/member'; // For Member type
 import { IFollowUp } from '@/models/followUp'; // For FollowUp type
 // import { IAttendance } from '@/models/attendance'; // If you have an attendance model and API

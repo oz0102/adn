@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/lib/client/components/ui/input";
 import { Textarea } from "@/lib/client/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/lib/client/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/lib/client/hooks/use-toast";
 import { ArrowLeft, Save } from "lucide-react";
 // Removed Tabs imports as they are not used in the final version of this form.
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/lib/client/components/ui/tabs";

@@ -1285,7 +1285,7 @@ import {
   ArrowLeft, Calendar, Mail, Phone, User, Clock, CheckCircle,
   XCircle, AlertCircle, Edit, Clipboard, Send, UserCheck, PlusCircle, X
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate, getInitials } from "@/lib/utils"
 import { 
   Dialog,

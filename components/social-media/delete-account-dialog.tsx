@@ -10,9 +10,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+} from "@/lib/client/components/ui/alert-dialog";
 import { socialMediaService } from "@/services/socialMediaService";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/lib/client/components/ui/use-toast";
 
 interface AccountForDelete {
   _id: string;
