@@ -309,7 +309,7 @@ export default function CentersPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/centers/${center._id}`}>
+                    <Link href={`/centers/${center._id}/dashboard`}>
                       <span>View Center</span>
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>
