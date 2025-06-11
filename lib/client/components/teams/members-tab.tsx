@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/lib/client/components/ui/dialog"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 
 interface TeamMember {

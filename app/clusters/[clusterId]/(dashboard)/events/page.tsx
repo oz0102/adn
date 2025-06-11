@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import {
   Search, Plus, Calendar, ChevronRight, X, Clock, MapPin, CalendarDays, AlertTriangleIcon, ArrowLeft
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store"
 import { checkPermission } from "@/lib/permissions"

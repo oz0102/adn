@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback } from "@/lib/client/components/ui/avatar"
 import { Pagination } from "@/lib/client/components/ui/pagination"
 import { Badge } from "@/lib/client/components/ui/badge"
 import { Search, Plus, ChevronRight, X } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 
 interface Member {

@@ -23,9 +23,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Pagination } from "@/components/ui/pagination"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/lib/client/components/ui/badge"
 import { Search, Plus, ChevronRight, X, AlertTriangleIcon } from "lucide-react" // Added AlertTriangleIcon
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { getInitials } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store" // Added for permissions
 import { checkPermission } from "@/lib/permissions" // Added for permissions

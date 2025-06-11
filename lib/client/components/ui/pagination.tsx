@@ -1,7 +1,7 @@
 // components/ui/pagination.tsx
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
 interface PaginationProps {

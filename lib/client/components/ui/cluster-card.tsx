@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./card";
+import { Button } from "./button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 

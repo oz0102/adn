@@ -1,6 +1,6 @@
 // components/ui/error-alert.tsx
 import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './alert';
 import { AlertCircle } from 'lucide-react';
 import { ApiErrorResponse } from '@/lib/error-handler';
 

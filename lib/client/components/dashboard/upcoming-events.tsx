@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/component
 import { Button } from "@/lib/client/components/ui/button"
 import { Calendar, Clock, MapPin } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 
 interface Event {
   id: string

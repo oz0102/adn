@@ -34,7 +34,7 @@ import {
   AlertTriangleIcon, // Added AlertTriangleIcon
   ArrowLeft // Added ArrowLeft
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 import { useAuthStore } from "@/lib/store" // Added for permissions
 import { checkPermission } from "@/lib/permissions" // Added for permissions

@@ -6,7 +6,7 @@ import { DataCard } from '@/lib/client/components/ui/data-card';
 import { Activity, User, Calendar, MessageSquare } from 'lucide-react';
 import { Badge } from '@/lib/client/components/ui/badge';
 import { formatDate } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/lib/client/hooks/use-toast';
 import { Skeleton } from '@/lib/client/components/ui/skeleton';
 
 interface ActivityItem {

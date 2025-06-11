@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "./button";
+import { Input } from "./input";
 import { Search } from "lucide-react";
 import { 
   Select,
@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "./select";
 
 interface FilterBarProps {
   onSearch?: (value: string) => void;

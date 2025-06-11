@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { StatsCard } from '@/lib/client/components/ui/stats-card';
 import { Users, Calendar, UserCheck, Clock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/lib/client/hooks/use-toast';
 
 interface DashboardStatsProps {
   className?: string;

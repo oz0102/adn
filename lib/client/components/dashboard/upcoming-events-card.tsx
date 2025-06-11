@@ -8,7 +8,7 @@ import { Button } from '@/lib/client/components/ui/button';
 import { formatDate, formatTime } from '@/lib/utils';
 import { Badge } from '@/lib/client/components/ui/badge';
 import { EventType } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/lib/client/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
 interface EventItem {

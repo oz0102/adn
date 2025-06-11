@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from './button';
 import { AlertCircle, Image as ImageIcon, X } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from './alert';
 // Removed unused import
 // import Image from 'next/image';
 

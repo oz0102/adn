@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from './button';
+import { Input } from './input';
+import { Label } from './label';
+import { Card, CardContent } from './card';
 import { AlertCircle, Upload, X } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from './alert';
+import { Progress } from './progress';
 
 interface UploadedImageData {
   url: string;

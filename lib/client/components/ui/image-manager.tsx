@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { CloudinaryImage } from '@/components/ui/cloudinary-image';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from './button';
+import { Card, CardContent, CardHeader, CardTitle } from './card';
+import { ImageUpload } from './image-upload';
+import { CloudinaryImage } from './cloudinary-image';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+import { Input } from './input';
+import { Label } from './label';
+import { useToast } from '@/lib/client/hooks/use-toast';
 
 interface CloudinaryUploadResult {
   public_id: string;

@@ -53,7 +53,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/lib/client/components/ui/card"
 import { Button } from "@/lib/client/components/ui/button"
 import { AlertCircle, Plus, CheckCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 import {
   Dialog,

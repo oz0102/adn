@@ -26,7 +26,7 @@ import {
   ChevronRight,
   Home 
 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/lib/client/hooks/use-toast";
 import { useAuthStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
 
