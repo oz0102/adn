@@ -22,7 +22,7 @@ import {
   FileText,
   Home, // Added Home
   Building, // Added Building
-  ClipboardUser // Added for Attendees
+  Clipboard // Added for Attendees
 } from "lucide-react"
 import { Button } from "@/lib/client/components/ui/button"
 
@@ -70,7 +70,7 @@ export function Sidebar() {
     { href: "/discipleship-goals", icon: <Target className="h-5 w-5" />, title: "Goals" },
     { href: "/notifications", icon: <Bell className="h-5 w-5" />, title: "Notifications" },
     { href: "/reports", icon: <BarChart3 className="h-5 w-5" />, title: "Reports" },
-    { href: "/dashboard/attendees", icon: <ClipboardUser className="h-5 w-5" />, title: "Attendees" },
+    { href: "/dashboard/attendees", icon: <Clipboard className="h-5 w-5" />, title: "Attendees" },
   ];
 
   const getCenterNavItems = (centerId: string) => [
@@ -79,7 +79,7 @@ export function Sidebar() {
     { href: `/centers/${centerId}/dashboard/members`, icon: <Users className="h-5 w-5" />, title: "Members" }, // Placeholder for actual members page for center
     { href: `/centers/${centerId}/dashboard/clusters`, icon: <Building className="h-5 w-5" />, title: "Clusters" },
     { href: `/centers/${centerId}/dashboard/events`, icon: <Calendar className="h-5 w-5" />, title: "Events" },
-    { href: `/centers/${centerId}/dashboard/attendees`, icon: <ClipboardUser className="h-5 w-5" />, title: "Attendees" },
+    { href: `/centers/${centerId}/dashboard/attendees`, icon: <Clipboard className="h-5 w-5" />, title: "Attendees" },
     // { href: `/centers/${centerId}/dashboard/settings`, icon: <Settings className="h-5 w-5" />, title: "Settings" },
   ];
 

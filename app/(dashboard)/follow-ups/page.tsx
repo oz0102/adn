@@ -32,7 +32,7 @@ import {
   Search, Plus, ChevronRight, X, Mail, Phone, 
   Calendar, AlertCircle, CheckCircle, XCircle, Clock 
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/lib/client/hooks/use-toast"
 import { formatDate, getInitials } from "@/lib/utils"
 
 // WhatsApp Icon Component
