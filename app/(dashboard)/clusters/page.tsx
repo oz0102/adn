@@ -192,7 +192,7 @@ export default function ClustersPage() {
     const paramsToKeep: Record<string, string | number | null> = {};
     if (filterCenterId) paramsToKeep.centerId = filterCenterId;
     if (parentCenterName) paramsToKeep.centerName = parentCenterName;
-    router.push(`/clusters${Object.keys(paramsToKeep).length > 0 ? `?${new URLSearchParams(paramsToKeep as Record<string,string>).toString()}` : ""}`);
+    router.push(`/dashboard/clusters${Object.keys(paramsToKeep).length > 0 ? `?${new URLSearchParams(paramsToKeep as Record<string,string>).toString()}` : ""}`);
   }
 
   const updateUrlParams = (params: Record<string, string | number | null>) => {
@@ -204,7 +204,7 @@ export default function ClustersPage() {
         newParams.delete(key)
       }
     })
-    router.push(`/clusters?${newParams.toString()}`)
+    router.push(`/dashboard/clusters?${newParams.toString()}`)
   }
 
   const handlePageChange = (page: number) => {
@@ -232,7 +232,7 @@ export default function ClustersPage() {
         <h1 className="text-3xl font-bold tracking-tight">Clusters {parentCenterName ? `(in ${parentCenterName})` : ""}</h1>
         {canCreateCluster && (
           <Button asChild>
-            <Link href={`/clusters/new${filterCenterId ? `?centerId=${filterCenterId}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`}>
+            <Link href={`/dashboard/clusters/new${filterCenterId ? `?centerId=${filterCenterId}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`}>
               <Plus className="mr-2 h-4 w-4" /> Create Cluster
             </Link>
           </Button>
@@ -290,7 +290,7 @@ export default function ClustersPage() {
             <p className="text-gray-500 mb-4">
               There are no clusters matching your search criteria or available for the selected center.
             </p>
-            {canCreateCluster && <Button onClick={() => router.push(`/clusters/new${filterCenterId ? `?centerId=${filterCenterId}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`)}>Create Cluster</Button>}
+            {canCreateCluster && <Button onClick={() => router.push(`/dashboard/clusters/new${filterCenterId ? `?centerId=${filterCenterId}${parentCenterName ? `&centerName=${encodeURIComponent(parentCenterName)}` : ""}` : ""}`)}>Create Cluster</Button>}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -345,7 +345,7 @@ export default function ClustersPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/clusters/${cluster._id}/dashboard?centerName=${encodeURIComponent(cluster.centerId?.name || parentCenterName || "")}`}>
+                    <Link href={`/dashboard/clusters/${cluster._id}/dashboard?centerName=${encodeURIComponent(cluster.centerId?.name || parentCenterName || "")}`}>
                       <span>View Cluster</span>
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>
