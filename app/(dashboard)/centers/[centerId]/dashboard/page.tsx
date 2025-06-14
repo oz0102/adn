@@ -1,665 +1,253 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/lib/client/components/ui/card";
-import { Button } from "@/lib/client/components/ui/button";
-import { Badge } from "@/lib/client/components/ui/badge";
+import { useParams, useRouter } from 'next/navigation'; // useRouter for navigation
+import { DashboardStats } from '@/lib/client/components/dashboard/dashboard-stats'; // Assuming this can be adapted or is already flexible
+import { ActivityFeed } from '@/lib/client/components/dashboard/activity-feed'; // Assuming this can be adapted
+import { UpcomingEventsCard } from '@/lib/client/components/dashboard/upcoming-events-card'; // Assuming this can be adapted
 import { ChartCard } from '@/lib/client/components/ui/chart-card';
 import { DataCard } from '@/lib/client/components/ui/data-card';
-import { 
-  Users, 
-  UserCheck, 
-  Calendar, 
-  Building, 
-  Network, 
-  MapPin, 
-  ArrowLeft,
-  ChevronRight
-} from 'lucide-react';
-import { useToast } from "@/lib/client/hooks/use-toast";
-import { useAuthStore } from "@/lib/store";
-import { useSession } from "next-auth/react";
+import { Users, UserCheck, Calendar, AlertTriangleIcon, ArrowLeft } from 'lucide-react'; // Added ArrowLeft
+import { apiClient } from '@/lib/client/api/api-client';
+import { useToast } from '@/lib/client/components/ui/use-toast';
+import { useAuthStore } from '@/lib/store';
+import { checkPermission } from '@/lib/permissions';
+import { ICenter } from '@/models/center'; // For Center type
+import { IMember } from '@/models/member';
+import { IFollowUp } from '@/models/followUp';
+import Link from 'next/link';
+import { Button } from '@/lib/client/components/ui/button'; // Added Button
 
-// Frontend Center interface
-interface Center {
-  _id: string;
-  centerId: string;
-  name: string;
-  location?: string;
-  leadPastor?: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email?: string;
-  };
-  contactEmail?: string;
-  contactPhone?: string;
-  description?: string;
-  clusterCount?: number;
-  memberCount?: number;
-}
-
-// Frontend Cluster interface
-interface Cluster {
-  _id: string;
-  clusterId: string;
-  name: string;
-  leaderId?: {
-    firstName: string;
-    lastName: string;
-  };
-  memberCount?: number;
-}
-
-// Frontend Event interface
-interface Event {
-  _id: string;
-  title: string;
-  date: string;
-  location: string;
-  description?: string;
-}
+// Helper function to get month name
+const getMonthName = (monthIndex: number) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months[monthIndex];
+};
 
 export default function CenterDashboardPage() {
-  const router = useRouter();
   const params = useParams();
-  const centerId = params.centerId as string; // Changed from params.id
+  const router = useRouter();
+  const centerId = params.centerId as string;
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuthStore();
-  const { status } = useSession();
+  const { user } = useAuthStore();
 
-  const [center, setCenter] = useState<Center | null>(null);
-  const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
+  const [center, setCenter] = useState<ICenter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasPermission, setHasPermission] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample chart data for attendance trends
-  const attendanceData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Sunday Service',
-        data: [65, 72, 68, 75, 82, 78],
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-      },
-      {
-        label: 'Midweek Service',
-        data: [42, 45, 40, 48, 53, 50],
-        borderColor: 'rgb(16, 185, 129)',
-        backgroundColor: 'rgba(16, 185, 129, 0.5)',
-      }
-    ],
-  };
+  const [canViewDashboard, setCanViewDashboard] = useState(false);
 
-  // Sample chart data for member growth
-  const memberGrowthData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'New Members',
-        data: [8, 12, 10, 14, 16, 12],
-        backgroundColor: 'rgba(99, 102, 241, 0.5)',
-        borderColor: 'rgb(99, 102, 241)',
-        borderWidth: 1,
-      }
-    ],
-  };
+  // Stats and Chart Data (scoped to centerId)
+  const [memberGrowthData, setMemberGrowthData] = useState<any>({ labels: [], datasets: [] });
+  const [demographicsData, setDemographicsData] = useState<any>({ labels: [], datasets: [] });
+  const [attendanceData, setAttendanceData] = useState<any>({ labels: [], datasets: [] }); // Placeholder
+  const [spiritualGrowthData, setSpiritualGrowthData] = useState<any>({ labels: [], datasets: [] }); // Placeholder
 
-  // Sample chart data for cluster performance
-  const clusterPerformanceData = {
-    labels: ['Cluster A', 'Cluster B', 'Cluster C', 'Cluster D', 'Cluster E'],
-    datasets: [
-      {
-        label: 'Member Growth',
-        data: [15, 25, 30, 20, 10],
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.5)',
-          'rgba(54, 162, 235, 0.5)',
-          'rgba(255, 206, 86, 0.5)',
-          'rgba(75, 192, 192, 0.5)',
-          'rgba(153, 102, 255, 0.5)',
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)',
-        ],
-        borderWidth: 1,
-      }
-    ],
-  };
+  const [birthdaysThisMonth, setBirthdaysThisMonth] = useState<IMember[]>([]);
+  const [pendingFollowUps, setPendingFollowUps] = useState<IFollowUp[]>([]);
 
-  // Sample data for spiritual growth
-  const spiritualGrowthData = {
-    labels: ['New Convert', 'Water Baptism', 'Holy Ghost Baptism', 'Worker', 'Minister'],
-    datasets: [
-      {
-        label: 'Members',
-        data: [120, 95, 80, 45, 20],
-        backgroundColor: 'rgba(147, 51, 234, 0.5)',
-        borderColor: 'rgb(147, 51, 234)',
-        borderWidth: 1,
-      }
-    ],
-  };
 
-  // Check permission for both CENTER_ADMIN and GLOBAL_ADMIN roles
-  const checkPermission = useCallback(async () => {
-    if (!user || !centerId) return;
-    
+  // Fetch Center Details
+  const fetchCenterDetails = useCallback(async () => {
+    if (!centerId) return;
     try {
-      // Check if user has GLOBAL_ADMIN role (which has access to all centers)
-      const globalAdminResponse = await fetch(`/api/auth/check-permission?role=GLOBAL_ADMIN`);
-      if (globalAdminResponse.ok) {
-        const globalAdminData = await globalAdminResponse.json();
-        if (globalAdminData.hasPermission) {
-          setHasPermission(true);
-          return;
+      const data = await apiClient.get<{ center: ICenter }>(`/centers/${centerId}`);
+      setCenter(data.center);
+    } catch (err: any) {
+      setError(err.message || "Failed to load center details.");
+      toast({ title: "Error", description: "Failed to load center details.", variant: "destructive" });
+    }
+  }, [centerId, toast]);
+
+  // Check permissions
+ useEffect(() => {
+    const checkPermissionsAndFetch = async () => {
+      if (user && centerId) {
+        const hasPermission =
+          await checkPermission(user, "GLOBAL_ADMIN") ||
+          await checkPermission(user, "CENTER_ADMIN", { centerId });
+
+        setCanViewDashboard(hasPermission);
+        if (hasPermission) {
+          setIsLoading(true);
+          await fetchCenterDetails();
+          // Chain other data fetching here after center details and permissions are confirmed
+          await fetchMemberDataForCharts();
+          await fetchBirthdays();
+          await fetchPendingFollowUps();
+          // TODO: Fetch data for Attendance Trends and Spiritual Growth Stages (scoped)
+          setIsLoading(false);
+        } else {
+          setError("You do not have permission to view this center's dashboard.");
+          setIsLoading(false);
         }
       }
-      
-      // If not GLOBAL_ADMIN, check for CENTER_ADMIN role for this specific center
-      const centerAdminResponse = await fetch(`/api/auth/check-permission?role=CENTER_ADMIN&centerId=${centerId}`);
-      if (!centerAdminResponse.ok) {
-        setHasPermission(false);
-        return;
-      }
-      
-      const centerAdminData = await centerAdminResponse.json();
-      setHasPermission(centerAdminData.hasPermission);
-    } catch (error) {
-      console.error("Error checking permission:", error);
-      setHasPermission(false);
-    }
-  }, [user, centerId]);
+    };
+    checkPermissionsAndFetch();
+  }, [user, centerId, fetchCenterDetails]); // Added fetchCenterDetails to dependencies
 
-  const fetchCenterData = useCallback(async () => {
-    if (!user || !centerId) return;
+  const fetchMemberDataForCharts = useCallback(async () => {
+    if (!centerId) return;
     try {
-      setIsLoading(true);
-      
-      // Fetch center data
-      const centerResponse = await fetch(`/api/centers/${centerId}`);
-      if (!centerResponse.ok) {
-        throw new Error('Failed to fetch center data');
-      }
-      
-      const centerData = await centerResponse.json();
-      setCenter(centerData.center);
+      const response = await apiClient.get<{ members: IMember[] }>(`/members?centerId=${centerId}&limit=10000`);
+      const members = response.members || [];
 
-      // Fetch clusters for this center
-      const clustersResponse = await fetch(`/api/clusters?centerId=${centerId}`);
-      if (!clustersResponse.ok) {
-        throw new Error('Failed to fetch clusters');
-      }
-      
-      const clustersData = await clustersResponse.json();
-      setClusters(clustersData.clusters || []);
+      const growthCounts: { [key: string]: number } = {};
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
 
-      // Fetch events for this center
-      const eventsResponse = await fetch(`/api/events?centerId=${centerId}`);
-      if (!eventsResponse.ok) {
-        throw new Error('Failed to fetch events');
-      }
-      
-      const eventsData = await eventsResponse.json();
-      setEvents(eventsData.events || []);
-
-    } catch (error: unknown) {
-      console.error("Error fetching center data:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to load center data. Please try again.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      
-      // Use sample data for demonstration if API fails
-      setCenter({
-        _id: centerId,
-        centerId: "CTR001",
-        name: "Main Center",
-        location: "Downtown",
-        leadPastor: {
-          _id: "sample-pastor-id",
-          firstName: "John",
-          lastName: "Doe",
-          email: "john.doe@example.com"
-        },
-        contactEmail: "info@maincenter.org",
-        contactPhone: "+1234567890",
-        description: "Our main worship center",
-        clusterCount: 5,
-        memberCount: 250
-      });
-      
-      setClusters([
-        {
-          _id: "cluster-1",
-          clusterId: "CL001",
-          name: "North Cluster",
-          leaderId: {
-            firstName: "Jane",
-            lastName: "Smith"
-          },
-          memberCount: 45
-        },
-        {
-          _id: "cluster-2",
-          clusterId: "CL002",
-          name: "South Cluster",
-          leaderId: {
-            firstName: "Mike",
-            lastName: "Johnson"
-          },
-          memberCount: 38
-        },
-        {
-          _id: "cluster-3",
-          clusterId: "CL003",
-          name: "East Cluster",
-          leaderId: {
-            firstName: "Sarah",
-            lastName: "Williams"
-          },
-          memberCount: 42
+      members.forEach(member => {
+        const joinedDate = new Date(member.createdAt);
+        if (joinedDate >= sixMonthsAgo) {
+          const monthYear = `${getMonthName(joinedDate.getMonth())} ${joinedDate.getFullYear()}`;
+          growthCounts[monthYear] = (growthCounts[monthYear] || 0) + 1;
         }
-      ]);
-      
-      setEvents([
-        {
-          _id: "event-1",
-          title: "Sunday Service",
-          date: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          location: "Main Auditorium",
-          description: "Weekly worship service"
-        },
-        {
-          _id: "event-2",
-          title: "Youth Conference",
-          date: new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          location: "Youth Hall",
-          description: "Annual youth gathering"
-        }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast, user, centerId]);
+      });
+      const growthLabels = Object.keys(growthCounts);
+      const growthValues = Object.values(growthCounts);
+      setMemberGrowthData({
+        labels: growthLabels,
+        datasets: [{ label: 'New Members', data: growthValues, backgroundColor: 'rgba(99, 102, 241, 0.5)', borderColor: 'rgb(99, 102, 241)', borderWidth: 1 }],
+      });
 
-  useEffect(() => {
-    // Only proceed if authentication is complete
-    if (status === "loading") return;
-    
-    if (isAuthenticated && user) {
-      checkPermission();
-      fetchCenterData();
-    } else if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, isAuthenticated, user, checkPermission, fetchCenterData, router]);
+      const ageCounts: { [key: string]: number } = { '18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55-64': 0, '65+': 0, 'Unknown': 0 };
+      members.forEach(member => {
+        if (member.dateOfBirth) {
+          const birthDate = new Date(member.dateOfBirth);
+          const age = new Date().getFullYear() - birthDate.getFullYear();
+          if (age >= 18 && age <= 24) ageCounts['18-24']++;
+          else if (age >= 25 && age <= 34) ageCounts['25-34']++;
+          else if (age >= 35 && age <= 44) ageCounts['35-44']++;
+          else if (age >= 45 && age <= 54) ageCounts['45-54']++;
+          else if (age >= 55 && age <= 64) ageCounts['55-64']++;
+          else if (age >= 65) ageCounts['65+']++;
+          else ageCounts['Unknown']++;
+        } else ageCounts['Unknown']++;
+      });
+      setDemographicsData({
+        labels: Object.keys(ageCounts),
+        datasets: [{ label: 'Age Distribution', data: Object.values(ageCounts),
+          backgroundColor: ['rgba(255, 99, 132, 0.5)','rgba(54, 162, 235, 0.5)','rgba(255, 206, 86, 0.5)','rgba(75, 192, 192, 0.5)','rgba(153, 102, 255, 0.5)','rgba(255, 159, 64, 0.5)', 'rgba(200, 200, 200, 0.5)'],
+          borderColor: ['rgba(255, 99, 132, 1)','rgba(54, 162, 235, 1)','rgba(255, 206, 86, 1)','rgba(75, 192, 192, 1)','rgba(153, 102, 255, 1)','rgba(255, 159, 64, 1)', 'rgba(200, 200, 200, 1)'],
+          borderWidth: 1 }],
+      });
+    } catch (err) { toast({ title: "Error", description: "Could not load chart data for members.", variant: "destructive" }); }
+  }, [centerId, toast]);
 
-  if (status === "loading" || isLoading) {
-    return <div className="flex justify-center items-center h-screen"><p>Loading center dashboard...</p></div>;
+  const fetchBirthdays = useCallback(async () => {
+    if (!centerId) return;
+    try {
+      const response = await apiClient.get<{ members: IMember[] }>(`/members?centerId=${centerId}&birthMonth=current&limit=5`);
+      setBirthdaysThisMonth(response.members || []);
+    } catch (err) { toast({ title: "Error", description: "Could not load birthday information.", variant: "destructive" }); }
+  }, [centerId, toast]);
+
+  const fetchPendingFollowUps = useCallback(async () => {
+    if (!centerId) return;
+    try {
+      const response = await apiClient.get<{ followUps: IFollowUp[] }>(`/follow-ups?centerId=${centerId}&status=Pending&limit=5&populate=personId,attendeeId`);
+      setPendingFollowUps(response.followUps || []);
+    } catch (err) { toast({ title: "Error", description: "Could not load pending follow-ups.", variant: "destructive" }); }
+  }, [centerId, toast]);
+
+  if (isLoading) {
+    return <div className="container mx-auto py-6 text-center"><p>Loading dashboard...</p></div>;
   }
 
-  if (!center) {
+  if (error) {
     return (
-      <div className="text-center py-10">
-        <Building className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium mb-2">Center Not Found</h3>
-        <p className="text-gray-500 mb-4">
-          The center you are looking for does not exist or you may not have permission to view it.
-        </p>
-        <Button onClick={() => router.push("/centers")}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Centers
+      <div className="container mx-auto py-10 text-center">
+        <AlertTriangleIcon className="mx-auto h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold mb-2 text-destructive">Error</h2>
+        <p className="text-muted-foreground">{error}</p>
+         <Button onClick={() => router.push('/dashboard')} variant="outline" className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Go to Global Dashboard
         </Button>
       </div>
     );
   }
-  
-  if (!hasPermission) {
-    return (
-      <div className="text-center py-10">
-        <Building className="mx-auto h-12 w-12 text-red-400 mb-4" />
-        <h3 className="text-lg font-medium mb-2">Permission Denied</h3>
-        <p className="text-gray-500 mb-4">You do not have permission to view this center&apos;s dashboard.</p>
-        <Button onClick={() => router.push("/centers")}>Back to Centers</Button>
+
+  if (!canViewDashboard) {
+      return (
+      <div className="container mx-auto py-10 text-center">
+        <AlertTriangleIcon className="mx-auto h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground">You do not have permission to view this center's dashboard.</p>
+         <Button onClick={() => router.push('/dashboard')} variant="outline" className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Go to Global Dashboard
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="secondary">{center.centerId}</Badge>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Building className="h-8 w-8 text-blue-600" />
-            {center.name} Dashboard
-          </h1>
-          {center.location && (
-            <div className="flex items-center gap-1 text-muted-foreground mt-1">
-              <MapPin className="h-4 w-4" />
-              <span>{center.location}</span>
-            </div>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/dashboard/centers/${centerId}`}>
-              Center Details
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/dashboard/centers/${centerId}/edit`}>
-              Manage Center
-            </Link>
-          </Button>
-        </div>
-      </div>
-      
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Members</p>
-                <h3 className="text-2xl font-bold mt-1">{center.memberCount || 0}</h3>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Clusters</p>
-                <h3 className="text-2xl font-bold mt-1">{center.clusterCount || clusters.length}</h3>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <Network className="h-5 w-5 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Upcoming Events</p>
-                <h3 className="text-2xl font-bold mt-1">{events.length}</h3>
-              </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <Calendar className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Follow-ups</p>
-                <h3 className="text-2xl font-bold mt-1">12</h3>
-              </div>
-              <div className="bg-amber-100 p-3 rounded-full">
-                <UserCheck className="h-5 w-5 text-amber-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Main Content */}
+    <div className="space-y-6 p-6">
+      <h1 className="text-3xl font-bold tracking-tight">Dashboard for {center?.name || 'Center'}</h1>
+
+      <DashboardStats className="mt-6" centerId={centerId} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Feed - Takes 1/3 of the width on large screens */}
-        <div className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest activities in {center.name}</CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[400px] overflow-y-auto">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-100 p-2 rounded-full mt-0.5">
-                    <Users className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">New member added to Cluster A</p>
-                    <p className="text-sm text-muted-foreground">John Doe was added by Pastor James</p>
-                    <p className="text-xs text-muted-foreground">2 hours ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-100 p-2 rounded-full mt-0.5">
-                    <Calendar className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">New event scheduled</p>
-                    <p className="text-sm text-muted-foreground">Youth Conference on June 15th</p>
-                    <p className="text-xs text-muted-foreground">Yesterday</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-100 p-2 rounded-full mt-0.5">
-                    <Network className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">New cluster created</p>
-                    <p className="text-sm text-muted-foreground">Cluster E was created by Admin</p>
-                    <p className="text-xs text-muted-foreground">2 days ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-amber-100 p-2 rounded-full mt-0.5">
-                    <UserCheck className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Follow-up completed</p>
-                    <p className="text-sm text-muted-foreground">Sarah Williams follow-up by Pastor James</p>
-                    <p className="text-xs text-muted-foreground">3 days ago</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" size="sm">
-                View All Activity
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-        
-        {/* Upcoming Events - Takes 2/3 of the width on large screens */}
-        <div className="lg:col-span-2">
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Upcoming Events</CardTitle>
-                <CardDescription>Events scheduled at {center.name}</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/centers/${centerId}/dashboard/events`}>
-                  View All
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {events.length > 0 ? (
-                <div className="space-y-4">
-                  {events.map((event) => (
-                    <div key={event._id} className="flex items-start gap-4 p-3 rounded-lg border">
-                      <div className="bg-green-100 p-3 rounded-lg">
-                        <Calendar className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{event.title}</h4>
-                        <p className="text-sm text-muted-foreground">{new Date(event.date).toLocaleDateString()} at {event.location}</p>
-                        {event.description && (
-                          <p className="text-sm mt-1">{event.description}</p>
-                        )}
-                      </div>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/dashboard/events/${event._id}?centerId=${centerId}`}>
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-4">No upcoming events scheduled</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <div className="lg:col-span-1"><ActivityFeed className="h-full" centerId={centerId} /></div>
+        <div className="lg:col-span-2"><UpcomingEventsCard className="h-full" centerId={centerId} /></div>
       </div>
-      
-      {/* Clusters List */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Clusters in {center.name}</CardTitle>
-            <CardDescription>Total: {center.clusterCount || clusters.length} clusters</CardDescription>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ChartCard title="Attendance Trends (Center)" type="line" data={attendanceData} />
+        <ChartCard title="Member Growth (Center, Last 6 Months)" type="bar" data={memberGrowthData} />
+        <ChartCard title="Age Demographics (Center)" type="doughnut" data={demographicsData} />
+        <ChartCard title="Spiritual Growth Stages (Center)" type="bar" data={spiritualGrowthData} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DataCard
+          title="Birthdays This Month (Center)"
+          icon={<Calendar className="h-4 w-4" />}
+          action={{ label: "View All Members", href: `/dashboard/centers/${centerId}/dashboard/members` }}
+        >
+          <div className="space-y-3">
+            {birthdaysThisMonth.length > 0 ? birthdaysThisMonth.map(member => (
+              <div key={member._id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary/10 p-2 rounded-full"><Users className="h-4 w-4" /></div>
+                  <div>
+                    <p className="font-medium">{member.firstName} {member.lastName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )) : <p className="text-sm text-muted-foreground">No birthdays this month in this center.</p>}
           </div>
-          <Button asChild>
-            <Link href={`/dashboard/clusters/new?centerId=${centerId}`}>
-              Add Cluster
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {clusters.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {clusters.map((cluster) => (
-                <Card key={cluster._id} className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-purple-100 p-2 rounded-full">
-                        <Network className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">{cluster.name}</CardTitle>
-                        <Badge variant="outline" className="mt-1">{cluster.clusterId}</Badge>
-                      </div>
+        </DataCard>
+
+        <DataCard
+          title="Pending Follow-ups (Center)"
+          icon={<UserCheck className="h-4 w-4" />}
+          action={{ label: "View All Follow-ups", href: `/dashboard/follow-ups?centerId=${centerId}&status=Pending` }}
+        >
+          <div className="space-y-3">
+            {pendingFollowUps.length > 0 ? pendingFollowUps.map(followUp => {
+              let personName = "N/A";
+              if (followUp.personId) personName = `${(followUp.personId as any).firstName} ${(followUp.personId as any).lastName}`;
+              else if (followUp.attendeeId) personName = `${(followUp.attendeeId as any).firstName} ${(followUp.attendeeId as any).lastName}`;
+              else if (followUp.newAttendee) personName = `${followUp.newAttendee.firstName} ${followUp.newAttendee.lastName}`;
+
+              return (
+                <div key={followUp._id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-primary/10 p-2 rounded-full"><UserCheck className="h-4 w-4" /></div>
+                    <div>
+                      <p className="font-medium">{personName}</p>
+                      <p className="text-sm text-muted-foreground">{followUp.personType} - {followUp.notes?.substring(0,30) || "Needs attention"}{followUp.notes && followUp.notes.length > 30 ? "..." : ""}</p>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    {cluster.leaderId && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-2 mb-1">
-                        <span className="i-lucide-user-circle h-4 w-4"></span>
-                        Leader: {cluster.leaderId.firstName} {cluster.leaderId.lastName}
-                      </p>
-                    )}
-                    {cluster.memberCount !== undefined && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <span className="i-lucide-users h-4 w-4"></span>
-                        {cluster.memberCount} Members
-                      </p>
-                    )}
-                  </CardContent>
-                  <CardFooter className="pt-2 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" asChild>
-                      <Link href={`/dashboard/clusters/${cluster._id}?centerId=${centerId}`}>
-                        View
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" asChild>
-                      <Link href={`/clusters/${cluster._id}/dashboard`}>
-                        Dashboard
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <Network className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Clusters Found</h3>
-              <p className="text-gray-500 mb-4">This center doesn&apos;t have any clusters yet.</p>
-              <Button asChild>
-                <Link href={`/dashboard/clusters/new?centerId=${centerId}`}>
-                  Create First Cluster
-                </Link>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ChartCard 
-          title="Attendance Trends (Center)"
-          type="line"
-          data={attendanceData}
-        />
-        
-        <ChartCard 
-          title="Member Growth (Center)"
-          type="bar"
-          data={memberGrowthData}
-        />
-        
-        <ChartCard 
-          title="Cluster Performance (Center)"
-          type="pie"
-          data={clusterPerformanceData}
-        />
-        
-        <ChartCard 
-          title="Spiritual Growth (Center)"
-          type="bar"
-          data={spiritualGrowthData}
-        />
-      </div>
-      
-      {/* Additional Data Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <DataCard
-          title="Upcoming Birthdays"
-          data={[
-            { title: "John Smith", description: "May 15", icon: "cake" },
-            { title: "Mary Johnson", description: "May 18", icon: "cake" },
-            { title: "Robert Brown", description: "May 22", icon: "cake" },
-            { title: "Jennifer Davis", description: "May 30", icon: "cake" },
-          ]}
-        />
-        
-        <DataCard
-          title="Recent Follow-ups"
-          data={[
-            { title: "New Convert Follow-up", description: "James Wilson - 3 days ago", icon: "user-check" },
-            { title: "First-time Visitor", description: "Sarah Johnson - 1 week ago", icon: "user-check" },
-            { title: "Absentee Follow-up", description: "Michael Brown - 2 weeks ago", icon: "user-check" },
-            { title: "Prayer Request", description: "Emily Davis - 2 weeks ago", icon: "user-check" },
-          ]}
-        />
+                  </div>
+                   <Button variant="link" size="sm" asChild><Link href={`/dashboard/follow-ups/${followUp._id}`}>View</Link></Button>
+                </div>);
+            }) : <p className="text-sm text-muted-foreground">No pending follow-ups in this center.</p>}
+          </div>
+        </DataCard>
       </div>
     </div>
   );
