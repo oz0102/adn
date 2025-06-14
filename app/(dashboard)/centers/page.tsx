@@ -167,7 +167,7 @@ export default function CentersPage() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    router.push("/dashboard/centers")
+    router.push("/centers") 
   }
 
   const updateUrlParams = (params: Record<string, string | number | null>) => {
@@ -179,7 +179,7 @@ export default function CentersPage() {
         newParams.delete(key)
       }
     })
-    router.push(`/dashboard/centers?${newParams.toString()}`)
+    router.push(`/centers?${newParams.toString()}`)
   }
 
   const handlePageChange = (page: number) => {
@@ -207,7 +207,7 @@ export default function CentersPage() {
         <h1 className="text-3xl font-bold tracking-tight">Centers</h1>
         {canCreateCenter && (
           <Button asChild>
-            <Link href="/dashboard/centers/new">
+            <Link href="/centers/new">
               <Plus className="mr-2 h-4 w-4" /> Create Center
             </Link>
           </Button>
@@ -265,7 +265,7 @@ export default function CentersPage() {
             <p className="text-gray-500 mb-4">
               There are no centers matching your search criteria or you may not have permission to view them.
             </p>
-            {canCreateCenter && <Button onClick={() => router.push("/dashboard/centers/new")}>Create Center</Button>}
+            {canCreateCenter && <Button onClick={() => router.push("/centers/new")}>Create Center</Button>}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -309,7 +309,7 @@ export default function CentersPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link href={`/dashboard/centers/${center._id}/dashboard`}>
+                    <Link href={`/centers/${center._id}/dashboard`}>
                       <span>View Center</span>
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>

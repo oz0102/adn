@@ -205,7 +205,7 @@ export default function CenterDetailPage() {
         </div>
         {canEditCenter && (
           <Button asChild>
-            <Link href={`/dashboard/centers/${center._id}/edit`}>
+            <Link href={`/centers/${center._id}/edit`}> 
               <Edit className="mr-2 h-4 w-4" /> Edit Center
             </Link>
           </Button>
@@ -269,7 +269,7 @@ export default function CenterDetailPage() {
           <CardTitle>Clusters in {center.name}</CardTitle>
           {canCreateCluster && (
             <Button asChild size="sm">
-                <Link href={`/dashboard/clusters/new?centerId=${center._id}&centerName=${encodeURIComponent(center.name)}`}>
+                <Link href={`/clusters/new?centerId=${center._id}&centerName=${encodeURIComponent(center.name)}`}>
                     <Plus className="mr-2 h-4 w-4" /> Add Cluster
                 </Link>
             </Button>
@@ -281,15 +281,15 @@ export default function CenterDetailPage() {
               {clusters.map(cluster => (
                 <li key={cluster._id} className="flex justify-between items-center p-2 border rounded-md">
                   <div>
-                    <Link href={`/dashboard/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`} className="font-medium hover:underline">{cluster.name}</Link>
+                    <Link href={`/clusters/${cluster._id}?centerName=${encodeURIComponent(center.name)}`} className="font-medium hover:underline">{cluster.name}</Link>
                     {cluster.leaderId && <span className="text-sm text-gray-500 block">Leader: {cluster.leaderId.firstName} {cluster.leaderId.lastName}</span>}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/dashboard/clusters/${cluster._id}`}>View</Link>
+                      <Link href={`/clusters/${cluster._id}`}>View</Link>
                     </Button>
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/dashboard/clusters/${cluster._id}/dashboard`}>Dashboard</Link>
+                      <Link href={`/clusters/${cluster._id}/dashboard`}>Dashboard</Link>
                     </Button>
                   </div>
                 </li>
@@ -308,17 +308,17 @@ export default function CenterDetailPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <Button variant="outline" className="w-full justify-start" asChild>
-              <Link href={`/dashboard/centers/${center._id}/dashboard`}>
+              <Link href={`/centers/${center._id}/dashboard`}>
                 <Building className="mr-2 h-4 w-4" /> Center Dashboard
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
-              <Link href={`/dashboard/centers/${center._id}/members`}>
+              <Link href={`/centers/${center._id}/members`}>
                 <Users className="mr-2 h-4 w-4" /> View Members
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
-              <Link href={`/dashboard/centers/${center._id}/events`}>
+              <Link href={`/centers/${center._id}/events`}>
                 <Calendar className="mr-2 h-4 w-4" /> Center Events
               </Link>
             </Button>
